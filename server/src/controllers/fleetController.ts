@@ -8,7 +8,7 @@ export const list = async (req: AuthenticatedRequest, res: Response) => {
     const fleets = await fleetService.listFleets(req.depotId);
     const formatted = fleets.map(f => ({
       ...f,
-      depot_name: f.depot.name
+      depot_name: f.depot?.name ?? null
     }));
     res.json(formatted);
   } catch (err) {
@@ -34,7 +34,7 @@ export const create = async (req: AuthenticatedRequest, res: Response) => {
     );
     const formatted = {
       ...fleet,
-      depot_name: fleet.depot.name
+      depot_name: fleet.depot?.name ?? null
     };
     res.status(201).json(formatted);
   } catch (err) {
@@ -54,7 +54,7 @@ export const update = async (req: AuthenticatedRequest, res: Response) => {
     const updated = await fleetService.updateFleet(id, data, req.user?.id);
     const formatted = {
       ...updated,
-      depot_name: updated.depot.name
+      depot_name: updated.depot?.name ?? null
     };
     res.json(formatted);
   } catch (err) {
@@ -73,7 +73,7 @@ export const getOne = async (req: AuthenticatedRequest, res: Response) => {
     if (!fleet) return res.status(404).json({ error: 'Fleet not found' });
     const formatted = {
       ...fleet,
-      depot_name: fleet.depot.name
+      depot_name: fleet.depot?.name ?? null
     };
     res.json(formatted);
   } catch (err) {

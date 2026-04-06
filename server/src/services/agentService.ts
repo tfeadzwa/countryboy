@@ -1,6 +1,6 @@
 import prisma from '../utils/prisma';
 import { Prisma } from '@prisma/client';
-import bcrypt from 'bcrypt';
+import bcrypt from '../lib/bcrypt';
 import jwt from 'jsonwebtoken';
 
 export const listAgents = async (depotId?: string) => {

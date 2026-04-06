@@ -5,7 +5,7 @@
  */
 
 import prisma from '../src/utils/prisma';
-import bcrypt from 'bcrypt';
+import bcrypt from '../src/lib/bcrypt';
 
 async function main() {
   console.log('🌱 Starting database seed...\n');

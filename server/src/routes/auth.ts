@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import prisma from '../utils/prisma';
-import bcrypt from 'bcrypt';
+import bcrypt from '../lib/bcrypt';
 import jwt from 'jsonwebtoken';
 import { validate } from '../middleware/validate';
 import { forgotPasswordSchema, loginSchema, resetPasswordSchema } from '../validators/schemas';
