@@ -1,0 +1,321 @@
+{
+  "meta": {
+    "name": "Countryboy Postman Test Dummy Data",
+    "version": "2.0.0",
+    "updated": "March 2026 - Schema v2 (offline-first)",
+    "notes": [
+      "Use these payloads in Postman request bodies.",
+      "Values use realistic Zimbabwe bus operations examples.",
+      "Replace placeholder variables ({{...}}) with values returned by previous requests.",
+      "Schema v2 changes: routes use origin/destination, tickets use ticket_category with departure/destination/issued_at"
+    ]
+  },
+  "postmanEnvironmentVariables": {
+    "baseUrl": "http://localhost:3000",
+    "jwt": "<set after login>",
+    "deviceToken": "<from device create response - long UUID>",
+    "pairingCode": "<from device create response - 6-char code like ABC-234>",
+    "depotId": "<from depots/create response - super admins MUST use this in x-depot-id header>",
+    "merchantCode": "<from depots/create response - for agent login>",
+    "agentId": "<from agents create response>",
+    "deviceId": "<from devices create response>",
+    "fleetId": "<from fleets create response>",
+    "routeId": "<from routes create response>",
+    "fareId": "<from fares create response>",
+    "tripId": "<from trips start response>",
+    "ticketId": "<from tickets issue response>"
+  },
+  "requestOrder": [
+    "auth.login",
+    "depots.create",
+    "agents.create",
+    "devices.create",
+    "devices.pair",
+    "agents.mobileLogin",
+    "fleets.create",
+    "routes.create",
+    "fares.create",
+    "trips.start",
+    "tickets.issue",
+    "tickets.issuePair",
+    "tickets.void",
+    "sync.push"
+  ],
+  "requests": {
+    "auth.login": {
+      "method": "POST",
+      "url": "{{baseUrl}}/auth/login",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "username": "super",
+        "password": "password123"
+      }
+    },
+    "depots.create": {
+      "method": "POST",
+      "url": "{{baseUrl}}/depots",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "merchant_code": "HRE001",
+        "name": "Harare Central Depot",
+        "location": "Simon Vengai Muzenda Street, Harare"
+      }
+    },
+    "agents.create": {
+      "method": "POST",
+      "url": "{{baseUrl}}/agents",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}",
+        "Content-Type": "application/json",
+        "x-depot-id": "{{depotId}}"
+      },
+      "body": {
+        "full_name": "Tapiwa Moyo",
+        "agent_code": "TMO014",
+        "pin": "1234",
+        "status": "ACTIVE"
+      },
+      "notes": "username is optional (for web portal). PIN required for mobile login. Status defaults to ACTIVE."
+    },
+    "devices.create": {
+      "method": "POST",
+      "url": "{{baseUrl}}/devices",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}",
+        "Content-Type": "application/json",
+        "x-depot-id": "{{depotId}}"
+      },
+      "body": {
+        "serial_number": "CB-POS-HRE-00014"
+      },
+      "notes": "Save the returned 'pairing_code' (e.g., ABC-234) and 'token' for next steps"
+    },
+    "devices.pair": {
+      "method": "POST",
+      "url": "{{baseUrl}}/devices/pair",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "pairing_code": "{{pairingCode}}"
+      },
+      "notes": "ONE-TIME pairing by conductor. Returns long device_token to store in app. No auth required."
+    },
+    "agents.mobileLogin": {
+      "method": "POST",
+      "url": "{{baseUrl}}/agents/login",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "merchant_code": "{{merchantCode}}",
+        "agent_code": "TMO014",
+        "pin": "1234"
+      },
+      "notes": "Daily conductor login. Use agent_code OR username. No auth required - validates PIN."
+    },
+    "fleets.create": {
+      "method": "POST",
+      "url": "{{baseUrl}}/fleets",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}",
+        "Content-Type": "application/json",
+        "x-depot-id": "{{depotId}}"
+      },
+      "body": {
+        "number": "HRE 2457"
+      }
+    },
+    "routes.create": {
+      "method": "POST",
+      "url": "{{baseUrl}}/routes",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}",
+        "Content-Type": "application/json",
+        "x-depot-id": "{{depotId}}"
+      },
+      "body": {
+        "origin": "Harare",
+        "destination": "Bulawayo"
+      }
+    },
+    "fares.create": {
+      "method": "POST",
+      "url": "{{baseUrl}}/fares",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}",
+        "Content-Type": "application/json",
+        "x-depot-id": "{{depotId}}"
+      },
+      "body": {
+        "route_id": "{{routeId}}",
+        "currency": "USD",
+        "amount": 18
+      }
+    },
+    "fares.update": {
+      "method": "PUT",
+      "url": "{{baseUrl}}/fares/{{fareId}}",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}",
+        "Content-Type": "application/json",
+        "x-depot-id": "{{depotId}}"
+      },
+      "body": {
+        "currency": "USD",
+        "amount": 20
+      }
+    },
+    "trips.start": {
+      "method": "POST",
+      "url": "{{baseUrl}}/trips",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}",
+        "Content-Type": "application/json",
+        "x-depot-id": "{{depotId}}"
+      },
+      "body": {
+        "agent_id": "{{agentId}}",
+        "fleet_id": "{{fleetId}}",
+        "route_id": "{{routeId}}",
+        "device_id": "{{deviceId}}",
+        "started_offline": false
+      },
+      "notes": "route_id is optional for trips started offline"
+    },
+    "trips.end": {
+      "method": "POST",
+      "url": "{{baseUrl}}/trips/{{tripId}}/end",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}",
+        "x-depot-id": "{{depotId}}"
+      },
+      "body": {}
+    },
+    "tickets.issue": {
+      "method": "POST",
+      "url": "{{baseUrl}}/tickets",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}",
+        "Content-Type": "application/json",
+        "x-depot-id": "{{depotId}}"
+      },
+      "body": {
+        "trip_id": "{{tripId}}",
+        "agent_id": "{{agentId}}",
+        "device_id": "{{deviceId}}",
+        "ticket_category": "PASSENGER",
+        "currency": "USD",
+        "amount": 18,
+        "departure": "Harare",
+        "destination": "Bulawayo",
+        "issued_at": "2026-03-01T06:30:00.000Z"
+      },
+      "notes": "departure, destination, and issued_at are optional. ticket_category replaced ticket_type."
+    },
+    "tickets.issuePair": {
+      "method": "POST",
+      "url": "{{baseUrl}}/tickets/passenger-luggage",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}",
+        "Content-Type": "application/json",
+        "x-depot-id": "{{depotId}}"
+      },
+      "body": {
+        "trip_id": "{{tripId}}",
+        "agent_id": "{{agentId}}",
+        "device_id": "{{deviceId}}",
+        "currency": "USD",
+        "amount": 18,
+        "departure": "Harare",
+        "destination": "Bulawayo",
+        "issued_at": "2026-03-01T06:35:00.000Z"
+      },
+      "notes": "Creates both PASSENGER and LUGGAGE tickets. Luggage automatically linked to passenger via linked_passenger_ticket_id."
+    },
+    "tickets.void": {
+      "method": "POST",
+      "url": "{{baseUrl}}/tickets/{{ticketId}}/void",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}",
+        "Content-Type": "application/json",
+        "x-depot-id": "{{depotId}}"
+      },
+      "body": {
+        "reason": "Customer requested route change before departure",
+        "agent_id": "{{agentId}}",
+        "device_id": "{{deviceId}}"
+      },
+      "notes": "Creates tblTicketVoids event record. agent_id and device_id are optional."
+    },
+    "sync.push": {
+      "method": "POST",
+      "url": "{{baseUrl}}/sync/push",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}",
+        "x-device-token": "{{deviceToken}}",
+        "Content-Type": "application/json",
+        "x-depot-id": "{{depotId}}"
+      },
+      "body": {
+        "trips": [
+          {
+            "id": "3a31e63f-bf43-4b0f-a8bc-0f57ccf4f561",
+            "agent_id": "{{agentId}}",
+            "device_id": "{{deviceId}}",
+            "fleet_id": "{{fleetId}}",
+            "route_id": null,
+            "started_at": "2026-03-01T06:15:00.000Z",
+            "ended_at": null,
+            "status": "ACTIVE",
+            "started_offline": true
+          }
+        ],
+        "tickets": [
+          {
+            "id": "8f5e0993-3c5f-4ea4-96f5-1a5bc4b7f760",
+            "trip_id": "3a31e63f-bf43-4b0f-a8bc-0f57ccf4f561",
+            "agent_id": "{{agentId}}",
+            "device_id": "{{deviceId}}",
+            "ticket_category": "PASSENGER",
+            "serial_number": null,
+            "currency": "USD",
+            "amount": 18,
+            "departure": "Harare",
+            "destination": "Bulawayo",
+            "issued_at": "2026-03-01T06:30:00.000Z",
+            "linked_passenger_ticket_id": null
+          }
+        ]
+      },
+      "notes": "Serial numbers allocated server-side if null. Trips can have null route_id if started offline."
+    },
+    "sync.pull": {
+      "method": "GET",
+      "url": "{{baseUrl}}/sync/pull?since=2026-03-01T00:00:00.000Z",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}",
+        "x-device-token": "{{deviceToken}}"
+      }
+    },
+    "admin.metrics.overview": {
+      "method": "GET",
+      "url": "{{baseUrl}}/admin/metrics/overview",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}"
+      }
+    },
+    "admin.metrics.revenueTimeseries": {
+      "method": "GET",
+      "url": "{{baseUrl}}/admin/metrics/revenue-timeseries?from=2026-02-01&to=2026-03-01",
+      "headers": {
+        "Authorization": "Bearer {{jwt}}"
+      }
+    }
+  }
+}

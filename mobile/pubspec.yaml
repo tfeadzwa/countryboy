@@ -1,0 +1,90 @@
+name: mobile
+description: "Countryboy Conductor - Bus Ticket Issuance App for Android POS Terminals"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI & Icons
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+  flutter_screenutil: ^5.9.3  # Responsive sizing for POS terminals
+  
+  # State Management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+  
+  # Immutable Models
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+  
+  # Local Database (Offline-First)
+  drift: ^2.22.0
+  sqlite3_flutter_libs: ^0.5.24
+  path_provider: ^2.1.5
+  path: ^1.9.0
+  
+  # Networking
+  dio: ^5.7.0
+  pretty_dio_logger: ^1.4.0
+  
+  # Storage
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.3
+  
+  # Background Tasks & Sync
+  workmanager: ^0.9.0
+  
+  # Connectivity
+  connectivity_plus: ^6.1.1
+  internet_connection_checker_plus: ^2.5.2
+  
+  # Device Info
+  device_info_plus: ^11.2.0
+  package_info_plus: ^8.1.2
+  
+  # Forms & Validation
+  flutter_form_builder: ^10.3.0
+  form_builder_validators: ^11.0.0
+  pinput: ^5.0.0  # PIN code input
+  
+  # Utils
+  # intl provided by flutter_localizations (pinned to 0.20.2)
+  uuid: ^4.5.2
+  logger: ^2.5.0
+  equatable: ^2.0.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  
+  # Code Generation
+  build_runner: ^2.4.14
+  riverpod_generator: ^2.6.2
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+  drift_dev: ^2.22.0
+  
+  # Testing
+  mockito: ^5.4.5
+  integration_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  # POS Terminal optimized assets
+  assets:
+    - assets/images/
+    - assets/icons/
+  
+  # Use system fonts optimized for POS terminals
+  # Roboto is default and highly readable on small screens

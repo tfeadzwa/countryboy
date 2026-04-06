@@ -1,0 +1,294 @@
+// Prisma schema for Countryboy bus ticketing system
+// All tables are prefixed with "tbl" as per spec.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Role definitions
+model tblRoles {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  users     tblUserRoles[]
+}
+
+model tblUserRoles {
+  id     String        @id @default(uuid())
+  user   tblAdminUsers @relation(fields: [userId], references: [id])
+  userId String
+  role   tblRoles      @relation(fields: [roleId], references: [id])
+  roleId String
+
+  @@unique([userId, roleId])
+}
+
+model tblDepots {
+  id            String   @id @default(uuid())
+  merchant_code String   @unique
+  name          String
+  location      String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by    String?
+  updated_by    String?
+
+  adminUsers       tblAdminUsers[]
+  agents           tblAgents[]
+  devices          tblDevices[]
+  fleets           tblFleets[]
+  routes           tblRoutes[]
+  fares            tblFares[]
+  trips            tblTrips[]
+  tickets          tblTickets[]
+  serialRanges     tblSerialRanges[]
+  syncLogs         tblSyncLogs[]
+  dailyAggregates  tblDailyAggregates[]
+}
+
+model tblAdminUsers {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  email        String?  @unique
+  password_hash String
+  full_name    String?
+  depot_id     String?  // null for super admins
+  status       String   @default("ACTIVE")
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  created_by   String?
+  updated_by   String?
+
+  depot        tblDepots? @relation(fields: [depot_id], references: [id])
+  roles        tblUserRoles[]
+  voids        tblTicketVoids[]
+}
+
+model tblAgents {
+  id          String   @id @default(uuid())
+  full_name   String
+  username    String?                      // Optional - for web portal access if needed
+  agent_code  String
+  pin         String?                      // Optional 4-6 digit PIN for quick daily login
+  depot_id    String
+  status      String   @default("ACTIVE")  // ACTIVE, INACTIVE, SUSPENDED, TERMINATED
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  created_by  String?
+  updated_by  String?
+
+  depot        tblDepots @relation(fields: [depot_id], references: [id])
+  trips        tblTrips[]
+  tickets      tblTickets[]
+  voids        tblTicketVoids[] @relation("VoidAgent")
+
+  @@unique([depot_id, username])
+  @@unique([depot_id, agent_code])
+}
+
+model tblDevices {
+  id            String   @id @default(uuid())
+  serial_number String   @unique
+  token         String?  @unique           // Long token for API authentication (UUID)
+  pairing_code  String?  @unique           // Short 6-char code for one-time device pairing
+  paired        Boolean  @default(false)   // Whether device has been paired with app
+  paired_at     DateTime?                  // When device was paired
+  depot_id      String
+  device_name   String?                    // Device brand and model (e.g., "Samsung SM A556E")
+  device_model  String?                    // Device model (e.g., "SM A556E")
+  last_seen     DateTime?
+  app_version   String?
+  sync_errors   Int      @default(0)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by    String?
+  updated_by    String?
+
+  depot         tblDepots @relation(fields: [depot_id], references: [id])
+  trips         tblTrips[]
+  tickets       tblTickets[]
+  serialRanges  tblSerialRanges[]
+  voids         tblTicketVoids[] @relation("VoidDevice")
+}
+
+model tblFleets {
+  id          String      @id @default(uuid())
+  number      String
+  depot_id    String
+  status      FleetStatus @default(ACTIVE)
+  capacity    Int         @default(0)
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+  created_by  String?
+  updated_by  String?
+
+  depot       tblDepots @relation(fields: [depot_id], references: [id])
+  trips       tblTrips[]
+
+  @@unique([depot_id, number])
+}
+
+enum FleetStatus {
+  ACTIVE
+  MAINTENANCE
+  OUT_OF_SERVICE
+  RETIRED
+}
+
+model tblRoutes {
+  id          String   @id @default(uuid())
+  origin      String
+  destination String
+  depot_id    String
+  is_active   Boolean  @default(true)
+  distance_km Decimal?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  created_by  String?
+  updated_by  String?
+
+  depot       tblDepots @relation(fields: [depot_id], references: [id])
+  fares       tblFares[]
+  trips       tblTrips[]
+
+  @@unique([depot_id, origin, destination])
+}
+
+model tblFares {
+  id          String   @id @default(uuid())
+  route_id    String
+  depot_id    String
+  currency    String
+  amount      Decimal
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  created_by  String?
+  updated_by  String?
+
+  route       tblRoutes @relation(fields: [route_id], references: [id])
+  depot       tblDepots  @relation(fields: [depot_id], references: [id])
+}
+
+model tblTrips {
+  id              String   @id @default(uuid())
+  depot_id        String
+  agent_id        String
+  device_id       String?
+  fleet_id        String
+  route_id        String?
+  started_at      DateTime
+  ended_at        DateTime?
+  status          String   @default("ACTIVE")
+  started_offline Boolean  @default(false)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  created_by      String?
+  updated_by      String?
+
+  depot       tblDepots @relation(fields: [depot_id], references: [id])
+  agent       tblAgents @relation(fields: [agent_id], references: [id])
+  device      tblDevices? @relation(fields: [device_id], references: [id])
+  fleet       tblFleets @relation(fields: [fleet_id], references: [id])
+  route       tblRoutes? @relation(fields: [route_id], references: [id])
+  tickets     tblTickets[]
+}
+
+model tblTickets {
+  id                        String   @id @default(uuid())
+  depot_id                  String
+  trip_id                   String
+  agent_id                  String
+  device_id                 String?
+  serial_number             Int?
+  ticket_category           String
+  currency                  String
+  amount                    Decimal
+  departure                 String?
+  destination               String?
+  linked_passenger_ticket_id String?
+  issued_at                 DateTime
+  created_at                DateTime @default(now())
+  updated_at                DateTime @updatedAt
+  created_by                String?
+  updated_by                String?
+
+  depot               tblDepots @relation(fields: [depot_id], references: [id])
+  trip                tblTrips @relation(fields: [trip_id], references: [id])
+  agent               tblAgents @relation(fields: [agent_id], references: [id])
+  device              tblDevices? @relation(fields: [device_id], references: [id])
+  linkedPassengerTicket tblTickets? @relation("TicketLuggage", fields: [linked_passenger_ticket_id], references: [id])
+  luggageTickets      tblTickets[] @relation("TicketLuggage")
+  voids               tblTicketVoids[]
+
+  @@index([depot_id, issued_at])
+  @@index([depot_id, agent_id, issued_at])
+}
+
+// Additional tables for analytics/support
+
+model tblTicketVoids {
+  id             String   @id @default(uuid())
+  ticket_id      String
+  reason         String
+  created_at     DateTime @default(now())
+  agent_id       String?
+  device_id      String?
+  admin_user_id  String?
+
+  ticket         tblTickets @relation(fields: [ticket_id], references: [id])
+  agent          tblAgents? @relation("VoidAgent", fields: [agent_id], references: [id])
+  device         tblDevices? @relation("VoidDevice", fields: [device_id], references: [id])
+  adminUser      tblAdminUsers? @relation(fields: [admin_user_id], references: [id])
+}
+
+model tblSyncLogs {
+  id             String   @id @default(uuid())
+  depot_id       String
+  device_id      String?
+  agent_id       String?
+  type           String   // push or pull
+  success        Boolean  @default(true)
+  error          String?
+  records_pushed Int?
+  records_pulled Int?
+  duration_ms    Int?
+  created_at     DateTime @default(now())
+
+  depot          tblDepots @relation(fields: [depot_id], references: [id])
+}
+
+model tblSerialRanges {
+  id           String    @id @default(uuid())
+  depot_id     String
+  device_id    String
+  currency     String
+  start_number Int
+  end_number   Int
+  next_number  Int
+  allocated_at DateTime  @default(now())
+  exhausted_at DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  depot        tblDepots @relation(fields: [depot_id], references: [id])
+  device       tblDevices @relation(fields: [device_id], references: [id])
+
+  @@unique([depot_id, device_id, currency, start_number])
+}
+
+model tblDailyAggregates {
+  id          String   @id @default(uuid())
+  depot_id    String
+  date        DateTime
+  currency    String
+  revenue     Decimal  @default(0)
+  ticket_count Int     @default(0)
+
+  depot       tblDepots @relation(fields: [depot_id], references: [id])
+
+  @@unique([depot_id, date, currency])
+}
