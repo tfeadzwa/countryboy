@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 97%;
+    --foreground: 0 0% 8%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 8%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 8%;
+
+    --primary: 160 55% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 20% 28%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 93%;
+    --muted-foreground: 0 0% 40%;
+
+    --accent: 205 70% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 160 55% 40%;
+
+    --radius: 0.625rem;
+
+    --sidebar-bg: 215 30% 18%;
+    --sidebar-fg: 210 15% 70%;
+    --sidebar-active: 205 70% 50%;
+    --sidebar-hover: 215 25% 24%;
+    --sidebar-border: 215 20% 22%;
+
+    --success: 160 55% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 40 85% 52%;
+    --warning-foreground: 0 0% 100%;
+
+    --stat-blue: 210 20% 28%;
+    --stat-teal: 160 55% 40%;
+    --stat-amber: 205 70% 50%;
+    --stat-green: 160 45% 48%;
+
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+
+    --sidebar-background: 215 30% 18%;
+    --sidebar-foreground: 210 15% 70%;
+    --sidebar-primary: 205 70% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 25% 24%;
+    --sidebar-accent-foreground: 210 15% 70%;
+    --sidebar-border: 215 20% 22%;
+    --sidebar-ring: 205 70% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  .stat-card-blue {
+    @apply bg-gradient-to-br from-[hsl(var(--stat-blue))] to-[hsl(210,20%,38%)];
+  }
+  .stat-card-teal {
+    @apply bg-gradient-to-br from-[hsl(var(--stat-teal))] to-[hsl(160,45%,50%)];
+  }
+  .stat-card-amber {
+    @apply bg-gradient-to-br from-[hsl(var(--stat-amber))] to-[hsl(205,60%,58%)];
+  }
+  .stat-card-green {
+    @apply bg-gradient-to-br from-[hsl(var(--stat-green))] to-[hsl(155,45%,55%)];
+  }
+}
