@@ -1,0 +1,45 @@
+# Node
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Vite / build outputs
+dist/
+frontend/dist/
+frontend/.turbo/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
+/var/log/
+
+# Environment
+.env
+.env.*
+server/.env
+frontend/.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Misc
+*.local
+coverage/
+
+# PM2
+pids/
+*.pid
+
+# Prisma
+prisma/migrations/
+
