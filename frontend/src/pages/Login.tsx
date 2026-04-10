@@ -141,7 +141,7 @@ const Login = () => {
           transition={{ delay: 0.8 }}
           className="relative z-10 text-[11px] text-[hsl(var(--sidebar-fg))]"
         >
-          © 2025 BusTicket System • All rights reserved
+          © 2025 CountryBoy System • All rights reserved
         </motion.p>
       </div>
 
@@ -158,7 +158,7 @@ const Login = () => {
             <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[hsl(var(--primary))] to-[hsl(var(--accent))] flex items-center justify-center">
               <Bus className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold text-foreground" style={{ fontFamily: 'var(--font-display)' }}>BusTicket</span>
+            <span className="text-lg font-bold text-foreground" style={{ fontFamily: 'var(--font-display)' }}>CountryBoy</span>
           </div>
 
           {/* Header */}
@@ -255,7 +255,7 @@ const Login = () => {
           </div>
 
           <p className="text-center text-[11px] text-muted-foreground/40 mt-8 lg:hidden">
-            © 2025 BusTicket System
+            © 2025 CountryBoy System
           </p>
         </motion.div>
       </div>

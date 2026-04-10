@@ -5,7 +5,7 @@ export const currentAdmin: AdminUser = {
   id: "admin1",
   username: "superadmin",
   full_name: "Admin User",
-  email: "admin@busticket.co",
+  email: "admin@countryboy.co",
   role: "SUPER_ADMIN",
 };
 
