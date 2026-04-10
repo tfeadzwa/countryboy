@@ -16,6 +16,7 @@ import { canManageAgents } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
 import type { Agent } from "@/types";
 
+//status configs
 const statusConfig: Record<string, { class: string; dot: string }> = {
   ACTIVE: { class: "bg-success/10 text-success border border-success/20", dot: "bg-success" },
   SUSPENDED: { class: "bg-destructive/10 text-destructive border border-destructive/20", dot: "bg-destructive" },
