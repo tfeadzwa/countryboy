@@ -272,7 +272,7 @@ const AdminUsers = () => {
       {/* Create / Edit dialog                                                */}
       {/* ------------------------------------------------------------------ */}
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>{editingAdmin ? 'Edit Admin User' : 'Add Admin User'}</DialogTitle>
             <DialogDescription>
@@ -289,139 +289,142 @@ const AdminUsers = () => {
               </div>
             )}
 
-            {/* Username (create only) */}
-            {!editingAdmin && (
+            {/* Two-column grid layout for better space usage */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Username (create only) */}
+              {!editingAdmin && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="au-username" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Username <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="au-username"
+                    placeholder="e.g. admin.harare"
+                    value={form.username}
+                    onChange={(e) => setForm((f) => ({ ...f, username: e.target.value.toLowerCase() }))}
+                    className="h-10 rounded-lg border-border/60 focus:border-accent transition-colors"
+                    disabled={saving}
+                  />
+                </div>
+              )}
+
+              {/* Full name */}
               <div className="space-y-1.5">
-                <Label htmlFor="au-username" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Username <span className="text-destructive">*</span>
+                <Label htmlFor="au-fullname" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Full Name <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="au-username"
-                  placeholder="e.g. admin.harare"
-                  value={form.username}
-                  onChange={(e) => setForm((f) => ({ ...f, username: e.target.value.toLowerCase() }))}
-                  className="h-10 rounded-xl bg-muted/30 border-border/60 focus:bg-background focus:border-[hsl(var(--accent))]"
+                  id="au-fullname"
+                  placeholder="e.g. John Moyo"
+                  value={form.full_name}
+                  onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
+                  className="h-10 rounded-lg border-border/60 focus:border-accent transition-colors"
                   disabled={saving}
                 />
               </div>
-            )}
 
-            {/* Full name */}
-            <div className="space-y-1.5">
-              <Label htmlFor="au-fullname" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Full Name <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="au-fullname"
-                placeholder="e.g. John Moyo"
-                value={form.full_name}
-                onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
-                className="h-10 rounded-xl bg-muted/30 border-border/60 focus:bg-background focus:border-[hsl(var(--accent))]"
-                disabled={saving}
-              />
-            </div>
-
-            {/* Email */}
-            <div className="space-y-1.5">
-              <Label htmlFor="au-email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Email
-              </Label>
-              <Input
-                id="au-email"
-                type="email"
-                placeholder="admin@example.com"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                className="h-10 rounded-xl bg-muted/30 border-border/60 focus:bg-background focus:border-[hsl(var(--accent))]"
-                disabled={saving}
-              />
-            </div>
-
-            {/* Role */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Role <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={form.role}
-                onValueChange={(v) => setForm((f) => ({ ...f, role: v as typeof form.role }))}
-                disabled={saving}
-              >
-                <SelectTrigger className="h-10 rounded-xl bg-muted/30 border-border/60">
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLE_OPTIONS.map((r) => (
-                    <SelectItem key={r.value} value={r.value}>
-                      <div>
-                        <span className="font-medium">{r.label}</span>
-                        <span className="text-muted-foreground text-xs ml-2">— {r.description}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Depot */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Depot
-              </Label>
-              <Select
-                value={form.depot_id || '_none'}
-                onValueChange={(v) => setForm((f) => ({ ...f, depot_id: v === '_none' ? '' : v }))}
-                disabled={saving}
-              >
-                <SelectTrigger className="h-10 rounded-xl bg-muted/30 border-border/60">
-                  <SelectValue placeholder="Select a depot" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_none">
-                    <span className="text-muted-foreground">No depot (system-wide)</span>
-                  </SelectItem>
-                  {depots.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>
-                      {d.name} <span className="text-muted-foreground text-xs ml-1">({d.merchant_code})</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Password (create only) */}
-            {!editingAdmin && (
+              {/* Email */}
               <div className="space-y-1.5">
-                <Label htmlFor="au-password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Password
-                  <span className="ml-1.5 text-muted-foreground/60 normal-case font-normal">(leave blank to auto-generate)</span>
+                <Label htmlFor="au-email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Email
                 </Label>
-                <div className="relative">
-                  <Input
-                    id="au-password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Min 8 characters"
-                    value={form.password}
-                    onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                    className="h-10 pr-10 rounded-xl bg-muted/30 border-border/60 focus:bg-background focus:border-[hsl(var(--accent))] appearance-none"
-                    disabled={saving}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
+                <Input
+                  id="au-email"
+                  type="email"
+                  placeholder="admin@example.com"
+                  value={form.email}
+                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                  className="h-10 rounded-lg border-border/60 focus:border-accent transition-colors"
+                  disabled={saving}
+                />
               </div>
-            )}
+
+              {/* Role */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Role <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={form.role}
+                  onValueChange={(v) => setForm((f) => ({ ...f, role: v as typeof form.role }))}
+                  disabled={saving}
+                >
+                  <SelectTrigger className="h-10 rounded-lg border-border/60">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ROLE_OPTIONS.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{r.label}</span>
+                          <span className="text-xs opacity-60">— {r.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Depot */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Depot
+                </Label>
+                <Select
+                  value={form.depot_id || '_none'}
+                  onValueChange={(v) => setForm((f) => ({ ...f, depot_id: v === '_none' ? '' : v }))}
+                  disabled={saving}
+                >
+                  <SelectTrigger className="h-10 rounded-lg border-border/60">
+                    <SelectValue placeholder="Select a depot" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">
+                      <span className="opacity-60">No depot (system-wide)</span>
+                    </SelectItem>
+                    {depots.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name} <span className="text-xs opacity-60 ml-1">({d.merchant_code})</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Password (create only) */}
+              {!editingAdmin && (
+                <div className="space-y-1.5 md:col-span-2">
+                  <Label htmlFor="au-password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Password
+                    <span className="ml-1.5 text-muted-foreground/60 normal-case font-normal">(leave blank to auto-generate)</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="au-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Min 8 characters"
+                      value={form.password}
+                      onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                      className="h-10 pr-10 rounded-lg border-border/60 focus:border-accent transition-colors appearance-none"
+                      disabled={saving}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog} disabled={saving}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={closeDialog} disabled={saving} className="px-6">Cancel</Button>
+            <Button onClick={handleSave} disabled={saving} className="px-6">
               {saving ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />

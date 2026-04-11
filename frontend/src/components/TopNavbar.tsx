@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Bell, Settings, LogOut, Search, Menu, User as UserIcon } from "lucide-react";
+import { Bell, Settings, LogOut, Search, Menu, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -8,13 +8,54 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
+import { isSuperAdmin } from "@/lib/permissions";
+import { useState, useEffect } from "react";
+import { depotService } from "@/lib/api/depot.service";
+import { Depot } from "@/types";
 
 const TopNavbar = ({ onMenuClick }: { onMenuClick?: () => void }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [depots, setDepots] = useState<Depot[]>([]);
+  const [selectedDepot, setSelectedDepot] = useState<string>("");
+  const userIsSuperAdmin = user ? isSuperAdmin(user.roles) : false;
+
+  // Load depots for SUPER_ADMIN users
+  useEffect(() => {
+    const loadDepots = async () => {
+      if (userIsSuperAdmin) {
+        try {
+          const depotList = await depotService.getAll();
+          setDepots(depotList);
+          
+          // Load saved depot selection
+          const saved = sessionStorage.getItem('selected_depot_id');
+          if (saved) {
+            setSelectedDepot(saved);
+          } else if (depotList.length > 0) {
+            // Default to first depot
+            setSelectedDepot(depotList[0].id);
+            sessionStorage.setItem('selected_depot_id', depotList[0].id);
+          }
+        } catch (err) {
+          console.error('Failed to load depots:', err);
+        }
+      }
+    };
+    loadDepots();
+  }, [userIsSuperAdmin]);
+
+  const handleDepotChange = (depotId: string) => {
+    setSelectedDepot(depotId);
+    sessionStorage.setItem('selected_depot_id', depotId);
+    // Reload page to refresh data with new depot context
+    window.location.reload();
+  };
 
   const handleLogout = () => {
+    sessionStorage.removeItem('selected_depot_id');
     logout();
   };
 
@@ -45,7 +86,29 @@ const TopNavbar = ({ onMenuClick }: { onMenuClick?: () => void }) => {
         </div>
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
+        {/* Depot Selector for SUPER_ADMIN */}
+        {userIsSuperAdmin && depots.length > 0 && (
+          <Select value={selectedDepot} onValueChange={handleDepotChange}>
+            <SelectTrigger className="h-9 w-[180px] sm:w-[220px] border-border/60 bg-muted/30 text-sm">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Select depot" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {depots.map((depot) => (
+                <SelectItem key={depot.id} value={depot.id}>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{depot.name}</span>
+                    <span className="text-xs opacity-60">{depot.merchant_code}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
         <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground" onClick={() => navigate("/notifications")}>
           <Bell className="h-4 w-4" />
           <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground flex items-center justify-center shadow-sm">3</span>
