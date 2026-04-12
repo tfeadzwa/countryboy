@@ -91,7 +91,11 @@ router.post('/login', validate(loginSchema), async (req: Request, res: Response)
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET as string, { expiresIn: '8h' });
+    const token = jwt.sign(
+      { userId: user.id, roles: roleNames, depot_id: user.depot_id ?? null },
+      process.env.JWT_SECRET as string,
+      { expiresIn: '8h' }
+    );
 
     authLoginLogger.info('LOGIN_SUCCESS', {
       userId: user.id,

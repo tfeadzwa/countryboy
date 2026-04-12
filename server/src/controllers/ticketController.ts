@@ -59,6 +59,8 @@ export const voidTicket = async (req: AuthenticatedRequest, res: Response) => {
 export const search = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const query: any = {};
+    // Always scope search to the request's depot — DEPOT_ADMIN cannot see other depots' tickets
+    if (req.depotId) query.depot_id = req.depotId;
     if (req.query.serial_number) query.serial_number = parseInt(req.query.serial_number as string);
     if (req.query.ticket_id) query.id = req.query.ticket_id;
     if (req.query.trip_id) query.trip_id = req.query.trip_id as string;

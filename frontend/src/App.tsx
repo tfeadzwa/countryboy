@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import SuperAdminRoute from "./components/auth/SuperAdminRoute";
 import AdminLayout from "./components/AdminLayout";
 import Dashboard from "./pages/Dashboard";
 import Depots from "./pages/Depots";
@@ -42,7 +43,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/depots" element={<Depots />} />
+              <Route path="/depots" element={<SuperAdminRoute><Depots /></SuperAdminRoute>} />
               <Route path="/agents" element={<Agents />} />
               <Route path="/fleets" element={<Fleets />} />
               <Route path="/routes" element={<RoutesPage />} />
@@ -51,7 +52,7 @@ const App = () => (
               <Route path="/devices" element={<Devices />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/notifications" element={<Notifications />} />
-              <Route path="/admin-users" element={<AdminUsers />} />
+              <Route path="/admin-users" element={<SuperAdminRoute><AdminUsers /></SuperAdminRoute>} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

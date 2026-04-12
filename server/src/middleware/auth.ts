@@ -5,8 +5,10 @@ import prisma from '../utils/prisma';
 interface JwtPayload {
   userId?: string;    // For admin users (web portal)
   agentId?: string;   // For agents (mobile app)
-  depotId?: string;   // Depot context
-  role?: string;      // User role (SUPER_ADMIN, DEPOT_ADMIN, AGENT)
+  depotId?: string;   // Depot context (legacy field, unused in new tokens)
+  role?: string;      // User role (legacy field, unused in new tokens)
+  roles?: string[];   // Admin user role names (embedded to avoid DB round-trip)
+  depot_id?: string | null; // Admin user depot (embedded to avoid DB round-trip)
   type: string;       // Token type (access, refresh)
 }
 
@@ -47,14 +49,26 @@ export const authMiddleware = async (req: AuthenticatedRequest, res: Response, n
 
     // Handle admin user tokens (web portal)
     if (payload.userId) {
-      const user = await prisma.tblAdminUsers.findUnique({
-        where: { id: payload.userId },
-        include: { roles: { include: { role: true } } }
-      });
-      if (!user) {
-        return res.status(401).json({ error: 'User not found' });
+      if (payload.roles) {
+        // New token format: reconstruct user object from JWT claims — no DB query needed
+        req.user = {
+          id: payload.userId,
+          depot_id: payload.depot_id ?? null,
+          status: 'ACTIVE',
+          // Reconstruct nested structure expected by rbac middleware
+          roles: payload.roles.map((name: string) => ({ role: { name } })),
+        };
+      } else {
+        // Legacy token (issued before this change): fall back to DB query
+        const user = await prisma.tblAdminUsers.findUnique({
+          where: { id: payload.userId },
+          include: { roles: { include: { role: true } } }
+        });
+        if (!user) {
+          return res.status(401).json({ error: 'User not found' });
+        }
+        req.user = user;
       }
-      req.user = user;
     }
     
     // Handle agent tokens (mobile app)

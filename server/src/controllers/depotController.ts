@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import prisma from '../utils/prisma';
 import { AuthenticatedRequest } from '@/middleware/auth';
 import { formatPrismaError } from '../utils/prismaErrors';
@@ -20,8 +20,10 @@ export const createDepot = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const listDepots = async (req: Request, res: Response) => {
-  const depots = await prisma.tblDepots.findMany();
+export const listDepots = async (req: AuthenticatedRequest, res: Response) => {
+  // SUPER_ADMIN (no depot_id) sees all depots; DEPOT_ADMIN sees only their own
+  const where = req.depotId ? { id: req.depotId } : {};
+  const depots = await prisma.tblDepots.findMany({ where });
   res.json(depots);
 };
 
