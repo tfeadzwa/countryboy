@@ -380,11 +380,11 @@ const AdminUsers = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="_none">
-                      <span className="opacity-60">No depot (system-wide)</span>
+                      <span className="text-muted-foreground">No depot (system-wide)</span>
                     </SelectItem>
                     {depots.map((d) => (
                       <SelectItem key={d.id} value={d.id}>
-                        {d.name} <span className="text-xs opacity-60 ml-1">({d.merchant_code})</span>
+                        {d.name} <span className="text-muted-foreground text-xs ml-1">({d.merchant_code})</span>
                       </SelectItem>
                     ))}
                   </SelectContent>

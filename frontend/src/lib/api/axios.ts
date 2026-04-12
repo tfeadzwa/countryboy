@@ -9,20 +9,13 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor to add auth token and depot context
+// Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
     const token = sessionStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    // Add depot context for SUPER_ADMIN users
-    const selectedDepot = sessionStorage.getItem('selected_depot_id');
-    if (selectedDepot) {
-      config.headers['x-depot-id'] = selectedDepot;
-    }
-    
     return config;
   },
   (error) => {
