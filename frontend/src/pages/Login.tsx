@@ -67,17 +67,6 @@ const Login = () => {
               <BrandLogo variant="light" height="h-12" showSubtitle subtitle="Transport Management" />
             </motion.div>
 
-            {/* Status pill */}
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.45, delay: 0.1 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/30 border border-white/15 backdrop-blur-md w-fit"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs font-medium text-white/85">System Operational</span>
-            </motion.div>
-
             {/* Headline */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
@@ -127,10 +116,16 @@ const Login = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.9 }}
-              className="flex items-center gap-2 text-[11px] text-white/30"
+              className="flex items-center justify-between text-[11px] text-white/30"
             >
-              <MapPin className="h-3 w-3 shrink-0" />
-              <span>Zimbabwe • © {new Date().getFullYear()} Country Boy Transport</span>
+              <span className="flex items-center gap-2">
+                <MapPin className="h-3 w-3 shrink-0" />
+                <span>Zimbabwe • © {new Date().getFullYear()} Country Boy Transport</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>System Operational</span>
+              </span>
             </motion.div>
           </div>
         </div>
