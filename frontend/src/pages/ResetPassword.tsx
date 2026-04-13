@@ -3,7 +3,8 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Bus, Lock, ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { Lock, ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 import { motion } from "framer-motion";
 import ErrorAlert from "@/components/ErrorAlert";
 import apiClient from "@/lib/api/axios";
@@ -75,13 +76,8 @@ const ResetPassword = () => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-[420px]"
       >
-        <div className="flex items-center gap-3 mb-10">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[hsl(var(--primary))] to-[hsl(var(--accent))] flex items-center justify-center">
-            <Bus className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="text-lg font-bold text-foreground" style={{ fontFamily: "var(--font-display)" }}>
-            CountryBoy
-          </span>
+        <div className="mb-10">
+          <BrandLogo variant="dark" height="h-10" showSubtitle subtitle="Transport Management" />
         </div>
 
         {!isSubmitted ? (

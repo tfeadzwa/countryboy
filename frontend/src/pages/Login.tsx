@@ -7,10 +7,8 @@ import { Lock, User, ArrowRight, Shield, Zap, BarChart3, Eye, EyeOff, MapPin } f
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import ErrorAlert from "@/components/ErrorAlert";
+import BrandLogo from "@/components/BrandLogo";
 import loginHeroBus from "@/assets/login-hero-bus.jpg";
-import cboyLogo from "@/assets/cboy-logo.svg";
-
-// CSS filter removed — SVG uses built-in colour groups (black / red / white)
 
 const adminHighlights = [
   { icon: Shield,    label: "Role-Based Access",    desc: "Superadmin & depot-level controls" },
@@ -65,16 +63,8 @@ const Login = () => {
               initial={{ opacity: 0, y: -12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.55 }}
-              className="space-y-2"
             >
-              <img
-                src={cboyLogo}
-                alt="Country Boy"
-                className="h-12 w-auto"
-              />
-              <p className="text-[11px] font-semibold text-white/50 uppercase tracking-[0.22em]" style={{ fontFamily: 'var(--font-display)' }}>
-                Transport Management
-              </p>
+              <BrandLogo variant="light" height="h-12" showSubtitle subtitle="Transport Management" />
             </motion.div>
 
             {/* Status pill */}
@@ -159,16 +149,8 @@ const Login = () => {
           className="w-full max-w-[400px]"
         >
           {/* Mobile logo */}
-          <div className="mb-10 lg:hidden space-y-1.5">
-            <img
-              src={cboyLogo}
-              alt="Country Boy"
-              className="h-10 w-auto"
-              style={{ filter: 'brightness(0) saturate(100%) invert(17%) sepia(83%) saturate(2600%) hue-rotate(347deg) brightness(92%)' }}
-            />
-            <p className="text-[10px] font-semibold text-foreground/60 uppercase tracking-[0.2em]" style={{ fontFamily: 'var(--font-display)' }}>
-              Transport Management
-            </p>
+          <div className="mb-10 lg:hidden">
+            <BrandLogo variant="dark" height="h-10" showSubtitle subtitle="Transport Management" />
           </div>
 
           {/* Header */}

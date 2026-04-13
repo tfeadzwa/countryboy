@@ -5,6 +5,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { canManageDepots, getPrimaryRole, getRoleDisplayName } from "@/lib/permissions";
+import BrandLogo from "@/components/BrandLogo";
+import cboyIcon from "@/assets/cboy-icon.svg";
 
 const mainLinks = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -61,14 +63,17 @@ const AppSidebar = ({ open = true, onToggle, onClose }: { open?: boolean; onTogg
     }`}>
       {/* Header */}
       <div className={`flex items-center border-b border-sidebar-border ${open || isMobileSheet ? "gap-3 px-4 py-4" : "flex-col gap-2 px-2 py-3"}`}>
-        <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
-          <Bus className="h-5 w-5 text-primary-foreground" />
-        </div>
-        {open && (
+        {open || isMobileSheet ? (
           <div className="flex-1 min-w-0">
-            <h1 className="font-display text-sm font-bold text-sidebar-primary-foreground tracking-tight leading-tight">CountryBoy</h1>
-            <p className="text-[10px] text-sidebar-foreground/50 font-medium tracking-wide uppercase">Admin Console</p>
+            <BrandLogo variant="light" height="h-9" showSubtitle subtitle="Admin Console" />
           </div>
+        ) : (
+          /* Collapsed: show only the horse icon */
+          <img
+            src={cboyIcon}
+            alt="Country Boy"
+            className="h-9 w-9 object-contain"
+          />
         )}
         {isMobileSheet ? (
           <button
