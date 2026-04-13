@@ -71,6 +71,11 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Brand identity tokens — use bg-brand-red, text-brand-gold etc.
+        brand: {
+          red:  "hsl(var(--brand-red))",
+          gold: "hsl(var(--brand-gold))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

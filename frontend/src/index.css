@@ -4,65 +4,139 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════════
+   COUNTRY BOY BRAND THEME
+   ═══════════════════════════════════════════════════════════════════
+   All design tokens live here. Change a value once — it propagates
+   to every component, page, button, input, sidebar and stat card.
+
+   BRAND PALETTE (from the bus livery):
+     --brand-red  : hsl(2, 72%, 43%)   — deep crimson red
+     --brand-gold : hsl(38, 82%, 50%)  — warm golden yellow
+
+   QUICK TWEAKS:
+     • Make buttons lighter red  → raise --primary lightness (e.g. 50%)
+     • Warmer background         → raise --background saturation
+     • Darker sidebar            → lower --sidebar-bg lightness
+     • Rounder corners           → increase --radius value
+   ═══════════════════════════════════════════════════════════════════ */
+
 @layer base {
   :root {
-    --background: 0 0% 97%;
-    --foreground: 0 0% 8%;
+    /* ── Brand identity tokens ─────────────────────────────────── */
+    --brand-red:  2 72% 43%;      /* CB Crimson — primary buttons, active states   */
+    --brand-gold: 38 82% 50%;     /* CB Gold    — accents, highlights, badges      */
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 8%;
+    /* ── Surface & background ──────────────────────────────────── */
+    --background: 30 25% 97%;     /* Warm off-white page background                */
+    --foreground: 220 15% 11%;    /* Near-black text                               */
+
+    --card: 0 0% 100%;            /* Pure white cards                              */
+    --card-foreground: 220 15% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 8%;
+    --popover-foreground: 220 15% 11%;
 
-    --primary: 160 55% 40%;
+    /* ── Primary action — CB Red ───────────────────────────────── */
+    --primary: var(--brand-red);
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 28%;
+    /* ── Secondary — dark charcoal ─────────────────────────────── */
+    --secondary: 220 15% 25%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 93%;
-    --muted-foreground: 0 0% 40%;
+    /* ── Muted / disabled surfaces ─────────────────────────────── */
+    --muted: 30 15% 93%;          /* Warm light grey                               */
+    --muted-foreground: 220 10% 44%;
 
-    --accent: 205 70% 50%;
-    --accent-foreground: 0 0% 100%;
+    /* ── Accent — CB Gold ──────────────────────────────────────── */
+    --accent: var(--brand-gold);
+    --accent-foreground: 220 15% 11%;  /* Dark text on gold for contrast           */
 
+    /* ── Destructive ───────────────────────────────────────────── */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 88%;
-    --input: 0 0% 88%;
-    --ring: 160 55% 40%;
+    /* ── Borders, inputs, focus rings ──────────────────────────── */
+    --border: 30 12% 87%;         /* Warm-tinted border                            */
+    --input: 30 12% 87%;
+    --ring: var(--brand-red);     /* Focus rings use brand red                     */
 
-    --radius: 0.625rem;
+    /* ── Border radius ─────────────────────────────────────────── */
+    --radius: 0.5rem;             /* Increase for rounder UI, decrease for sharper */
 
-    --sidebar-bg: 215 30% 18%;
-    --sidebar-fg: 210 15% 70%;
-    --sidebar-active: 205 70% 50%;
-    --sidebar-hover: 215 25% 24%;
-    --sidebar-border: 215 20% 22%;
-
-    --success: 160 55% 40%;
+    /* ── Semantic status colours ───────────────────────────────── */
+    --success: 142 55% 38%;       /* Green for revenue / active / success          */
     --success-foreground: 0 0% 100%;
-    --warning: 40 85% 52%;
-    --warning-foreground: 0 0% 100%;
+    --warning: var(--brand-gold); /* Gold for warnings (matches brand)             */
+    --warning-foreground: 220 15% 11%;
 
-    --stat-blue: 210 20% 28%;
-    --stat-teal: 160 55% 40%;
-    --stat-amber: 205 70% 50%;
-    --stat-green: 160 45% 48%;
+    /* ── Sidebar ────────────────────────────────────────────────── */
+    --sidebar-bg:      220 18% 12%;   /* Deep charcoal background                  */
+    --sidebar-fg:      220 12% 62%;   /* Muted secondary text in sidebar            */
+    --sidebar-active:  var(--brand-red); /* Active link highlight                  */
+    --sidebar-hover:   220 15% 19%;   /* Hover row fill                            */
+    --sidebar-border:  220 15% 17%;   /* Divider between sidebar sections          */
 
-    --font-display: 'Space Grotesk', sans-serif;
-    --font-body: 'DM Sans', sans-serif;
+    /* Shadcn sidebar aliases (keep for component compatibility) */
+    --sidebar-background:          var(--sidebar-bg);
+    --sidebar-foreground:          var(--sidebar-fg);
+    --sidebar-primary:             var(--brand-red);
+    --sidebar-primary-foreground:  0 0% 100%;
+    --sidebar-accent:              220 15% 19%;
+    --sidebar-accent-foreground:   220 12% 78%;
+    --sidebar-ring:                var(--brand-red);
 
-    --sidebar-background: 215 30% 18%;
-    --sidebar-foreground: 210 15% 70%;
-    --sidebar-primary: 205 70% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 25% 24%;
-    --sidebar-accent-foreground: 210 15% 70%;
-    --sidebar-border: 215 20% 22%;
-    --sidebar-ring: 205 70% 50%;
+    /* ── Dashboard stat card gradients ─────────────────────────── */
+    --stat-red:   2 72% 43%;      /* CB Red    — tickets / primary metric          */
+    --stat-gold:  38 82% 50%;     /* CB Gold   — revenue / money metric            */
+    --stat-navy:  220 18% 28%;    /* Dark navy — trips / count metric              */
+    --stat-green: 142 55% 38%;    /* Success green — active agents / fleet         */
+
+    /* Legacy aliases so any existing stat-card-blue/teal/amber/green still work */
+    --stat-blue:  var(--stat-navy);
+    --stat-teal:  var(--stat-red);
+    --stat-amber: var(--stat-gold);
+
+    /* ── Typography ─────────────────────────────────────────────── */
+    --font-display: 'Space Grotesk', sans-serif;  /* Headings, labels, bold UI    */
+    --font-body:    'DM Sans', sans-serif;         /* Body text, inputs, paragraphs */
+  }
+
+  /* ── Dark mode ────────────────────────────────────────────────── */
+  /* Toggle by adding class="dark" to <html>. All variables below   */
+  /* override the light-mode values; brand colours stay consistent. */
+  .dark {
+    --background: 220 18% 8%;
+    --foreground: 30 10% 93%;
+
+    --card: 220 15% 11%;
+    --card-foreground: 30 10% 93%;
+
+    --popover: 220 15% 11%;
+    --popover-foreground: 30 10% 93%;
+
+    --primary: 2 72% 52%;         /* Slightly lighter red for dark bg contrast    */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 15% 22%;
+    --secondary-foreground: 30 10% 90%;
+
+    --muted: 220 15% 15%;
+    --muted-foreground: 220 10% 55%;
+
+    --accent: 38 82% 56%;         /* Lighter gold for dark bg contrast            */
+    --accent-foreground: 220 15% 11%;
+
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 18%;
+    --input: 220 15% 18%;
+    --ring: 2 72% 52%;
+
+    --success: 142 50% 45%;
+    --warning: 38 82% 56%;
   }
 }
 
@@ -79,17 +153,27 @@
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   STAT CARD UTILITY CLASSES
+   Used on Dashboard metric cards.
+   ═══════════════════════════════════════════════════════════════════ */
 @layer utilities {
-  .stat-card-blue {
-    @apply bg-gradient-to-br from-[hsl(var(--stat-blue))] to-[hsl(210,20%,38%)];
+  /* New semantic names */
+  .stat-card-red {
+    @apply bg-gradient-to-br from-[hsl(2,72%,43%)] to-[hsl(2,65%,54%)];
   }
-  .stat-card-teal {
-    @apply bg-gradient-to-br from-[hsl(var(--stat-teal))] to-[hsl(160,45%,50%)];
+  .stat-card-gold {
+    @apply bg-gradient-to-br from-[hsl(38,82%,44%)] to-[hsl(38,75%,56%)];
   }
-  .stat-card-amber {
-    @apply bg-gradient-to-br from-[hsl(var(--stat-amber))] to-[hsl(205,60%,58%)];
+  .stat-card-navy {
+    @apply bg-gradient-to-br from-[hsl(220,18%,28%)] to-[hsl(220,15%,38%)];
   }
   .stat-card-green {
-    @apply bg-gradient-to-br from-[hsl(var(--stat-green))] to-[hsl(155,45%,55%)];
+    @apply bg-gradient-to-br from-[hsl(142,55%,33%)] to-[hsl(142,48%,46%)];
   }
+
+  /* Legacy aliases — keep existing Dashboard markup working */
+  .stat-card-blue  { @apply stat-card-navy; }
+  .stat-card-teal  { @apply stat-card-red;  }
+  .stat-card-amber { @apply stat-card-gold; }
 }
