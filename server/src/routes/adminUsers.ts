@@ -29,7 +29,7 @@ const createAdminUserSchema = z.object({
     role: z.enum(['DEPOT_ADMIN', 'MANAGER', 'VIEWER'], {
       errorMap: () => ({ message: 'Role must be DEPOT_ADMIN, MANAGER or VIEWER' }),
     }),
-    depot_id: z.string().uuid('Invalid depot ID').optional(),
+    depot_id: z.string().optional(),
     password: z.string().min(8, 'Password must be at least 8 characters').optional(),
   }),
 });
@@ -40,7 +40,7 @@ const updateAdminUserSchema = z.object({
     full_name: z.string().min(2).max(100).optional(),
     email: z.string().email('Invalid email address').optional().nullable(),
     role: z.enum(['DEPOT_ADMIN', 'MANAGER', 'VIEWER']).optional(),
-    depot_id: z.string().uuid('Invalid depot ID').optional().nullable(),
+    depot_id: z.string().optional().nullable(),
     status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
   }),
 });
