@@ -3,607 +3,58 @@
 part of 'database.dart';
 
 // ignore_for_file: type=lint
-class $DevicesTable extends Devices with TableInfo<$DevicesTable, Device> {
+class $CachedFleetsTable extends CachedFleets
+    with TableInfo<$CachedFleetsTable, CachedFleet> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $DevicesTable(this.attachedDatabase, [this._alias]);
+  $CachedFleetsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
     'id',
     aliasedName,
     false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _numberMeta = const VerificationMeta('number');
+  @override
+  late final GeneratedColumn<String> number = GeneratedColumn<String>(
+    'number',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
+    defaultValue: const Constant('ACTIVE'),
   );
-  static const VerificationMeta _deviceTokenMeta = const VerificationMeta(
-    'deviceToken',
+  static const VerificationMeta _capacityMeta = const VerificationMeta(
+    'capacity',
   );
   @override
-  late final GeneratedColumn<String> deviceToken = GeneratedColumn<String>(
-    'device_token',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
-  );
-  static const VerificationMeta _merchantCodeMeta = const VerificationMeta(
-    'merchantCode',
-  );
-  @override
-  late final GeneratedColumn<String> merchantCode = GeneratedColumn<String>(
-    'merchant_code',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _deviceNameMeta = const VerificationMeta(
-    'deviceName',
-  );
-  @override
-  late final GeneratedColumn<String> deviceName = GeneratedColumn<String>(
-    'device_name',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _deviceModelMeta = const VerificationMeta(
-    'deviceModel',
-  );
-  @override
-  late final GeneratedColumn<String> deviceModel = GeneratedColumn<String>(
-    'device_model',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _pairedAtMeta = const VerificationMeta(
-    'pairedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> pairedAt = GeneratedColumn<DateTime>(
-    'paired_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _isActiveMeta = const VerificationMeta(
-    'isActive',
-  );
-  @override
-  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
-    'is_active',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_active" IN (0, 1))',
-    ),
-    defaultValue: const Constant(true),
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    deviceToken,
-    merchantCode,
-    deviceName,
-    deviceModel,
-    pairedAt,
-    isActive,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'devices';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<Device> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('device_token')) {
-      context.handle(
-        _deviceTokenMeta,
-        deviceToken.isAcceptableOrUnknown(
-          data['device_token']!,
-          _deviceTokenMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_deviceTokenMeta);
-    }
-    if (data.containsKey('merchant_code')) {
-      context.handle(
-        _merchantCodeMeta,
-        merchantCode.isAcceptableOrUnknown(
-          data['merchant_code']!,
-          _merchantCodeMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_merchantCodeMeta);
-    }
-    if (data.containsKey('device_name')) {
-      context.handle(
-        _deviceNameMeta,
-        deviceName.isAcceptableOrUnknown(data['device_name']!, _deviceNameMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_deviceNameMeta);
-    }
-    if (data.containsKey('device_model')) {
-      context.handle(
-        _deviceModelMeta,
-        deviceModel.isAcceptableOrUnknown(
-          data['device_model']!,
-          _deviceModelMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_deviceModelMeta);
-    }
-    if (data.containsKey('paired_at')) {
-      context.handle(
-        _pairedAtMeta,
-        pairedAt.isAcceptableOrUnknown(data['paired_at']!, _pairedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_pairedAtMeta);
-    }
-    if (data.containsKey('is_active')) {
-      context.handle(
-        _isActiveMeta,
-        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
-      );
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  Device map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Device(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      deviceToken: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}device_token'],
-      )!,
-      merchantCode: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}merchant_code'],
-      )!,
-      deviceName: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}device_name'],
-      )!,
-      deviceModel: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}device_model'],
-      )!,
-      pairedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}paired_at'],
-      )!,
-      isActive: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}is_active'],
-      )!,
-    );
-  }
-
-  @override
-  $DevicesTable createAlias(String alias) {
-    return $DevicesTable(attachedDatabase, alias);
-  }
-}
-
-class Device extends DataClass implements Insertable<Device> {
-  final int id;
-  final String deviceToken;
-  final String merchantCode;
-  final String deviceName;
-  final String deviceModel;
-  final DateTime pairedAt;
-  final bool isActive;
-  const Device({
-    required this.id,
-    required this.deviceToken,
-    required this.merchantCode,
-    required this.deviceName,
-    required this.deviceModel,
-    required this.pairedAt,
-    required this.isActive,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['device_token'] = Variable<String>(deviceToken);
-    map['merchant_code'] = Variable<String>(merchantCode);
-    map['device_name'] = Variable<String>(deviceName);
-    map['device_model'] = Variable<String>(deviceModel);
-    map['paired_at'] = Variable<DateTime>(pairedAt);
-    map['is_active'] = Variable<bool>(isActive);
-    return map;
-  }
-
-  DevicesCompanion toCompanion(bool nullToAbsent) {
-    return DevicesCompanion(
-      id: Value(id),
-      deviceToken: Value(deviceToken),
-      merchantCode: Value(merchantCode),
-      deviceName: Value(deviceName),
-      deviceModel: Value(deviceModel),
-      pairedAt: Value(pairedAt),
-      isActive: Value(isActive),
-    );
-  }
-
-  factory Device.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Device(
-      id: serializer.fromJson<int>(json['id']),
-      deviceToken: serializer.fromJson<String>(json['deviceToken']),
-      merchantCode: serializer.fromJson<String>(json['merchantCode']),
-      deviceName: serializer.fromJson<String>(json['deviceName']),
-      deviceModel: serializer.fromJson<String>(json['deviceModel']),
-      pairedAt: serializer.fromJson<DateTime>(json['pairedAt']),
-      isActive: serializer.fromJson<bool>(json['isActive']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'deviceToken': serializer.toJson<String>(deviceToken),
-      'merchantCode': serializer.toJson<String>(merchantCode),
-      'deviceName': serializer.toJson<String>(deviceName),
-      'deviceModel': serializer.toJson<String>(deviceModel),
-      'pairedAt': serializer.toJson<DateTime>(pairedAt),
-      'isActive': serializer.toJson<bool>(isActive),
-    };
-  }
-
-  Device copyWith({
-    int? id,
-    String? deviceToken,
-    String? merchantCode,
-    String? deviceName,
-    String? deviceModel,
-    DateTime? pairedAt,
-    bool? isActive,
-  }) => Device(
-    id: id ?? this.id,
-    deviceToken: deviceToken ?? this.deviceToken,
-    merchantCode: merchantCode ?? this.merchantCode,
-    deviceName: deviceName ?? this.deviceName,
-    deviceModel: deviceModel ?? this.deviceModel,
-    pairedAt: pairedAt ?? this.pairedAt,
-    isActive: isActive ?? this.isActive,
-  );
-  Device copyWithCompanion(DevicesCompanion data) {
-    return Device(
-      id: data.id.present ? data.id.value : this.id,
-      deviceToken: data.deviceToken.present
-          ? data.deviceToken.value
-          : this.deviceToken,
-      merchantCode: data.merchantCode.present
-          ? data.merchantCode.value
-          : this.merchantCode,
-      deviceName: data.deviceName.present
-          ? data.deviceName.value
-          : this.deviceName,
-      deviceModel: data.deviceModel.present
-          ? data.deviceModel.value
-          : this.deviceModel,
-      pairedAt: data.pairedAt.present ? data.pairedAt.value : this.pairedAt,
-      isActive: data.isActive.present ? data.isActive.value : this.isActive,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('Device(')
-          ..write('id: $id, ')
-          ..write('deviceToken: $deviceToken, ')
-          ..write('merchantCode: $merchantCode, ')
-          ..write('deviceName: $deviceName, ')
-          ..write('deviceModel: $deviceModel, ')
-          ..write('pairedAt: $pairedAt, ')
-          ..write('isActive: $isActive')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    deviceToken,
-    merchantCode,
-    deviceName,
-    deviceModel,
-    pairedAt,
-    isActive,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is Device &&
-          other.id == this.id &&
-          other.deviceToken == this.deviceToken &&
-          other.merchantCode == this.merchantCode &&
-          other.deviceName == this.deviceName &&
-          other.deviceModel == this.deviceModel &&
-          other.pairedAt == this.pairedAt &&
-          other.isActive == this.isActive);
-}
-
-class DevicesCompanion extends UpdateCompanion<Device> {
-  final Value<int> id;
-  final Value<String> deviceToken;
-  final Value<String> merchantCode;
-  final Value<String> deviceName;
-  final Value<String> deviceModel;
-  final Value<DateTime> pairedAt;
-  final Value<bool> isActive;
-  const DevicesCompanion({
-    this.id = const Value.absent(),
-    this.deviceToken = const Value.absent(),
-    this.merchantCode = const Value.absent(),
-    this.deviceName = const Value.absent(),
-    this.deviceModel = const Value.absent(),
-    this.pairedAt = const Value.absent(),
-    this.isActive = const Value.absent(),
-  });
-  DevicesCompanion.insert({
-    this.id = const Value.absent(),
-    required String deviceToken,
-    required String merchantCode,
-    required String deviceName,
-    required String deviceModel,
-    required DateTime pairedAt,
-    this.isActive = const Value.absent(),
-  }) : deviceToken = Value(deviceToken),
-       merchantCode = Value(merchantCode),
-       deviceName = Value(deviceName),
-       deviceModel = Value(deviceModel),
-       pairedAt = Value(pairedAt);
-  static Insertable<Device> custom({
-    Expression<int>? id,
-    Expression<String>? deviceToken,
-    Expression<String>? merchantCode,
-    Expression<String>? deviceName,
-    Expression<String>? deviceModel,
-    Expression<DateTime>? pairedAt,
-    Expression<bool>? isActive,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (deviceToken != null) 'device_token': deviceToken,
-      if (merchantCode != null) 'merchant_code': merchantCode,
-      if (deviceName != null) 'device_name': deviceName,
-      if (deviceModel != null) 'device_model': deviceModel,
-      if (pairedAt != null) 'paired_at': pairedAt,
-      if (isActive != null) 'is_active': isActive,
-    });
-  }
-
-  DevicesCompanion copyWith({
-    Value<int>? id,
-    Value<String>? deviceToken,
-    Value<String>? merchantCode,
-    Value<String>? deviceName,
-    Value<String>? deviceModel,
-    Value<DateTime>? pairedAt,
-    Value<bool>? isActive,
-  }) {
-    return DevicesCompanion(
-      id: id ?? this.id,
-      deviceToken: deviceToken ?? this.deviceToken,
-      merchantCode: merchantCode ?? this.merchantCode,
-      deviceName: deviceName ?? this.deviceName,
-      deviceModel: deviceModel ?? this.deviceModel,
-      pairedAt: pairedAt ?? this.pairedAt,
-      isActive: isActive ?? this.isActive,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (deviceToken.present) {
-      map['device_token'] = Variable<String>(deviceToken.value);
-    }
-    if (merchantCode.present) {
-      map['merchant_code'] = Variable<String>(merchantCode.value);
-    }
-    if (deviceName.present) {
-      map['device_name'] = Variable<String>(deviceName.value);
-    }
-    if (deviceModel.present) {
-      map['device_model'] = Variable<String>(deviceModel.value);
-    }
-    if (pairedAt.present) {
-      map['paired_at'] = Variable<DateTime>(pairedAt.value);
-    }
-    if (isActive.present) {
-      map['is_active'] = Variable<bool>(isActive.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('DevicesCompanion(')
-          ..write('id: $id, ')
-          ..write('deviceToken: $deviceToken, ')
-          ..write('merchantCode: $merchantCode, ')
-          ..write('deviceName: $deviceName, ')
-          ..write('deviceModel: $deviceModel, ')
-          ..write('pairedAt: $pairedAt, ')
-          ..write('isActive: $isActive')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $AgentsTable extends Agents with TableInfo<$AgentsTable, Agent> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $AgentsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
+  late final GeneratedColumn<int> capacity = GeneratedColumn<int>(
+    'capacity',
     aliasedName,
     false,
     type: DriftSqlType.int,
     requiredDuringInsert: false,
+    defaultValue: const Constant(0),
   );
-  static const VerificationMeta _agentCodeMeta = const VerificationMeta(
-    'agentCode',
-  );
-  @override
-  late final GeneratedColumn<String> agentCode = GeneratedColumn<String>(
-    'agent_code',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
-  );
-  static const VerificationMeta _firstNameMeta = const VerificationMeta(
-    'firstName',
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
   );
   @override
-  late final GeneratedColumn<String> firstName = GeneratedColumn<String>(
-    'first_name',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _lastNameMeta = const VerificationMeta(
-    'lastName',
-  );
-  @override
-  late final GeneratedColumn<String> lastName = GeneratedColumn<String>(
-    'last_name',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _roleMeta = const VerificationMeta('role');
-  @override
-  late final GeneratedColumn<String> role = GeneratedColumn<String>(
-    'role',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _merchantCodeMeta = const VerificationMeta(
-    'merchantCode',
-  );
-  @override
-  late final GeneratedColumn<String> merchantCode = GeneratedColumn<String>(
-    'merchant_code',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _merchantNameMeta = const VerificationMeta(
-    'merchantName',
-  );
-  @override
-  late final GeneratedColumn<String> merchantName = GeneratedColumn<String>(
-    'merchant_name',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _depotCodeMeta = const VerificationMeta(
-    'depotCode',
-  );
-  @override
-  late final GeneratedColumn<String> depotCode = GeneratedColumn<String>(
-    'depot_code',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _depotNameMeta = const VerificationMeta(
-    'depotName',
-  );
-  @override
-  late final GeneratedColumn<String> depotName = GeneratedColumn<String>(
-    'depot_name',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _lastLoginMeta = const VerificationMeta(
-    'lastLogin',
-  );
-  @override
-  late final GeneratedColumn<DateTime> lastLogin = GeneratedColumn<DateTime>(
-    'last_login',
-    aliasedName,
-    true,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta(
-    'createdAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-    'created_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
     aliasedName,
     false,
     type: DriftSqlType.dateTime,
@@ -612,124 +63,55 @@ class $AgentsTable extends Agents with TableInfo<$AgentsTable, Agent> {
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    agentCode,
-    firstName,
-    lastName,
-    role,
-    merchantCode,
-    merchantName,
-    depotCode,
-    depotName,
-    lastLogin,
-    createdAt,
-    updatedAt,
+    number,
+    status,
+    capacity,
+    cachedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'agents';
+  static const String $name = 'cached_fleets';
   @override
   VerificationContext validateIntegrity(
-    Insertable<Agent> instance, {
+    Insertable<CachedFleet> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
     }
-    if (data.containsKey('agent_code')) {
+    if (data.containsKey('number')) {
       context.handle(
-        _agentCodeMeta,
-        agentCode.isAcceptableOrUnknown(data['agent_code']!, _agentCodeMeta),
+        _numberMeta,
+        number.isAcceptableOrUnknown(data['number']!, _numberMeta),
       );
     } else if (isInserting) {
-      context.missing(_agentCodeMeta);
+      context.missing(_numberMeta);
     }
-    if (data.containsKey('first_name')) {
+    if (data.containsKey('status')) {
       context.handle(
-        _firstNameMeta,
-        firstName.isAcceptableOrUnknown(data['first_name']!, _firstNameMeta),
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('capacity')) {
+      context.handle(
+        _capacityMeta,
+        capacity.isAcceptableOrUnknown(data['capacity']!, _capacityMeta),
+      );
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
       );
     } else if (isInserting) {
-      context.missing(_firstNameMeta);
-    }
-    if (data.containsKey('last_name')) {
-      context.handle(
-        _lastNameMeta,
-        lastName.isAcceptableOrUnknown(data['last_name']!, _lastNameMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_lastNameMeta);
-    }
-    if (data.containsKey('role')) {
-      context.handle(
-        _roleMeta,
-        role.isAcceptableOrUnknown(data['role']!, _roleMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_roleMeta);
-    }
-    if (data.containsKey('merchant_code')) {
-      context.handle(
-        _merchantCodeMeta,
-        merchantCode.isAcceptableOrUnknown(
-          data['merchant_code']!,
-          _merchantCodeMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_merchantCodeMeta);
-    }
-    if (data.containsKey('merchant_name')) {
-      context.handle(
-        _merchantNameMeta,
-        merchantName.isAcceptableOrUnknown(
-          data['merchant_name']!,
-          _merchantNameMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_merchantNameMeta);
-    }
-    if (data.containsKey('depot_code')) {
-      context.handle(
-        _depotCodeMeta,
-        depotCode.isAcceptableOrUnknown(data['depot_code']!, _depotCodeMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_depotCodeMeta);
-    }
-    if (data.containsKey('depot_name')) {
-      context.handle(
-        _depotNameMeta,
-        depotName.isAcceptableOrUnknown(data['depot_name']!, _depotNameMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_depotNameMeta);
-    }
-    if (data.containsKey('last_login')) {
-      context.handle(
-        _lastLoginMeta,
-        lastLogin.isAcceptableOrUnknown(data['last_login']!, _lastLoginMeta),
-      );
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(
-        _createdAtMeta,
-        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_createdAtMeta);
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
+      context.missing(_cachedAtMeta);
     }
     return context;
   }
@@ -737,378 +119,203 @@ class $AgentsTable extends Agents with TableInfo<$AgentsTable, Agent> {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Agent map(Map<String, dynamic> data, {String? tablePrefix}) {
+  CachedFleet map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Agent(
+    return CachedFleet(
       id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      agentCode: attachedDatabase.typeMapping.read(
+      number: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}agent_code'],
+        data['${effectivePrefix}number'],
       )!,
-      firstName: attachedDatabase.typeMapping.read(
+      status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}first_name'],
+        data['${effectivePrefix}status'],
       )!,
-      lastName: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}last_name'],
+      capacity: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}capacity'],
       )!,
-      role: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}role'],
-      )!,
-      merchantCode: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}merchant_code'],
-      )!,
-      merchantName: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}merchant_name'],
-      )!,
-      depotCode: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}depot_code'],
-      )!,
-      depotName: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}depot_name'],
-      )!,
-      lastLogin: attachedDatabase.typeMapping.read(
+      cachedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
-        data['${effectivePrefix}last_login'],
-      ),
-      createdAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}created_at'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
+        data['${effectivePrefix}cached_at'],
       )!,
     );
   }
 
   @override
-  $AgentsTable createAlias(String alias) {
-    return $AgentsTable(attachedDatabase, alias);
+  $CachedFleetsTable createAlias(String alias) {
+    return $CachedFleetsTable(attachedDatabase, alias);
   }
 }
 
-class Agent extends DataClass implements Insertable<Agent> {
-  final int id;
-  final String agentCode;
-  final String firstName;
-  final String lastName;
-  final String role;
-  final String merchantCode;
-  final String merchantName;
-  final String depotCode;
-  final String depotName;
-  final DateTime? lastLogin;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  const Agent({
+class CachedFleet extends DataClass implements Insertable<CachedFleet> {
+  final String id;
+  final String number;
+  final String status;
+  final int capacity;
+  final DateTime cachedAt;
+  const CachedFleet({
     required this.id,
-    required this.agentCode,
-    required this.firstName,
-    required this.lastName,
-    required this.role,
-    required this.merchantCode,
-    required this.merchantName,
-    required this.depotCode,
-    required this.depotName,
-    this.lastLogin,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.number,
+    required this.status,
+    required this.capacity,
+    required this.cachedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['agent_code'] = Variable<String>(agentCode);
-    map['first_name'] = Variable<String>(firstName);
-    map['last_name'] = Variable<String>(lastName);
-    map['role'] = Variable<String>(role);
-    map['merchant_code'] = Variable<String>(merchantCode);
-    map['merchant_name'] = Variable<String>(merchantName);
-    map['depot_code'] = Variable<String>(depotCode);
-    map['depot_name'] = Variable<String>(depotName);
-    if (!nullToAbsent || lastLogin != null) {
-      map['last_login'] = Variable<DateTime>(lastLogin);
-    }
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['id'] = Variable<String>(id);
+    map['number'] = Variable<String>(number);
+    map['status'] = Variable<String>(status);
+    map['capacity'] = Variable<int>(capacity);
+    map['cached_at'] = Variable<DateTime>(cachedAt);
     return map;
   }
 
-  AgentsCompanion toCompanion(bool nullToAbsent) {
-    return AgentsCompanion(
+  CachedFleetsCompanion toCompanion(bool nullToAbsent) {
+    return CachedFleetsCompanion(
       id: Value(id),
-      agentCode: Value(agentCode),
-      firstName: Value(firstName),
-      lastName: Value(lastName),
-      role: Value(role),
-      merchantCode: Value(merchantCode),
-      merchantName: Value(merchantName),
-      depotCode: Value(depotCode),
-      depotName: Value(depotName),
-      lastLogin: lastLogin == null && nullToAbsent
-          ? const Value.absent()
-          : Value(lastLogin),
-      createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
+      number: Value(number),
+      status: Value(status),
+      capacity: Value(capacity),
+      cachedAt: Value(cachedAt),
     );
   }
 
-  factory Agent.fromJson(
+  factory CachedFleet.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Agent(
-      id: serializer.fromJson<int>(json['id']),
-      agentCode: serializer.fromJson<String>(json['agentCode']),
-      firstName: serializer.fromJson<String>(json['firstName']),
-      lastName: serializer.fromJson<String>(json['lastName']),
-      role: serializer.fromJson<String>(json['role']),
-      merchantCode: serializer.fromJson<String>(json['merchantCode']),
-      merchantName: serializer.fromJson<String>(json['merchantName']),
-      depotCode: serializer.fromJson<String>(json['depotCode']),
-      depotName: serializer.fromJson<String>(json['depotName']),
-      lastLogin: serializer.fromJson<DateTime?>(json['lastLogin']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    return CachedFleet(
+      id: serializer.fromJson<String>(json['id']),
+      number: serializer.fromJson<String>(json['number']),
+      status: serializer.fromJson<String>(json['status']),
+      capacity: serializer.fromJson<int>(json['capacity']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
     );
   }
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'agentCode': serializer.toJson<String>(agentCode),
-      'firstName': serializer.toJson<String>(firstName),
-      'lastName': serializer.toJson<String>(lastName),
-      'role': serializer.toJson<String>(role),
-      'merchantCode': serializer.toJson<String>(merchantCode),
-      'merchantName': serializer.toJson<String>(merchantName),
-      'depotCode': serializer.toJson<String>(depotCode),
-      'depotName': serializer.toJson<String>(depotName),
-      'lastLogin': serializer.toJson<DateTime?>(lastLogin),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'id': serializer.toJson<String>(id),
+      'number': serializer.toJson<String>(number),
+      'status': serializer.toJson<String>(status),
+      'capacity': serializer.toJson<int>(capacity),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
     };
   }
 
-  Agent copyWith({
-    int? id,
-    String? agentCode,
-    String? firstName,
-    String? lastName,
-    String? role,
-    String? merchantCode,
-    String? merchantName,
-    String? depotCode,
-    String? depotName,
-    Value<DateTime?> lastLogin = const Value.absent(),
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) => Agent(
+  CachedFleet copyWith({
+    String? id,
+    String? number,
+    String? status,
+    int? capacity,
+    DateTime? cachedAt,
+  }) => CachedFleet(
     id: id ?? this.id,
-    agentCode: agentCode ?? this.agentCode,
-    firstName: firstName ?? this.firstName,
-    lastName: lastName ?? this.lastName,
-    role: role ?? this.role,
-    merchantCode: merchantCode ?? this.merchantCode,
-    merchantName: merchantName ?? this.merchantName,
-    depotCode: depotCode ?? this.depotCode,
-    depotName: depotName ?? this.depotName,
-    lastLogin: lastLogin.present ? lastLogin.value : this.lastLogin,
-    createdAt: createdAt ?? this.createdAt,
-    updatedAt: updatedAt ?? this.updatedAt,
+    number: number ?? this.number,
+    status: status ?? this.status,
+    capacity: capacity ?? this.capacity,
+    cachedAt: cachedAt ?? this.cachedAt,
   );
-  Agent copyWithCompanion(AgentsCompanion data) {
-    return Agent(
+  CachedFleet copyWithCompanion(CachedFleetsCompanion data) {
+    return CachedFleet(
       id: data.id.present ? data.id.value : this.id,
-      agentCode: data.agentCode.present ? data.agentCode.value : this.agentCode,
-      firstName: data.firstName.present ? data.firstName.value : this.firstName,
-      lastName: data.lastName.present ? data.lastName.value : this.lastName,
-      role: data.role.present ? data.role.value : this.role,
-      merchantCode: data.merchantCode.present
-          ? data.merchantCode.value
-          : this.merchantCode,
-      merchantName: data.merchantName.present
-          ? data.merchantName.value
-          : this.merchantName,
-      depotCode: data.depotCode.present ? data.depotCode.value : this.depotCode,
-      depotName: data.depotName.present ? data.depotName.value : this.depotName,
-      lastLogin: data.lastLogin.present ? data.lastLogin.value : this.lastLogin,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      number: data.number.present ? data.number.value : this.number,
+      status: data.status.present ? data.status.value : this.status,
+      capacity: data.capacity.present ? data.capacity.value : this.capacity,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('Agent(')
+    return (StringBuffer('CachedFleet(')
           ..write('id: $id, ')
-          ..write('agentCode: $agentCode, ')
-          ..write('firstName: $firstName, ')
-          ..write('lastName: $lastName, ')
-          ..write('role: $role, ')
-          ..write('merchantCode: $merchantCode, ')
-          ..write('merchantName: $merchantName, ')
-          ..write('depotCode: $depotCode, ')
-          ..write('depotName: $depotName, ')
-          ..write('lastLogin: $lastLogin, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('number: $number, ')
+          ..write('status: $status, ')
+          ..write('capacity: $capacity, ')
+          ..write('cachedAt: $cachedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-    id,
-    agentCode,
-    firstName,
-    lastName,
-    role,
-    merchantCode,
-    merchantName,
-    depotCode,
-    depotName,
-    lastLogin,
-    createdAt,
-    updatedAt,
-  );
+  int get hashCode => Object.hash(id, number, status, capacity, cachedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Agent &&
+      (other is CachedFleet &&
           other.id == this.id &&
-          other.agentCode == this.agentCode &&
-          other.firstName == this.firstName &&
-          other.lastName == this.lastName &&
-          other.role == this.role &&
-          other.merchantCode == this.merchantCode &&
-          other.merchantName == this.merchantName &&
-          other.depotCode == this.depotCode &&
-          other.depotName == this.depotName &&
-          other.lastLogin == this.lastLogin &&
-          other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.number == this.number &&
+          other.status == this.status &&
+          other.capacity == this.capacity &&
+          other.cachedAt == this.cachedAt);
 }
 
-class AgentsCompanion extends UpdateCompanion<Agent> {
-  final Value<int> id;
-  final Value<String> agentCode;
-  final Value<String> firstName;
-  final Value<String> lastName;
-  final Value<String> role;
-  final Value<String> merchantCode;
-  final Value<String> merchantName;
-  final Value<String> depotCode;
-  final Value<String> depotName;
-  final Value<DateTime?> lastLogin;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
-  const AgentsCompanion({
+class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
+  final Value<String> id;
+  final Value<String> number;
+  final Value<String> status;
+  final Value<int> capacity;
+  final Value<DateTime> cachedAt;
+  final Value<int> rowid;
+  const CachedFleetsCompanion({
     this.id = const Value.absent(),
-    this.agentCode = const Value.absent(),
-    this.firstName = const Value.absent(),
-    this.lastName = const Value.absent(),
-    this.role = const Value.absent(),
-    this.merchantCode = const Value.absent(),
-    this.merchantName = const Value.absent(),
-    this.depotCode = const Value.absent(),
-    this.depotName = const Value.absent(),
-    this.lastLogin = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.updatedAt = const Value.absent(),
+    this.number = const Value.absent(),
+    this.status = const Value.absent(),
+    this.capacity = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
-  AgentsCompanion.insert({
-    this.id = const Value.absent(),
-    required String agentCode,
-    required String firstName,
-    required String lastName,
-    required String role,
-    required String merchantCode,
-    required String merchantName,
-    required String depotCode,
-    required String depotName,
-    this.lastLogin = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
-  }) : agentCode = Value(agentCode),
-       firstName = Value(firstName),
-       lastName = Value(lastName),
-       role = Value(role),
-       merchantCode = Value(merchantCode),
-       merchantName = Value(merchantName),
-       depotCode = Value(depotCode),
-       depotName = Value(depotName),
-       createdAt = Value(createdAt),
-       updatedAt = Value(updatedAt);
-  static Insertable<Agent> custom({
-    Expression<int>? id,
-    Expression<String>? agentCode,
-    Expression<String>? firstName,
-    Expression<String>? lastName,
-    Expression<String>? role,
-    Expression<String>? merchantCode,
-    Expression<String>? merchantName,
-    Expression<String>? depotCode,
-    Expression<String>? depotName,
-    Expression<DateTime>? lastLogin,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
+  CachedFleetsCompanion.insert({
+    required String id,
+    required String number,
+    this.status = const Value.absent(),
+    this.capacity = const Value.absent(),
+    required DateTime cachedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       number = Value(number),
+       cachedAt = Value(cachedAt);
+  static Insertable<CachedFleet> custom({
+    Expression<String>? id,
+    Expression<String>? number,
+    Expression<String>? status,
+    Expression<int>? capacity,
+    Expression<DateTime>? cachedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (agentCode != null) 'agent_code': agentCode,
-      if (firstName != null) 'first_name': firstName,
-      if (lastName != null) 'last_name': lastName,
-      if (role != null) 'role': role,
-      if (merchantCode != null) 'merchant_code': merchantCode,
-      if (merchantName != null) 'merchant_name': merchantName,
-      if (depotCode != null) 'depot_code': depotCode,
-      if (depotName != null) 'depot_name': depotName,
-      if (lastLogin != null) 'last_login': lastLogin,
-      if (createdAt != null) 'created_at': createdAt,
-      if (updatedAt != null) 'updated_at': updatedAt,
+      if (number != null) 'number': number,
+      if (status != null) 'status': status,
+      if (capacity != null) 'capacity': capacity,
+      if (cachedAt != null) 'cached_at': cachedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
-  AgentsCompanion copyWith({
-    Value<int>? id,
-    Value<String>? agentCode,
-    Value<String>? firstName,
-    Value<String>? lastName,
-    Value<String>? role,
-    Value<String>? merchantCode,
-    Value<String>? merchantName,
-    Value<String>? depotCode,
-    Value<String>? depotName,
-    Value<DateTime?>? lastLogin,
-    Value<DateTime>? createdAt,
-    Value<DateTime>? updatedAt,
+  CachedFleetsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? number,
+    Value<String>? status,
+    Value<int>? capacity,
+    Value<DateTime>? cachedAt,
+    Value<int>? rowid,
   }) {
-    return AgentsCompanion(
+    return CachedFleetsCompanion(
       id: id ?? this.id,
-      agentCode: agentCode ?? this.agentCode,
-      firstName: firstName ?? this.firstName,
-      lastName: lastName ?? this.lastName,
-      role: role ?? this.role,
-      merchantCode: merchantCode ?? this.merchantCode,
-      merchantName: merchantName ?? this.merchantName,
-      depotCode: depotCode ?? this.depotCode,
-      depotName: depotName ?? this.depotName,
-      lastLogin: lastLogin ?? this.lastLogin,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      number: number ?? this.number,
+      status: status ?? this.status,
+      capacity: capacity ?? this.capacity,
+      cachedAt: cachedAt ?? this.cachedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -1116,111 +323,50 @@ class AgentsCompanion extends UpdateCompanion<Agent> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     if (id.present) {
-      map['id'] = Variable<int>(id.value);
+      map['id'] = Variable<String>(id.value);
     }
-    if (agentCode.present) {
-      map['agent_code'] = Variable<String>(agentCode.value);
+    if (number.present) {
+      map['number'] = Variable<String>(number.value);
     }
-    if (firstName.present) {
-      map['first_name'] = Variable<String>(firstName.value);
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
     }
-    if (lastName.present) {
-      map['last_name'] = Variable<String>(lastName.value);
+    if (capacity.present) {
+      map['capacity'] = Variable<int>(capacity.value);
     }
-    if (role.present) {
-      map['role'] = Variable<String>(role.value);
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
     }
-    if (merchantCode.present) {
-      map['merchant_code'] = Variable<String>(merchantCode.value);
-    }
-    if (merchantName.present) {
-      map['merchant_name'] = Variable<String>(merchantName.value);
-    }
-    if (depotCode.present) {
-      map['depot_code'] = Variable<String>(depotCode.value);
-    }
-    if (depotName.present) {
-      map['depot_name'] = Variable<String>(depotName.value);
-    }
-    if (lastLogin.present) {
-      map['last_login'] = Variable<DateTime>(lastLogin.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
-    }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
     }
     return map;
   }
 
   @override
   String toString() {
-    return (StringBuffer('AgentsCompanion(')
+    return (StringBuffer('CachedFleetsCompanion(')
           ..write('id: $id, ')
-          ..write('agentCode: $agentCode, ')
-          ..write('firstName: $firstName, ')
-          ..write('lastName: $lastName, ')
-          ..write('role: $role, ')
-          ..write('merchantCode: $merchantCode, ')
-          ..write('merchantName: $merchantName, ')
-          ..write('depotCode: $depotCode, ')
-          ..write('depotName: $depotName, ')
-          ..write('lastLogin: $lastLogin, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('number: $number, ')
+          ..write('status: $status, ')
+          ..write('capacity: $capacity, ')
+          ..write('cachedAt: $cachedAt, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
 }
 
-class $RoutesTable extends Routes with TableInfo<$RoutesTable, Route> {
+class $CachedRoutesTable extends CachedRoutes
+    with TableInfo<$CachedRoutesTable, CachedRoute> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $RoutesTable(this.attachedDatabase, [this._alias]);
+  $CachedRoutesTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
     'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  static const VerificationMeta _serverIdMeta = const VerificationMeta(
-    'serverId',
-  );
-  @override
-  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
-    'server_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
-  );
-  static const VerificationMeta _routeCodeMeta = const VerificationMeta(
-    'routeCode',
-  );
-  @override
-  late final GeneratedColumn<String> routeCode = GeneratedColumn<String>(
-    'route_code',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _routeNameMeta = const VerificationMeta(
-    'routeName',
-  );
-  @override
-  late final GeneratedColumn<String> routeName = GeneratedColumn<String>(
-    'route_name',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -1241,634 +387,6 @@ class $RoutesTable extends Routes with TableInfo<$RoutesTable, Route> {
   @override
   late final GeneratedColumn<String> destination = GeneratedColumn<String>(
     'destination',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _fareMeta = const VerificationMeta('fare');
-  @override
-  late final GeneratedColumn<double> fare = GeneratedColumn<double>(
-    'fare',
-    aliasedName,
-    false,
-    type: DriftSqlType.double,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _distanceKmMeta = const VerificationMeta(
-    'distanceKm',
-  );
-  @override
-  late final GeneratedColumn<int> distanceKm = GeneratedColumn<int>(
-    'distance_km',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _isActiveMeta = const VerificationMeta(
-    'isActive',
-  );
-  @override
-  late final GeneratedColumn<bool> isActive = GeneratedColumn<bool>(
-    'is_active',
-    aliasedName,
-    false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_active" IN (0, 1))',
-    ),
-    defaultValue: const Constant(true),
-  );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta(
-    'createdAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-    'created_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
-  @override
-  List<GeneratedColumn> get $columns => [
-    id,
-    serverId,
-    routeCode,
-    routeName,
-    origin,
-    destination,
-    fare,
-    distanceKm,
-    isActive,
-    createdAt,
-    updatedAt,
-  ];
-  @override
-  String get aliasedName => _alias ?? actualTableName;
-  @override
-  String get actualTableName => $name;
-  static const String $name = 'routes';
-  @override
-  VerificationContext validateIntegrity(
-    Insertable<Route> instance, {
-    bool isInserting = false,
-  }) {
-    final context = VerificationContext();
-    final data = instance.toColumns(true);
-    if (data.containsKey('id')) {
-      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('server_id')) {
-      context.handle(
-        _serverIdMeta,
-        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_serverIdMeta);
-    }
-    if (data.containsKey('route_code')) {
-      context.handle(
-        _routeCodeMeta,
-        routeCode.isAcceptableOrUnknown(data['route_code']!, _routeCodeMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_routeCodeMeta);
-    }
-    if (data.containsKey('route_name')) {
-      context.handle(
-        _routeNameMeta,
-        routeName.isAcceptableOrUnknown(data['route_name']!, _routeNameMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_routeNameMeta);
-    }
-    if (data.containsKey('origin')) {
-      context.handle(
-        _originMeta,
-        origin.isAcceptableOrUnknown(data['origin']!, _originMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_originMeta);
-    }
-    if (data.containsKey('destination')) {
-      context.handle(
-        _destinationMeta,
-        destination.isAcceptableOrUnknown(
-          data['destination']!,
-          _destinationMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_destinationMeta);
-    }
-    if (data.containsKey('fare')) {
-      context.handle(
-        _fareMeta,
-        fare.isAcceptableOrUnknown(data['fare']!, _fareMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_fareMeta);
-    }
-    if (data.containsKey('distance_km')) {
-      context.handle(
-        _distanceKmMeta,
-        distanceKm.isAcceptableOrUnknown(data['distance_km']!, _distanceKmMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_distanceKmMeta);
-    }
-    if (data.containsKey('is_active')) {
-      context.handle(
-        _isActiveMeta,
-        isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
-      );
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(
-        _createdAtMeta,
-        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_createdAtMeta);
-    }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
-    return context;
-  }
-
-  @override
-  Set<GeneratedColumn> get $primaryKey => {id};
-  @override
-  Route map(Map<String, dynamic> data, {String? tablePrefix}) {
-    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Route(
-      id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}id'],
-      )!,
-      serverId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}server_id'],
-      )!,
-      routeCode: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}route_code'],
-      )!,
-      routeName: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}route_name'],
-      )!,
-      origin: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}origin'],
-      )!,
-      destination: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}destination'],
-      )!,
-      fare: attachedDatabase.typeMapping.read(
-        DriftSqlType.double,
-        data['${effectivePrefix}fare'],
-      )!,
-      distanceKm: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}distance_km'],
-      )!,
-      isActive: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}is_active'],
-      )!,
-      createdAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}created_at'],
-      )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      )!,
-    );
-  }
-
-  @override
-  $RoutesTable createAlias(String alias) {
-    return $RoutesTable(attachedDatabase, alias);
-  }
-}
-
-class Route extends DataClass implements Insertable<Route> {
-  final int id;
-  final String serverId;
-  final String routeCode;
-  final String routeName;
-  final String origin;
-  final String destination;
-  final double fare;
-  final int distanceKm;
-  final bool isActive;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  const Route({
-    required this.id,
-    required this.serverId,
-    required this.routeCode,
-    required this.routeName,
-    required this.origin,
-    required this.destination,
-    required this.fare,
-    required this.distanceKm,
-    required this.isActive,
-    required this.createdAt,
-    required this.updatedAt,
-  });
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['server_id'] = Variable<String>(serverId);
-    map['route_code'] = Variable<String>(routeCode);
-    map['route_name'] = Variable<String>(routeName);
-    map['origin'] = Variable<String>(origin);
-    map['destination'] = Variable<String>(destination);
-    map['fare'] = Variable<double>(fare);
-    map['distance_km'] = Variable<int>(distanceKm);
-    map['is_active'] = Variable<bool>(isActive);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
-    return map;
-  }
-
-  RoutesCompanion toCompanion(bool nullToAbsent) {
-    return RoutesCompanion(
-      id: Value(id),
-      serverId: Value(serverId),
-      routeCode: Value(routeCode),
-      routeName: Value(routeName),
-      origin: Value(origin),
-      destination: Value(destination),
-      fare: Value(fare),
-      distanceKm: Value(distanceKm),
-      isActive: Value(isActive),
-      createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
-    );
-  }
-
-  factory Route.fromJson(
-    Map<String, dynamic> json, {
-    ValueSerializer? serializer,
-  }) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Route(
-      id: serializer.fromJson<int>(json['id']),
-      serverId: serializer.fromJson<String>(json['serverId']),
-      routeCode: serializer.fromJson<String>(json['routeCode']),
-      routeName: serializer.fromJson<String>(json['routeName']),
-      origin: serializer.fromJson<String>(json['origin']),
-      destination: serializer.fromJson<String>(json['destination']),
-      fare: serializer.fromJson<double>(json['fare']),
-      distanceKm: serializer.fromJson<int>(json['distanceKm']),
-      isActive: serializer.fromJson<bool>(json['isActive']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
-    );
-  }
-  @override
-  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
-    serializer ??= driftRuntimeOptions.defaultSerializer;
-    return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'serverId': serializer.toJson<String>(serverId),
-      'routeCode': serializer.toJson<String>(routeCode),
-      'routeName': serializer.toJson<String>(routeName),
-      'origin': serializer.toJson<String>(origin),
-      'destination': serializer.toJson<String>(destination),
-      'fare': serializer.toJson<double>(fare),
-      'distanceKm': serializer.toJson<int>(distanceKm),
-      'isActive': serializer.toJson<bool>(isActive),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
-    };
-  }
-
-  Route copyWith({
-    int? id,
-    String? serverId,
-    String? routeCode,
-    String? routeName,
-    String? origin,
-    String? destination,
-    double? fare,
-    int? distanceKm,
-    bool? isActive,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) => Route(
-    id: id ?? this.id,
-    serverId: serverId ?? this.serverId,
-    routeCode: routeCode ?? this.routeCode,
-    routeName: routeName ?? this.routeName,
-    origin: origin ?? this.origin,
-    destination: destination ?? this.destination,
-    fare: fare ?? this.fare,
-    distanceKm: distanceKm ?? this.distanceKm,
-    isActive: isActive ?? this.isActive,
-    createdAt: createdAt ?? this.createdAt,
-    updatedAt: updatedAt ?? this.updatedAt,
-  );
-  Route copyWithCompanion(RoutesCompanion data) {
-    return Route(
-      id: data.id.present ? data.id.value : this.id,
-      serverId: data.serverId.present ? data.serverId.value : this.serverId,
-      routeCode: data.routeCode.present ? data.routeCode.value : this.routeCode,
-      routeName: data.routeName.present ? data.routeName.value : this.routeName,
-      origin: data.origin.present ? data.origin.value : this.origin,
-      destination: data.destination.present
-          ? data.destination.value
-          : this.destination,
-      fare: data.fare.present ? data.fare.value : this.fare,
-      distanceKm: data.distanceKm.present
-          ? data.distanceKm.value
-          : this.distanceKm,
-      isActive: data.isActive.present ? data.isActive.value : this.isActive,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
-    );
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('Route(')
-          ..write('id: $id, ')
-          ..write('serverId: $serverId, ')
-          ..write('routeCode: $routeCode, ')
-          ..write('routeName: $routeName, ')
-          ..write('origin: $origin, ')
-          ..write('destination: $destination, ')
-          ..write('fare: $fare, ')
-          ..write('distanceKm: $distanceKm, ')
-          ..write('isActive: $isActive, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
-          ..write(')'))
-        .toString();
-  }
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    serverId,
-    routeCode,
-    routeName,
-    origin,
-    destination,
-    fare,
-    distanceKm,
-    isActive,
-    createdAt,
-    updatedAt,
-  );
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is Route &&
-          other.id == this.id &&
-          other.serverId == this.serverId &&
-          other.routeCode == this.routeCode &&
-          other.routeName == this.routeName &&
-          other.origin == this.origin &&
-          other.destination == this.destination &&
-          other.fare == this.fare &&
-          other.distanceKm == this.distanceKm &&
-          other.isActive == this.isActive &&
-          other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
-}
-
-class RoutesCompanion extends UpdateCompanion<Route> {
-  final Value<int> id;
-  final Value<String> serverId;
-  final Value<String> routeCode;
-  final Value<String> routeName;
-  final Value<String> origin;
-  final Value<String> destination;
-  final Value<double> fare;
-  final Value<int> distanceKm;
-  final Value<bool> isActive;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
-  const RoutesCompanion({
-    this.id = const Value.absent(),
-    this.serverId = const Value.absent(),
-    this.routeCode = const Value.absent(),
-    this.routeName = const Value.absent(),
-    this.origin = const Value.absent(),
-    this.destination = const Value.absent(),
-    this.fare = const Value.absent(),
-    this.distanceKm = const Value.absent(),
-    this.isActive = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.updatedAt = const Value.absent(),
-  });
-  RoutesCompanion.insert({
-    this.id = const Value.absent(),
-    required String serverId,
-    required String routeCode,
-    required String routeName,
-    required String origin,
-    required String destination,
-    required double fare,
-    required int distanceKm,
-    this.isActive = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
-  }) : serverId = Value(serverId),
-       routeCode = Value(routeCode),
-       routeName = Value(routeName),
-       origin = Value(origin),
-       destination = Value(destination),
-       fare = Value(fare),
-       distanceKm = Value(distanceKm),
-       createdAt = Value(createdAt),
-       updatedAt = Value(updatedAt);
-  static Insertable<Route> custom({
-    Expression<int>? id,
-    Expression<String>? serverId,
-    Expression<String>? routeCode,
-    Expression<String>? routeName,
-    Expression<String>? origin,
-    Expression<String>? destination,
-    Expression<double>? fare,
-    Expression<int>? distanceKm,
-    Expression<bool>? isActive,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
-  }) {
-    return RawValuesInsertable({
-      if (id != null) 'id': id,
-      if (serverId != null) 'server_id': serverId,
-      if (routeCode != null) 'route_code': routeCode,
-      if (routeName != null) 'route_name': routeName,
-      if (origin != null) 'origin': origin,
-      if (destination != null) 'destination': destination,
-      if (fare != null) 'fare': fare,
-      if (distanceKm != null) 'distance_km': distanceKm,
-      if (isActive != null) 'is_active': isActive,
-      if (createdAt != null) 'created_at': createdAt,
-      if (updatedAt != null) 'updated_at': updatedAt,
-    });
-  }
-
-  RoutesCompanion copyWith({
-    Value<int>? id,
-    Value<String>? serverId,
-    Value<String>? routeCode,
-    Value<String>? routeName,
-    Value<String>? origin,
-    Value<String>? destination,
-    Value<double>? fare,
-    Value<int>? distanceKm,
-    Value<bool>? isActive,
-    Value<DateTime>? createdAt,
-    Value<DateTime>? updatedAt,
-  }) {
-    return RoutesCompanion(
-      id: id ?? this.id,
-      serverId: serverId ?? this.serverId,
-      routeCode: routeCode ?? this.routeCode,
-      routeName: routeName ?? this.routeName,
-      origin: origin ?? this.origin,
-      destination: destination ?? this.destination,
-      fare: fare ?? this.fare,
-      distanceKm: distanceKm ?? this.distanceKm,
-      isActive: isActive ?? this.isActive,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
-  }
-
-  @override
-  Map<String, Expression> toColumns(bool nullToAbsent) {
-    final map = <String, Expression>{};
-    if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (serverId.present) {
-      map['server_id'] = Variable<String>(serverId.value);
-    }
-    if (routeCode.present) {
-      map['route_code'] = Variable<String>(routeCode.value);
-    }
-    if (routeName.present) {
-      map['route_name'] = Variable<String>(routeName.value);
-    }
-    if (origin.present) {
-      map['origin'] = Variable<String>(origin.value);
-    }
-    if (destination.present) {
-      map['destination'] = Variable<String>(destination.value);
-    }
-    if (fare.present) {
-      map['fare'] = Variable<double>(fare.value);
-    }
-    if (distanceKm.present) {
-      map['distance_km'] = Variable<int>(distanceKm.value);
-    }
-    if (isActive.present) {
-      map['is_active'] = Variable<bool>(isActive.value);
-    }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
-    }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
-    }
-    return map;
-  }
-
-  @override
-  String toString() {
-    return (StringBuffer('RoutesCompanion(')
-          ..write('id: $id, ')
-          ..write('serverId: $serverId, ')
-          ..write('routeCode: $routeCode, ')
-          ..write('routeName: $routeName, ')
-          ..write('origin: $origin, ')
-          ..write('destination: $destination, ')
-          ..write('fare: $fare, ')
-          ..write('distanceKm: $distanceKm, ')
-          ..write('isActive: $isActive, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
-          ..write(')'))
-        .toString();
-  }
-}
-
-class $FleetsTable extends Fleets with TableInfo<$FleetsTable, Fleet> {
-  @override
-  final GeneratedDatabase attachedDatabase;
-  final String? _alias;
-  $FleetsTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _idMeta = const VerificationMeta('id');
-  @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
-    'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  static const VerificationMeta _serverIdMeta = const VerificationMeta(
-    'serverId',
-  );
-  @override
-  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
-    'server_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
-  );
-  static const VerificationMeta _numberMeta = const VerificationMeta('number');
-  @override
-  late final GeneratedColumn<String> number = GeneratedColumn<String>(
-    'number',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _depotIdMeta = const VerificationMeta(
-    'depotId',
-  );
-  @override
-  late final GeneratedColumn<String> depotId = GeneratedColumn<String>(
-    'depot_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -1900,65 +418,49 @@ class $FleetsTable extends Fleets with TableInfo<$FleetsTable, Fleet> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
-  );
-  @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
-    aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
-  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    serverId,
-    number,
-    depotId,
+    origin,
+    destination,
     isActive,
     cachedAt,
-    updatedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'fleets';
+  static const String $name = 'cached_routes';
   @override
   VerificationContext validateIntegrity(
-    Insertable<Fleet> instance, {
+    Insertable<CachedRoute> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
     }
-    if (data.containsKey('server_id')) {
+    if (data.containsKey('origin')) {
       context.handle(
-        _serverIdMeta,
-        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+        _originMeta,
+        origin.isAcceptableOrUnknown(data['origin']!, _originMeta),
       );
     } else if (isInserting) {
-      context.missing(_serverIdMeta);
+      context.missing(_originMeta);
     }
-    if (data.containsKey('number')) {
+    if (data.containsKey('destination')) {
       context.handle(
-        _numberMeta,
-        number.isAcceptableOrUnknown(data['number']!, _numberMeta),
+        _destinationMeta,
+        destination.isAcceptableOrUnknown(
+          data['destination']!,
+          _destinationMeta,
+        ),
       );
     } else if (isInserting) {
-      context.missing(_numberMeta);
-    }
-    if (data.containsKey('depot_id')) {
-      context.handle(
-        _depotIdMeta,
-        depotId.isAcceptableOrUnknown(data['depot_id']!, _depotIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_depotIdMeta);
+      context.missing(_destinationMeta);
     }
     if (data.containsKey('is_active')) {
       context.handle(
@@ -1974,38 +476,26 @@ class $FleetsTable extends Fleets with TableInfo<$FleetsTable, Fleet> {
     } else if (isInserting) {
       context.missing(_cachedAtMeta);
     }
-    if (data.containsKey('updated_at')) {
-      context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
-    }
     return context;
   }
 
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Fleet map(Map<String, dynamic> data, {String? tablePrefix}) {
+  CachedRoute map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Fleet(
+    return CachedRoute(
       id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      serverId: attachedDatabase.typeMapping.read(
+      origin: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}server_id'],
+        data['${effectivePrefix}origin'],
       )!,
-      number: attachedDatabase.typeMapping.read(
+      destination: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}number'],
-      )!,
-      depotId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}depot_id'],
+        data['${effectivePrefix}destination'],
       )!,
       isActive: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
@@ -2015,216 +505,183 @@ class $FleetsTable extends Fleets with TableInfo<$FleetsTable, Fleet> {
         DriftSqlType.dateTime,
         data['${effectivePrefix}cached_at'],
       )!,
-      updatedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
-      )!,
     );
   }
 
   @override
-  $FleetsTable createAlias(String alias) {
-    return $FleetsTable(attachedDatabase, alias);
+  $CachedRoutesTable createAlias(String alias) {
+    return $CachedRoutesTable(attachedDatabase, alias);
   }
 }
 
-class Fleet extends DataClass implements Insertable<Fleet> {
-  final int id;
-  final String serverId;
-  final String number;
-  final String depotId;
+class CachedRoute extends DataClass implements Insertable<CachedRoute> {
+  final String id;
+  final String origin;
+  final String destination;
   final bool isActive;
   final DateTime cachedAt;
-  final DateTime updatedAt;
-  const Fleet({
+  const CachedRoute({
     required this.id,
-    required this.serverId,
-    required this.number,
-    required this.depotId,
+    required this.origin,
+    required this.destination,
     required this.isActive,
     required this.cachedAt,
-    required this.updatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['server_id'] = Variable<String>(serverId);
-    map['number'] = Variable<String>(number);
-    map['depot_id'] = Variable<String>(depotId);
+    map['id'] = Variable<String>(id);
+    map['origin'] = Variable<String>(origin);
+    map['destination'] = Variable<String>(destination);
     map['is_active'] = Variable<bool>(isActive);
     map['cached_at'] = Variable<DateTime>(cachedAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
 
-  FleetsCompanion toCompanion(bool nullToAbsent) {
-    return FleetsCompanion(
+  CachedRoutesCompanion toCompanion(bool nullToAbsent) {
+    return CachedRoutesCompanion(
       id: Value(id),
-      serverId: Value(serverId),
-      number: Value(number),
-      depotId: Value(depotId),
+      origin: Value(origin),
+      destination: Value(destination),
       isActive: Value(isActive),
       cachedAt: Value(cachedAt),
-      updatedAt: Value(updatedAt),
     );
   }
 
-  factory Fleet.fromJson(
+  factory CachedRoute.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Fleet(
-      id: serializer.fromJson<int>(json['id']),
-      serverId: serializer.fromJson<String>(json['serverId']),
-      number: serializer.fromJson<String>(json['number']),
-      depotId: serializer.fromJson<String>(json['depotId']),
+    return CachedRoute(
+      id: serializer.fromJson<String>(json['id']),
+      origin: serializer.fromJson<String>(json['origin']),
+      destination: serializer.fromJson<String>(json['destination']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'serverId': serializer.toJson<String>(serverId),
-      'number': serializer.toJson<String>(number),
-      'depotId': serializer.toJson<String>(depotId),
+      'id': serializer.toJson<String>(id),
+      'origin': serializer.toJson<String>(origin),
+      'destination': serializer.toJson<String>(destination),
       'isActive': serializer.toJson<bool>(isActive),
       'cachedAt': serializer.toJson<DateTime>(cachedAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
 
-  Fleet copyWith({
-    int? id,
-    String? serverId,
-    String? number,
-    String? depotId,
+  CachedRoute copyWith({
+    String? id,
+    String? origin,
+    String? destination,
     bool? isActive,
     DateTime? cachedAt,
-    DateTime? updatedAt,
-  }) => Fleet(
+  }) => CachedRoute(
     id: id ?? this.id,
-    serverId: serverId ?? this.serverId,
-    number: number ?? this.number,
-    depotId: depotId ?? this.depotId,
+    origin: origin ?? this.origin,
+    destination: destination ?? this.destination,
     isActive: isActive ?? this.isActive,
     cachedAt: cachedAt ?? this.cachedAt,
-    updatedAt: updatedAt ?? this.updatedAt,
   );
-  Fleet copyWithCompanion(FleetsCompanion data) {
-    return Fleet(
+  CachedRoute copyWithCompanion(CachedRoutesCompanion data) {
+    return CachedRoute(
       id: data.id.present ? data.id.value : this.id,
-      serverId: data.serverId.present ? data.serverId.value : this.serverId,
-      number: data.number.present ? data.number.value : this.number,
-      depotId: data.depotId.present ? data.depotId.value : this.depotId,
+      origin: data.origin.present ? data.origin.value : this.origin,
+      destination: data.destination.present
+          ? data.destination.value
+          : this.destination,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('Fleet(')
+    return (StringBuffer('CachedRoute(')
           ..write('id: $id, ')
-          ..write('serverId: $serverId, ')
-          ..write('number: $number, ')
-          ..write('depotId: $depotId, ')
+          ..write('origin: $origin, ')
+          ..write('destination: $destination, ')
           ..write('isActive: $isActive, ')
-          ..write('cachedAt: $cachedAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('cachedAt: $cachedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, serverId, number, depotId, isActive, cachedAt, updatedAt);
+  int get hashCode => Object.hash(id, origin, destination, isActive, cachedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Fleet &&
+      (other is CachedRoute &&
           other.id == this.id &&
-          other.serverId == this.serverId &&
-          other.number == this.number &&
-          other.depotId == this.depotId &&
+          other.origin == this.origin &&
+          other.destination == this.destination &&
           other.isActive == this.isActive &&
-          other.cachedAt == this.cachedAt &&
-          other.updatedAt == this.updatedAt);
+          other.cachedAt == this.cachedAt);
 }
 
-class FleetsCompanion extends UpdateCompanion<Fleet> {
-  final Value<int> id;
-  final Value<String> serverId;
-  final Value<String> number;
-  final Value<String> depotId;
+class CachedRoutesCompanion extends UpdateCompanion<CachedRoute> {
+  final Value<String> id;
+  final Value<String> origin;
+  final Value<String> destination;
   final Value<bool> isActive;
   final Value<DateTime> cachedAt;
-  final Value<DateTime> updatedAt;
-  const FleetsCompanion({
+  final Value<int> rowid;
+  const CachedRoutesCompanion({
     this.id = const Value.absent(),
-    this.serverId = const Value.absent(),
-    this.number = const Value.absent(),
-    this.depotId = const Value.absent(),
+    this.origin = const Value.absent(),
+    this.destination = const Value.absent(),
     this.isActive = const Value.absent(),
     this.cachedAt = const Value.absent(),
-    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
-  FleetsCompanion.insert({
-    this.id = const Value.absent(),
-    required String serverId,
-    required String number,
-    required String depotId,
+  CachedRoutesCompanion.insert({
+    required String id,
+    required String origin,
+    required String destination,
     this.isActive = const Value.absent(),
     required DateTime cachedAt,
-    required DateTime updatedAt,
-  }) : serverId = Value(serverId),
-       number = Value(number),
-       depotId = Value(depotId),
-       cachedAt = Value(cachedAt),
-       updatedAt = Value(updatedAt);
-  static Insertable<Fleet> custom({
-    Expression<int>? id,
-    Expression<String>? serverId,
-    Expression<String>? number,
-    Expression<String>? depotId,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       origin = Value(origin),
+       destination = Value(destination),
+       cachedAt = Value(cachedAt);
+  static Insertable<CachedRoute> custom({
+    Expression<String>? id,
+    Expression<String>? origin,
+    Expression<String>? destination,
     Expression<bool>? isActive,
     Expression<DateTime>? cachedAt,
-    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (serverId != null) 'server_id': serverId,
-      if (number != null) 'number': number,
-      if (depotId != null) 'depot_id': depotId,
+      if (origin != null) 'origin': origin,
+      if (destination != null) 'destination': destination,
       if (isActive != null) 'is_active': isActive,
       if (cachedAt != null) 'cached_at': cachedAt,
-      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
-  FleetsCompanion copyWith({
-    Value<int>? id,
-    Value<String>? serverId,
-    Value<String>? number,
-    Value<String>? depotId,
+  CachedRoutesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? origin,
+    Value<String>? destination,
     Value<bool>? isActive,
     Value<DateTime>? cachedAt,
-    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
   }) {
-    return FleetsCompanion(
+    return CachedRoutesCompanion(
       id: id ?? this.id,
-      serverId: serverId ?? this.serverId,
-      number: number ?? this.number,
-      depotId: depotId ?? this.depotId,
+      origin: origin ?? this.origin,
+      destination: destination ?? this.destination,
       isActive: isActive ?? this.isActive,
       cachedAt: cachedAt ?? this.cachedAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -2232,16 +689,13 @@ class FleetsCompanion extends UpdateCompanion<Fleet> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     if (id.present) {
-      map['id'] = Variable<int>(id.value);
+      map['id'] = Variable<String>(id.value);
     }
-    if (serverId.present) {
-      map['server_id'] = Variable<String>(serverId.value);
+    if (origin.present) {
+      map['origin'] = Variable<String>(origin.value);
     }
-    if (number.present) {
-      map['number'] = Variable<String>(number.value);
-    }
-    if (depotId.present) {
-      map['depot_id'] = Variable<String>(depotId.value);
+    if (destination.present) {
+      map['destination'] = Variable<String>(destination.value);
     }
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
@@ -2249,80 +703,40 @@ class FleetsCompanion extends UpdateCompanion<Fleet> {
     if (cachedAt.present) {
       map['cached_at'] = Variable<DateTime>(cachedAt.value);
     }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
     }
     return map;
   }
 
   @override
   String toString() {
-    return (StringBuffer('FleetsCompanion(')
+    return (StringBuffer('CachedRoutesCompanion(')
           ..write('id: $id, ')
-          ..write('serverId: $serverId, ')
-          ..write('number: $number, ')
-          ..write('depotId: $depotId, ')
+          ..write('origin: $origin, ')
+          ..write('destination: $destination, ')
           ..write('isActive: $isActive, ')
           ..write('cachedAt: $cachedAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
 }
 
-class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
+class $CachedFaresTable extends CachedFares
+    with TableInfo<$CachedFaresTable, CachedFare> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $TripsTable(this.attachedDatabase, [this._alias]);
+  $CachedFaresTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
     'id',
     aliasedName,
     false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  static const VerificationMeta _serverIdMeta = const VerificationMeta(
-    'serverId',
-  );
-  @override
-  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
-    'server_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
-  );
-  static const VerificationMeta _localIdMeta = const VerificationMeta(
-    'localId',
-  );
-  @override
-  late final GeneratedColumn<String> localId = GeneratedColumn<String>(
-    'local_id',
-    aliasedName,
-    false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
-  );
-  static const VerificationMeta _tripCodeMeta = const VerificationMeta(
-    'tripCode',
-  );
-  @override
-  late final GeneratedColumn<String> tripCode = GeneratedColumn<String>(
-    'trip_code',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
   );
   static const VerificationMeta _routeIdMeta = const VerificationMeta(
     'routeId',
@@ -2330,6 +744,417 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
   @override
   late final GeneratedColumn<String> routeId = GeneratedColumn<String>(
     'route_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _currencyMeta = const VerificationMeta(
+    'currency',
+  );
+  @override
+  late final GeneratedColumn<String> currency = GeneratedColumn<String>(
+    'currency',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _routeLabelMeta = const VerificationMeta(
+    'routeLabel',
+  );
+  @override
+  late final GeneratedColumn<String> routeLabel = GeneratedColumn<String>(
+    'route_label',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    routeId,
+    currency,
+    amount,
+    routeLabel,
+    cachedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cached_fares';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CachedFare> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('route_id')) {
+      context.handle(
+        _routeIdMeta,
+        routeId.isAcceptableOrUnknown(data['route_id']!, _routeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_routeIdMeta);
+    }
+    if (data.containsKey('currency')) {
+      context.handle(
+        _currencyMeta,
+        currency.isAcceptableOrUnknown(data['currency']!, _currencyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_currencyMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('route_label')) {
+      context.handle(
+        _routeLabelMeta,
+        routeLabel.isAcceptableOrUnknown(data['route_label']!, _routeLabelMeta),
+      );
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CachedFare map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CachedFare(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      routeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}route_id'],
+      )!,
+      currency: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}currency'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount'],
+      )!,
+      routeLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}route_label'],
+      ),
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CachedFaresTable createAlias(String alias) {
+    return $CachedFaresTable(attachedDatabase, alias);
+  }
+}
+
+class CachedFare extends DataClass implements Insertable<CachedFare> {
+  final String id;
+  final String routeId;
+  final String currency;
+  final double amount;
+  final String? routeLabel;
+  final DateTime cachedAt;
+  const CachedFare({
+    required this.id,
+    required this.routeId,
+    required this.currency,
+    required this.amount,
+    this.routeLabel,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['route_id'] = Variable<String>(routeId);
+    map['currency'] = Variable<String>(currency);
+    map['amount'] = Variable<double>(amount);
+    if (!nullToAbsent || routeLabel != null) {
+      map['route_label'] = Variable<String>(routeLabel);
+    }
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    return map;
+  }
+
+  CachedFaresCompanion toCompanion(bool nullToAbsent) {
+    return CachedFaresCompanion(
+      id: Value(id),
+      routeId: Value(routeId),
+      currency: Value(currency),
+      amount: Value(amount),
+      routeLabel: routeLabel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(routeLabel),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory CachedFare.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CachedFare(
+      id: serializer.fromJson<String>(json['id']),
+      routeId: serializer.fromJson<String>(json['routeId']),
+      currency: serializer.fromJson<String>(json['currency']),
+      amount: serializer.fromJson<double>(json['amount']),
+      routeLabel: serializer.fromJson<String?>(json['routeLabel']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'routeId': serializer.toJson<String>(routeId),
+      'currency': serializer.toJson<String>(currency),
+      'amount': serializer.toJson<double>(amount),
+      'routeLabel': serializer.toJson<String?>(routeLabel),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+    };
+  }
+
+  CachedFare copyWith({
+    String? id,
+    String? routeId,
+    String? currency,
+    double? amount,
+    Value<String?> routeLabel = const Value.absent(),
+    DateTime? cachedAt,
+  }) => CachedFare(
+    id: id ?? this.id,
+    routeId: routeId ?? this.routeId,
+    currency: currency ?? this.currency,
+    amount: amount ?? this.amount,
+    routeLabel: routeLabel.present ? routeLabel.value : this.routeLabel,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  CachedFare copyWithCompanion(CachedFaresCompanion data) {
+    return CachedFare(
+      id: data.id.present ? data.id.value : this.id,
+      routeId: data.routeId.present ? data.routeId.value : this.routeId,
+      currency: data.currency.present ? data.currency.value : this.currency,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      routeLabel: data.routeLabel.present
+          ? data.routeLabel.value
+          : this.routeLabel,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CachedFare(')
+          ..write('id: $id, ')
+          ..write('routeId: $routeId, ')
+          ..write('currency: $currency, ')
+          ..write('amount: $amount, ')
+          ..write('routeLabel: $routeLabel, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, routeId, currency, amount, routeLabel, cachedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CachedFare &&
+          other.id == this.id &&
+          other.routeId == this.routeId &&
+          other.currency == this.currency &&
+          other.amount == this.amount &&
+          other.routeLabel == this.routeLabel &&
+          other.cachedAt == this.cachedAt);
+}
+
+class CachedFaresCompanion extends UpdateCompanion<CachedFare> {
+  final Value<String> id;
+  final Value<String> routeId;
+  final Value<String> currency;
+  final Value<double> amount;
+  final Value<String?> routeLabel;
+  final Value<DateTime> cachedAt;
+  final Value<int> rowid;
+  const CachedFaresCompanion({
+    this.id = const Value.absent(),
+    this.routeId = const Value.absent(),
+    this.currency = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.routeLabel = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CachedFaresCompanion.insert({
+    required String id,
+    required String routeId,
+    required String currency,
+    required double amount,
+    this.routeLabel = const Value.absent(),
+    required DateTime cachedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       routeId = Value(routeId),
+       currency = Value(currency),
+       amount = Value(amount),
+       cachedAt = Value(cachedAt);
+  static Insertable<CachedFare> custom({
+    Expression<String>? id,
+    Expression<String>? routeId,
+    Expression<String>? currency,
+    Expression<double>? amount,
+    Expression<String>? routeLabel,
+    Expression<DateTime>? cachedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (routeId != null) 'route_id': routeId,
+      if (currency != null) 'currency': currency,
+      if (amount != null) 'amount': amount,
+      if (routeLabel != null) 'route_label': routeLabel,
+      if (cachedAt != null) 'cached_at': cachedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CachedFaresCompanion copyWith({
+    Value<String>? id,
+    Value<String>? routeId,
+    Value<String>? currency,
+    Value<double>? amount,
+    Value<String?>? routeLabel,
+    Value<DateTime>? cachedAt,
+    Value<int>? rowid,
+  }) {
+    return CachedFaresCompanion(
+      id: id ?? this.id,
+      routeId: routeId ?? this.routeId,
+      currency: currency ?? this.currency,
+      amount: amount ?? this.amount,
+      routeLabel: routeLabel ?? this.routeLabel,
+      cachedAt: cachedAt ?? this.cachedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (routeId.present) {
+      map['route_id'] = Variable<String>(routeId.value);
+    }
+    if (currency.present) {
+      map['currency'] = Variable<String>(currency.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (routeLabel.present) {
+      map['route_label'] = Variable<String>(routeLabel.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CachedFaresCompanion(')
+          ..write('id: $id, ')
+          ..write('routeId: $routeId, ')
+          ..write('currency: $currency, ')
+          ..write('amount: $amount, ')
+          ..write('routeLabel: $routeLabel, ')
+          ..write('cachedAt: $cachedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $LocalTripsTable extends LocalTrips
+    with TableInfo<$LocalTripsTable, LocalTrip> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalTripsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _agentIdMeta = const VerificationMeta(
+    'agentId',
+  );
+  @override
+  late final GeneratedColumn<String> agentId = GeneratedColumn<String>(
+    'agent_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
@@ -2346,50 +1171,38 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _busNumberMeta = const VerificationMeta(
-    'busNumber',
+  static const VerificationMeta _routeIdMeta = const VerificationMeta(
+    'routeId',
   );
   @override
-  late final GeneratedColumn<String> busNumber = GeneratedColumn<String>(
-    'bus_number',
+  late final GeneratedColumn<String> routeId = GeneratedColumn<String>(
+    'route_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _driverNameMeta = const VerificationMeta(
-    'driverName',
+  static const VerificationMeta _deviceIdMeta = const VerificationMeta(
+    'deviceId',
   );
   @override
-  late final GeneratedColumn<String> driverName = GeneratedColumn<String>(
-    'driver_name',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _departureTimeMeta = const VerificationMeta(
-    'departureTime',
-  );
-  @override
-  late final GeneratedColumn<DateTime> departureTime =
-      GeneratedColumn<DateTime>(
-        'departure_time',
-        aliasedName,
-        false,
-        type: DriftSqlType.dateTime,
-        requiredDuringInsert: true,
-      );
-  static const VerificationMeta _arrivalTimeMeta = const VerificationMeta(
-    'arrivalTime',
-  );
-  @override
-  late final GeneratedColumn<DateTime> arrivalTime = GeneratedColumn<DateTime>(
-    'arrival_time',
+  late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
+    'device_id',
     aliasedName,
     true,
-    type: DriftSqlType.dateTime,
+    type: DriftSqlType.string,
     requiredDuringInsert: false,
+  );
+  static const VerificationMeta _depotIdMeta = const VerificationMeta(
+    'depotId',
+  );
+  @override
+  late final GeneratedColumn<String> depotId = GeneratedColumn<String>(
+    'depot_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
@@ -2398,51 +1211,8 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
     aliasedName,
     false,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _totalSeatsMeta = const VerificationMeta(
-    'totalSeats',
-  );
-  @override
-  late final GeneratedColumn<int> totalSeats = GeneratedColumn<int>(
-    'total_seats',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _availableSeatsMeta = const VerificationMeta(
-    'availableSeats',
-  );
-  @override
-  late final GeneratedColumn<int> availableSeats = GeneratedColumn<int>(
-    'available_seats',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _agentIdMeta = const VerificationMeta(
-    'agentId',
-  );
-  @override
-  late final GeneratedColumn<String> agentId = GeneratedColumn<String>(
-    'agent_id',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
-  );
-  static const VerificationMeta _agentCodeMeta = const VerificationMeta(
-    'agentCode',
-  );
-  @override
-  late final GeneratedColumn<String> agentCode = GeneratedColumn<String>(
-    'agent_code',
-    aliasedName,
-    false,
-    type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('ACTIVE'),
   );
   static const VerificationMeta _startedOfflineMeta = const VerificationMeta(
     'startedOffline',
@@ -2459,180 +1229,106 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
     ),
     defaultValue: const Constant(false),
   );
-  static const VerificationMeta _isSyncedMeta = const VerificationMeta(
-    'isSynced',
+  static const VerificationMeta _startedAtMeta = const VerificationMeta(
+    'startedAt',
   );
   @override
-  late final GeneratedColumn<bool> isSynced = GeneratedColumn<bool>(
-    'is_synced',
+  late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>(
+    'started_at',
     aliasedName,
     false,
-    type: DriftSqlType.bool,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _endedAtMeta = const VerificationMeta(
+    'endedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> endedAt = GeneratedColumn<DateTime>(
+    'ended_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
     requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_synced" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
   );
-  static const VerificationMeta _createdAtMeta = const VerificationMeta(
-    'createdAt',
+  static const VerificationMeta _fleetNumberMeta = const VerificationMeta(
+    'fleetNumber',
   );
   @override
-  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
-    'created_at',
+  late final GeneratedColumn<String> fleetNumber = GeneratedColumn<String>(
+    'fleet_number',
     aliasedName,
-    false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
   );
-  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
-    'updatedAt',
+  static const VerificationMeta _routeOriginMeta = const VerificationMeta(
+    'routeOrigin',
   );
   @override
-  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
-    'updated_at',
+  late final GeneratedColumn<String> routeOrigin = GeneratedColumn<String>(
+    'route_origin',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _routeDestinationMeta = const VerificationMeta(
+    'routeDestination',
+  );
+  @override
+  late final GeneratedColumn<String> routeDestination = GeneratedColumn<String>(
+    'route_destination',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
     aliasedName,
     false,
-    type: DriftSqlType.dateTime,
-    requiredDuringInsert: true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
   );
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    serverId,
-    localId,
-    tripCode,
-    routeId,
-    fleetId,
-    busNumber,
-    driverName,
-    departureTime,
-    arrivalTime,
-    status,
-    totalSeats,
-    availableSeats,
     agentId,
-    agentCode,
+    fleetId,
+    routeId,
+    deviceId,
+    depotId,
+    status,
     startedOffline,
-    isSynced,
-    createdAt,
-    updatedAt,
+    startedAt,
+    endedAt,
+    fleetNumber,
+    routeOrigin,
+    routeDestination,
+    syncStatus,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'trips';
+  static const String $name = 'local_trips';
   @override
   VerificationContext validateIntegrity(
-    Insertable<Trip> instance, {
+    Insertable<LocalTrip> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
-    }
-    if (data.containsKey('server_id')) {
-      context.handle(
-        _serverIdMeta,
-        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
-      );
-    }
-    if (data.containsKey('local_id')) {
-      context.handle(
-        _localIdMeta,
-        localId.isAcceptableOrUnknown(data['local_id']!, _localIdMeta),
-      );
     } else if (isInserting) {
-      context.missing(_localIdMeta);
-    }
-    if (data.containsKey('trip_code')) {
-      context.handle(
-        _tripCodeMeta,
-        tripCode.isAcceptableOrUnknown(data['trip_code']!, _tripCodeMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_tripCodeMeta);
-    }
-    if (data.containsKey('route_id')) {
-      context.handle(
-        _routeIdMeta,
-        routeId.isAcceptableOrUnknown(data['route_id']!, _routeIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_routeIdMeta);
-    }
-    if (data.containsKey('fleet_id')) {
-      context.handle(
-        _fleetIdMeta,
-        fleetId.isAcceptableOrUnknown(data['fleet_id']!, _fleetIdMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_fleetIdMeta);
-    }
-    if (data.containsKey('bus_number')) {
-      context.handle(
-        _busNumberMeta,
-        busNumber.isAcceptableOrUnknown(data['bus_number']!, _busNumberMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_busNumberMeta);
-    }
-    if (data.containsKey('driver_name')) {
-      context.handle(
-        _driverNameMeta,
-        driverName.isAcceptableOrUnknown(data['driver_name']!, _driverNameMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_driverNameMeta);
-    }
-    if (data.containsKey('departure_time')) {
-      context.handle(
-        _departureTimeMeta,
-        departureTime.isAcceptableOrUnknown(
-          data['departure_time']!,
-          _departureTimeMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_departureTimeMeta);
-    }
-    if (data.containsKey('arrival_time')) {
-      context.handle(
-        _arrivalTimeMeta,
-        arrivalTime.isAcceptableOrUnknown(
-          data['arrival_time']!,
-          _arrivalTimeMeta,
-        ),
-      );
-    }
-    if (data.containsKey('status')) {
-      context.handle(
-        _statusMeta,
-        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_statusMeta);
-    }
-    if (data.containsKey('total_seats')) {
-      context.handle(
-        _totalSeatsMeta,
-        totalSeats.isAcceptableOrUnknown(data['total_seats']!, _totalSeatsMeta),
-      );
-    } else if (isInserting) {
-      context.missing(_totalSeatsMeta);
-    }
-    if (data.containsKey('available_seats')) {
-      context.handle(
-        _availableSeatsMeta,
-        availableSeats.isAcceptableOrUnknown(
-          data['available_seats']!,
-          _availableSeatsMeta,
-        ),
-      );
-    } else if (isInserting) {
-      context.missing(_availableSeatsMeta);
+      context.missing(_idMeta);
     }
     if (data.containsKey('agent_id')) {
       context.handle(
@@ -2642,13 +1338,41 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
     } else if (isInserting) {
       context.missing(_agentIdMeta);
     }
-    if (data.containsKey('agent_code')) {
+    if (data.containsKey('fleet_id')) {
       context.handle(
-        _agentCodeMeta,
-        agentCode.isAcceptableOrUnknown(data['agent_code']!, _agentCodeMeta),
+        _fleetIdMeta,
+        fleetId.isAcceptableOrUnknown(data['fleet_id']!, _fleetIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_agentCodeMeta);
+      context.missing(_fleetIdMeta);
+    }
+    if (data.containsKey('route_id')) {
+      context.handle(
+        _routeIdMeta,
+        routeId.isAcceptableOrUnknown(data['route_id']!, _routeIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_routeIdMeta);
+    }
+    if (data.containsKey('device_id')) {
+      context.handle(
+        _deviceIdMeta,
+        deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta),
+      );
+    }
+    if (data.containsKey('depot_id')) {
+      context.handle(
+        _depotIdMeta,
+        depotId.isAcceptableOrUnknown(data['depot_id']!, _depotIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_depotIdMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
     }
     if (data.containsKey('started_offline')) {
       context.handle(
@@ -2659,27 +1383,52 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
         ),
       );
     }
-    if (data.containsKey('is_synced')) {
+    if (data.containsKey('started_at')) {
       context.handle(
-        _isSyncedMeta,
-        isSynced.isAcceptableOrUnknown(data['is_synced']!, _isSyncedMeta),
-      );
-    }
-    if (data.containsKey('created_at')) {
-      context.handle(
-        _createdAtMeta,
-        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+        _startedAtMeta,
+        startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta),
       );
     } else if (isInserting) {
-      context.missing(_createdAtMeta);
+      context.missing(_startedAtMeta);
     }
-    if (data.containsKey('updated_at')) {
+    if (data.containsKey('ended_at')) {
       context.handle(
-        _updatedAtMeta,
-        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+        _endedAtMeta,
+        endedAt.isAcceptableOrUnknown(data['ended_at']!, _endedAtMeta),
       );
-    } else if (isInserting) {
-      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('fleet_number')) {
+      context.handle(
+        _fleetNumberMeta,
+        fleetNumber.isAcceptableOrUnknown(
+          data['fleet_number']!,
+          _fleetNumberMeta,
+        ),
+      );
+    }
+    if (data.containsKey('route_origin')) {
+      context.handle(
+        _routeOriginMeta,
+        routeOrigin.isAcceptableOrUnknown(
+          data['route_origin']!,
+          _routeOriginMeta,
+        ),
+      );
+    }
+    if (data.containsKey('route_destination')) {
+      context.handle(
+        _routeDestinationMeta,
+        routeDestination.isAcceptableOrUnknown(
+          data['route_destination']!,
+          _routeDestinationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
     }
     return context;
   }
@@ -2687,344 +1436,286 @@ class $TripsTable extends Trips with TableInfo<$TripsTable, Trip> {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Trip map(Map<String, dynamic> data, {String? tablePrefix}) {
+  LocalTrip map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Trip(
+    return LocalTrip(
       id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.string,
         data['${effectivePrefix}id'],
-      )!,
-      serverId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}server_id'],
-      ),
-      localId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}local_id'],
-      )!,
-      tripCode: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}trip_code'],
-      )!,
-      routeId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}route_id'],
-      )!,
-      fleetId: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}fleet_id'],
-      )!,
-      busNumber: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}bus_number'],
-      )!,
-      driverName: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}driver_name'],
-      )!,
-      departureTime: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}departure_time'],
-      )!,
-      arrivalTime: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}arrival_time'],
-      ),
-      status: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}status'],
-      )!,
-      totalSeats: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}total_seats'],
-      )!,
-      availableSeats: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}available_seats'],
       )!,
       agentId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}agent_id'],
       )!,
-      agentCode: attachedDatabase.typeMapping.read(
+      fleetId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}agent_code'],
+        data['${effectivePrefix}fleet_id'],
+      )!,
+      routeId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}route_id'],
+      )!,
+      deviceId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}device_id'],
+      ),
+      depotId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}depot_id'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
       )!,
       startedOffline: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}started_offline'],
       )!,
-      isSynced: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}is_synced'],
-      )!,
-      createdAt: attachedDatabase.typeMapping.read(
+      startedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
-        data['${effectivePrefix}created_at'],
+        data['${effectivePrefix}started_at'],
       )!,
-      updatedAt: attachedDatabase.typeMapping.read(
+      endedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
-        data['${effectivePrefix}updated_at'],
+        data['${effectivePrefix}ended_at'],
+      ),
+      fleetNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fleet_number'],
+      ),
+      routeOrigin: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}route_origin'],
+      ),
+      routeDestination: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}route_destination'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
       )!,
     );
   }
 
   @override
-  $TripsTable createAlias(String alias) {
-    return $TripsTable(attachedDatabase, alias);
+  $LocalTripsTable createAlias(String alias) {
+    return $LocalTripsTable(attachedDatabase, alias);
   }
 }
 
-class Trip extends DataClass implements Insertable<Trip> {
-  final int id;
-  final String? serverId;
-  final String localId;
-  final String tripCode;
-  final String routeId;
-  final String fleetId;
-  final String busNumber;
-  final String driverName;
-  final DateTime departureTime;
-  final DateTime? arrivalTime;
-  final String status;
-  final int totalSeats;
-  final int availableSeats;
+class LocalTrip extends DataClass implements Insertable<LocalTrip> {
+  final String id;
   final String agentId;
-  final String agentCode;
+  final String fleetId;
+  final String routeId;
+  final String? deviceId;
+  final String depotId;
+  final String status;
   final bool startedOffline;
-  final bool isSynced;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  const Trip({
+  final DateTime startedAt;
+  final DateTime? endedAt;
+  final String? fleetNumber;
+  final String? routeOrigin;
+  final String? routeDestination;
+  final String syncStatus;
+  const LocalTrip({
     required this.id,
-    this.serverId,
-    required this.localId,
-    required this.tripCode,
-    required this.routeId,
-    required this.fleetId,
-    required this.busNumber,
-    required this.driverName,
-    required this.departureTime,
-    this.arrivalTime,
-    required this.status,
-    required this.totalSeats,
-    required this.availableSeats,
     required this.agentId,
-    required this.agentCode,
+    required this.fleetId,
+    required this.routeId,
+    this.deviceId,
+    required this.depotId,
+    required this.status,
     required this.startedOffline,
-    required this.isSynced,
-    required this.createdAt,
-    required this.updatedAt,
+    required this.startedAt,
+    this.endedAt,
+    this.fleetNumber,
+    this.routeOrigin,
+    this.routeDestination,
+    required this.syncStatus,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    if (!nullToAbsent || serverId != null) {
-      map['server_id'] = Variable<String>(serverId);
-    }
-    map['local_id'] = Variable<String>(localId);
-    map['trip_code'] = Variable<String>(tripCode);
-    map['route_id'] = Variable<String>(routeId);
-    map['fleet_id'] = Variable<String>(fleetId);
-    map['bus_number'] = Variable<String>(busNumber);
-    map['driver_name'] = Variable<String>(driverName);
-    map['departure_time'] = Variable<DateTime>(departureTime);
-    if (!nullToAbsent || arrivalTime != null) {
-      map['arrival_time'] = Variable<DateTime>(arrivalTime);
-    }
-    map['status'] = Variable<String>(status);
-    map['total_seats'] = Variable<int>(totalSeats);
-    map['available_seats'] = Variable<int>(availableSeats);
+    map['id'] = Variable<String>(id);
     map['agent_id'] = Variable<String>(agentId);
-    map['agent_code'] = Variable<String>(agentCode);
+    map['fleet_id'] = Variable<String>(fleetId);
+    map['route_id'] = Variable<String>(routeId);
+    if (!nullToAbsent || deviceId != null) {
+      map['device_id'] = Variable<String>(deviceId);
+    }
+    map['depot_id'] = Variable<String>(depotId);
+    map['status'] = Variable<String>(status);
     map['started_offline'] = Variable<bool>(startedOffline);
-    map['is_synced'] = Variable<bool>(isSynced);
-    map['created_at'] = Variable<DateTime>(createdAt);
-    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['started_at'] = Variable<DateTime>(startedAt);
+    if (!nullToAbsent || endedAt != null) {
+      map['ended_at'] = Variable<DateTime>(endedAt);
+    }
+    if (!nullToAbsent || fleetNumber != null) {
+      map['fleet_number'] = Variable<String>(fleetNumber);
+    }
+    if (!nullToAbsent || routeOrigin != null) {
+      map['route_origin'] = Variable<String>(routeOrigin);
+    }
+    if (!nullToAbsent || routeDestination != null) {
+      map['route_destination'] = Variable<String>(routeDestination);
+    }
+    map['sync_status'] = Variable<String>(syncStatus);
     return map;
   }
 
-  TripsCompanion toCompanion(bool nullToAbsent) {
-    return TripsCompanion(
+  LocalTripsCompanion toCompanion(bool nullToAbsent) {
+    return LocalTripsCompanion(
       id: Value(id),
-      serverId: serverId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(serverId),
-      localId: Value(localId),
-      tripCode: Value(tripCode),
-      routeId: Value(routeId),
-      fleetId: Value(fleetId),
-      busNumber: Value(busNumber),
-      driverName: Value(driverName),
-      departureTime: Value(departureTime),
-      arrivalTime: arrivalTime == null && nullToAbsent
-          ? const Value.absent()
-          : Value(arrivalTime),
-      status: Value(status),
-      totalSeats: Value(totalSeats),
-      availableSeats: Value(availableSeats),
       agentId: Value(agentId),
-      agentCode: Value(agentCode),
+      fleetId: Value(fleetId),
+      routeId: Value(routeId),
+      deviceId: deviceId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deviceId),
+      depotId: Value(depotId),
+      status: Value(status),
       startedOffline: Value(startedOffline),
-      isSynced: Value(isSynced),
-      createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
+      startedAt: Value(startedAt),
+      endedAt: endedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(endedAt),
+      fleetNumber: fleetNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fleetNumber),
+      routeOrigin: routeOrigin == null && nullToAbsent
+          ? const Value.absent()
+          : Value(routeOrigin),
+      routeDestination: routeDestination == null && nullToAbsent
+          ? const Value.absent()
+          : Value(routeDestination),
+      syncStatus: Value(syncStatus),
     );
   }
 
-  factory Trip.fromJson(
+  factory LocalTrip.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Trip(
-      id: serializer.fromJson<int>(json['id']),
-      serverId: serializer.fromJson<String?>(json['serverId']),
-      localId: serializer.fromJson<String>(json['localId']),
-      tripCode: serializer.fromJson<String>(json['tripCode']),
-      routeId: serializer.fromJson<String>(json['routeId']),
-      fleetId: serializer.fromJson<String>(json['fleetId']),
-      busNumber: serializer.fromJson<String>(json['busNumber']),
-      driverName: serializer.fromJson<String>(json['driverName']),
-      departureTime: serializer.fromJson<DateTime>(json['departureTime']),
-      arrivalTime: serializer.fromJson<DateTime?>(json['arrivalTime']),
-      status: serializer.fromJson<String>(json['status']),
-      totalSeats: serializer.fromJson<int>(json['totalSeats']),
-      availableSeats: serializer.fromJson<int>(json['availableSeats']),
+    return LocalTrip(
+      id: serializer.fromJson<String>(json['id']),
       agentId: serializer.fromJson<String>(json['agentId']),
-      agentCode: serializer.fromJson<String>(json['agentCode']),
+      fleetId: serializer.fromJson<String>(json['fleetId']),
+      routeId: serializer.fromJson<String>(json['routeId']),
+      deviceId: serializer.fromJson<String?>(json['deviceId']),
+      depotId: serializer.fromJson<String>(json['depotId']),
+      status: serializer.fromJson<String>(json['status']),
       startedOffline: serializer.fromJson<bool>(json['startedOffline']),
-      isSynced: serializer.fromJson<bool>(json['isSynced']),
-      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      startedAt: serializer.fromJson<DateTime>(json['startedAt']),
+      endedAt: serializer.fromJson<DateTime?>(json['endedAt']),
+      fleetNumber: serializer.fromJson<String?>(json['fleetNumber']),
+      routeOrigin: serializer.fromJson<String?>(json['routeOrigin']),
+      routeDestination: serializer.fromJson<String?>(json['routeDestination']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
     );
   }
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'serverId': serializer.toJson<String?>(serverId),
-      'localId': serializer.toJson<String>(localId),
-      'tripCode': serializer.toJson<String>(tripCode),
-      'routeId': serializer.toJson<String>(routeId),
-      'fleetId': serializer.toJson<String>(fleetId),
-      'busNumber': serializer.toJson<String>(busNumber),
-      'driverName': serializer.toJson<String>(driverName),
-      'departureTime': serializer.toJson<DateTime>(departureTime),
-      'arrivalTime': serializer.toJson<DateTime?>(arrivalTime),
-      'status': serializer.toJson<String>(status),
-      'totalSeats': serializer.toJson<int>(totalSeats),
-      'availableSeats': serializer.toJson<int>(availableSeats),
+      'id': serializer.toJson<String>(id),
       'agentId': serializer.toJson<String>(agentId),
-      'agentCode': serializer.toJson<String>(agentCode),
+      'fleetId': serializer.toJson<String>(fleetId),
+      'routeId': serializer.toJson<String>(routeId),
+      'deviceId': serializer.toJson<String?>(deviceId),
+      'depotId': serializer.toJson<String>(depotId),
+      'status': serializer.toJson<String>(status),
       'startedOffline': serializer.toJson<bool>(startedOffline),
-      'isSynced': serializer.toJson<bool>(isSynced),
-      'createdAt': serializer.toJson<DateTime>(createdAt),
-      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'startedAt': serializer.toJson<DateTime>(startedAt),
+      'endedAt': serializer.toJson<DateTime?>(endedAt),
+      'fleetNumber': serializer.toJson<String?>(fleetNumber),
+      'routeOrigin': serializer.toJson<String?>(routeOrigin),
+      'routeDestination': serializer.toJson<String?>(routeDestination),
+      'syncStatus': serializer.toJson<String>(syncStatus),
     };
   }
 
-  Trip copyWith({
-    int? id,
-    Value<String?> serverId = const Value.absent(),
-    String? localId,
-    String? tripCode,
-    String? routeId,
-    String? fleetId,
-    String? busNumber,
-    String? driverName,
-    DateTime? departureTime,
-    Value<DateTime?> arrivalTime = const Value.absent(),
-    String? status,
-    int? totalSeats,
-    int? availableSeats,
+  LocalTrip copyWith({
+    String? id,
     String? agentId,
-    String? agentCode,
+    String? fleetId,
+    String? routeId,
+    Value<String?> deviceId = const Value.absent(),
+    String? depotId,
+    String? status,
     bool? startedOffline,
-    bool? isSynced,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) => Trip(
+    DateTime? startedAt,
+    Value<DateTime?> endedAt = const Value.absent(),
+    Value<String?> fleetNumber = const Value.absent(),
+    Value<String?> routeOrigin = const Value.absent(),
+    Value<String?> routeDestination = const Value.absent(),
+    String? syncStatus,
+  }) => LocalTrip(
     id: id ?? this.id,
-    serverId: serverId.present ? serverId.value : this.serverId,
-    localId: localId ?? this.localId,
-    tripCode: tripCode ?? this.tripCode,
-    routeId: routeId ?? this.routeId,
-    fleetId: fleetId ?? this.fleetId,
-    busNumber: busNumber ?? this.busNumber,
-    driverName: driverName ?? this.driverName,
-    departureTime: departureTime ?? this.departureTime,
-    arrivalTime: arrivalTime.present ? arrivalTime.value : this.arrivalTime,
-    status: status ?? this.status,
-    totalSeats: totalSeats ?? this.totalSeats,
-    availableSeats: availableSeats ?? this.availableSeats,
     agentId: agentId ?? this.agentId,
-    agentCode: agentCode ?? this.agentCode,
+    fleetId: fleetId ?? this.fleetId,
+    routeId: routeId ?? this.routeId,
+    deviceId: deviceId.present ? deviceId.value : this.deviceId,
+    depotId: depotId ?? this.depotId,
+    status: status ?? this.status,
     startedOffline: startedOffline ?? this.startedOffline,
-    isSynced: isSynced ?? this.isSynced,
-    createdAt: createdAt ?? this.createdAt,
-    updatedAt: updatedAt ?? this.updatedAt,
+    startedAt: startedAt ?? this.startedAt,
+    endedAt: endedAt.present ? endedAt.value : this.endedAt,
+    fleetNumber: fleetNumber.present ? fleetNumber.value : this.fleetNumber,
+    routeOrigin: routeOrigin.present ? routeOrigin.value : this.routeOrigin,
+    routeDestination: routeDestination.present
+        ? routeDestination.value
+        : this.routeDestination,
+    syncStatus: syncStatus ?? this.syncStatus,
   );
-  Trip copyWithCompanion(TripsCompanion data) {
-    return Trip(
+  LocalTrip copyWithCompanion(LocalTripsCompanion data) {
+    return LocalTrip(
       id: data.id.present ? data.id.value : this.id,
-      serverId: data.serverId.present ? data.serverId.value : this.serverId,
-      localId: data.localId.present ? data.localId.value : this.localId,
-      tripCode: data.tripCode.present ? data.tripCode.value : this.tripCode,
-      routeId: data.routeId.present ? data.routeId.value : this.routeId,
-      fleetId: data.fleetId.present ? data.fleetId.value : this.fleetId,
-      busNumber: data.busNumber.present ? data.busNumber.value : this.busNumber,
-      driverName: data.driverName.present
-          ? data.driverName.value
-          : this.driverName,
-      departureTime: data.departureTime.present
-          ? data.departureTime.value
-          : this.departureTime,
-      arrivalTime: data.arrivalTime.present
-          ? data.arrivalTime.value
-          : this.arrivalTime,
-      status: data.status.present ? data.status.value : this.status,
-      totalSeats: data.totalSeats.present
-          ? data.totalSeats.value
-          : this.totalSeats,
-      availableSeats: data.availableSeats.present
-          ? data.availableSeats.value
-          : this.availableSeats,
       agentId: data.agentId.present ? data.agentId.value : this.agentId,
-      agentCode: data.agentCode.present ? data.agentCode.value : this.agentCode,
+      fleetId: data.fleetId.present ? data.fleetId.value : this.fleetId,
+      routeId: data.routeId.present ? data.routeId.value : this.routeId,
+      deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      depotId: data.depotId.present ? data.depotId.value : this.depotId,
+      status: data.status.present ? data.status.value : this.status,
       startedOffline: data.startedOffline.present
           ? data.startedOffline.value
           : this.startedOffline,
-      isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
-      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      endedAt: data.endedAt.present ? data.endedAt.value : this.endedAt,
+      fleetNumber: data.fleetNumber.present
+          ? data.fleetNumber.value
+          : this.fleetNumber,
+      routeOrigin: data.routeOrigin.present
+          ? data.routeOrigin.value
+          : this.routeOrigin,
+      routeDestination: data.routeDestination.present
+          ? data.routeDestination.value
+          : this.routeDestination,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('Trip(')
+    return (StringBuffer('LocalTrip(')
           ..write('id: $id, ')
-          ..write('serverId: $serverId, ')
-          ..write('localId: $localId, ')
-          ..write('tripCode: $tripCode, ')
-          ..write('routeId: $routeId, ')
-          ..write('fleetId: $fleetId, ')
-          ..write('busNumber: $busNumber, ')
-          ..write('driverName: $driverName, ')
-          ..write('departureTime: $departureTime, ')
-          ..write('arrivalTime: $arrivalTime, ')
-          ..write('status: $status, ')
-          ..write('totalSeats: $totalSeats, ')
-          ..write('availableSeats: $availableSeats, ')
           ..write('agentId: $agentId, ')
-          ..write('agentCode: $agentCode, ')
+          ..write('fleetId: $fleetId, ')
+          ..write('routeId: $routeId, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('depotId: $depotId, ')
+          ..write('status: $status, ')
           ..write('startedOffline: $startedOffline, ')
-          ..write('isSynced: $isSynced, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('startedAt: $startedAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('fleetNumber: $fleetNumber, ')
+          ..write('routeOrigin: $routeOrigin, ')
+          ..write('routeDestination: $routeDestination, ')
+          ..write('syncStatus: $syncStatus')
           ..write(')'))
         .toString();
   }
@@ -3032,210 +1723,164 @@ class Trip extends DataClass implements Insertable<Trip> {
   @override
   int get hashCode => Object.hash(
     id,
-    serverId,
-    localId,
-    tripCode,
-    routeId,
-    fleetId,
-    busNumber,
-    driverName,
-    departureTime,
-    arrivalTime,
-    status,
-    totalSeats,
-    availableSeats,
     agentId,
-    agentCode,
+    fleetId,
+    routeId,
+    deviceId,
+    depotId,
+    status,
     startedOffline,
-    isSynced,
-    createdAt,
-    updatedAt,
+    startedAt,
+    endedAt,
+    fleetNumber,
+    routeOrigin,
+    routeDestination,
+    syncStatus,
   );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Trip &&
+      (other is LocalTrip &&
           other.id == this.id &&
-          other.serverId == this.serverId &&
-          other.localId == this.localId &&
-          other.tripCode == this.tripCode &&
-          other.routeId == this.routeId &&
-          other.fleetId == this.fleetId &&
-          other.busNumber == this.busNumber &&
-          other.driverName == this.driverName &&
-          other.departureTime == this.departureTime &&
-          other.arrivalTime == this.arrivalTime &&
-          other.status == this.status &&
-          other.totalSeats == this.totalSeats &&
-          other.availableSeats == this.availableSeats &&
           other.agentId == this.agentId &&
-          other.agentCode == this.agentCode &&
+          other.fleetId == this.fleetId &&
+          other.routeId == this.routeId &&
+          other.deviceId == this.deviceId &&
+          other.depotId == this.depotId &&
+          other.status == this.status &&
           other.startedOffline == this.startedOffline &&
-          other.isSynced == this.isSynced &&
-          other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.startedAt == this.startedAt &&
+          other.endedAt == this.endedAt &&
+          other.fleetNumber == this.fleetNumber &&
+          other.routeOrigin == this.routeOrigin &&
+          other.routeDestination == this.routeDestination &&
+          other.syncStatus == this.syncStatus);
 }
 
-class TripsCompanion extends UpdateCompanion<Trip> {
-  final Value<int> id;
-  final Value<String?> serverId;
-  final Value<String> localId;
-  final Value<String> tripCode;
-  final Value<String> routeId;
-  final Value<String> fleetId;
-  final Value<String> busNumber;
-  final Value<String> driverName;
-  final Value<DateTime> departureTime;
-  final Value<DateTime?> arrivalTime;
-  final Value<String> status;
-  final Value<int> totalSeats;
-  final Value<int> availableSeats;
+class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
+  final Value<String> id;
   final Value<String> agentId;
-  final Value<String> agentCode;
+  final Value<String> fleetId;
+  final Value<String> routeId;
+  final Value<String?> deviceId;
+  final Value<String> depotId;
+  final Value<String> status;
   final Value<bool> startedOffline;
-  final Value<bool> isSynced;
-  final Value<DateTime> createdAt;
-  final Value<DateTime> updatedAt;
-  const TripsCompanion({
+  final Value<DateTime> startedAt;
+  final Value<DateTime?> endedAt;
+  final Value<String?> fleetNumber;
+  final Value<String?> routeOrigin;
+  final Value<String?> routeDestination;
+  final Value<String> syncStatus;
+  final Value<int> rowid;
+  const LocalTripsCompanion({
     this.id = const Value.absent(),
-    this.serverId = const Value.absent(),
-    this.localId = const Value.absent(),
-    this.tripCode = const Value.absent(),
-    this.routeId = const Value.absent(),
-    this.fleetId = const Value.absent(),
-    this.busNumber = const Value.absent(),
-    this.driverName = const Value.absent(),
-    this.departureTime = const Value.absent(),
-    this.arrivalTime = const Value.absent(),
-    this.status = const Value.absent(),
-    this.totalSeats = const Value.absent(),
-    this.availableSeats = const Value.absent(),
     this.agentId = const Value.absent(),
-    this.agentCode = const Value.absent(),
+    this.fleetId = const Value.absent(),
+    this.routeId = const Value.absent(),
+    this.deviceId = const Value.absent(),
+    this.depotId = const Value.absent(),
+    this.status = const Value.absent(),
     this.startedOffline = const Value.absent(),
-    this.isSynced = const Value.absent(),
-    this.createdAt = const Value.absent(),
-    this.updatedAt = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.endedAt = const Value.absent(),
+    this.fleetNumber = const Value.absent(),
+    this.routeOrigin = const Value.absent(),
+    this.routeDestination = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.rowid = const Value.absent(),
   });
-  TripsCompanion.insert({
-    this.id = const Value.absent(),
-    this.serverId = const Value.absent(),
-    required String localId,
-    required String tripCode,
-    required String routeId,
-    required String fleetId,
-    required String busNumber,
-    required String driverName,
-    required DateTime departureTime,
-    this.arrivalTime = const Value.absent(),
-    required String status,
-    required int totalSeats,
-    required int availableSeats,
+  LocalTripsCompanion.insert({
+    required String id,
     required String agentId,
-    required String agentCode,
+    required String fleetId,
+    required String routeId,
+    this.deviceId = const Value.absent(),
+    required String depotId,
+    this.status = const Value.absent(),
     this.startedOffline = const Value.absent(),
-    this.isSynced = const Value.absent(),
-    required DateTime createdAt,
-    required DateTime updatedAt,
-  }) : localId = Value(localId),
-       tripCode = Value(tripCode),
-       routeId = Value(routeId),
-       fleetId = Value(fleetId),
-       busNumber = Value(busNumber),
-       driverName = Value(driverName),
-       departureTime = Value(departureTime),
-       status = Value(status),
-       totalSeats = Value(totalSeats),
-       availableSeats = Value(availableSeats),
+    required DateTime startedAt,
+    this.endedAt = const Value.absent(),
+    this.fleetNumber = const Value.absent(),
+    this.routeOrigin = const Value.absent(),
+    this.routeDestination = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
        agentId = Value(agentId),
-       agentCode = Value(agentCode),
-       createdAt = Value(createdAt),
-       updatedAt = Value(updatedAt);
-  static Insertable<Trip> custom({
-    Expression<int>? id,
-    Expression<String>? serverId,
-    Expression<String>? localId,
-    Expression<String>? tripCode,
-    Expression<String>? routeId,
-    Expression<String>? fleetId,
-    Expression<String>? busNumber,
-    Expression<String>? driverName,
-    Expression<DateTime>? departureTime,
-    Expression<DateTime>? arrivalTime,
-    Expression<String>? status,
-    Expression<int>? totalSeats,
-    Expression<int>? availableSeats,
+       fleetId = Value(fleetId),
+       routeId = Value(routeId),
+       depotId = Value(depotId),
+       startedAt = Value(startedAt);
+  static Insertable<LocalTrip> custom({
+    Expression<String>? id,
     Expression<String>? agentId,
-    Expression<String>? agentCode,
+    Expression<String>? fleetId,
+    Expression<String>? routeId,
+    Expression<String>? deviceId,
+    Expression<String>? depotId,
+    Expression<String>? status,
     Expression<bool>? startedOffline,
-    Expression<bool>? isSynced,
-    Expression<DateTime>? createdAt,
-    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? startedAt,
+    Expression<DateTime>? endedAt,
+    Expression<String>? fleetNumber,
+    Expression<String>? routeOrigin,
+    Expression<String>? routeDestination,
+    Expression<String>? syncStatus,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (serverId != null) 'server_id': serverId,
-      if (localId != null) 'local_id': localId,
-      if (tripCode != null) 'trip_code': tripCode,
-      if (routeId != null) 'route_id': routeId,
-      if (fleetId != null) 'fleet_id': fleetId,
-      if (busNumber != null) 'bus_number': busNumber,
-      if (driverName != null) 'driver_name': driverName,
-      if (departureTime != null) 'departure_time': departureTime,
-      if (arrivalTime != null) 'arrival_time': arrivalTime,
-      if (status != null) 'status': status,
-      if (totalSeats != null) 'total_seats': totalSeats,
-      if (availableSeats != null) 'available_seats': availableSeats,
       if (agentId != null) 'agent_id': agentId,
-      if (agentCode != null) 'agent_code': agentCode,
+      if (fleetId != null) 'fleet_id': fleetId,
+      if (routeId != null) 'route_id': routeId,
+      if (deviceId != null) 'device_id': deviceId,
+      if (depotId != null) 'depot_id': depotId,
+      if (status != null) 'status': status,
       if (startedOffline != null) 'started_offline': startedOffline,
-      if (isSynced != null) 'is_synced': isSynced,
-      if (createdAt != null) 'created_at': createdAt,
-      if (updatedAt != null) 'updated_at': updatedAt,
+      if (startedAt != null) 'started_at': startedAt,
+      if (endedAt != null) 'ended_at': endedAt,
+      if (fleetNumber != null) 'fleet_number': fleetNumber,
+      if (routeOrigin != null) 'route_origin': routeOrigin,
+      if (routeDestination != null) 'route_destination': routeDestination,
+      if (syncStatus != null) 'sync_status': syncStatus,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
-  TripsCompanion copyWith({
-    Value<int>? id,
-    Value<String?>? serverId,
-    Value<String>? localId,
-    Value<String>? tripCode,
-    Value<String>? routeId,
-    Value<String>? fleetId,
-    Value<String>? busNumber,
-    Value<String>? driverName,
-    Value<DateTime>? departureTime,
-    Value<DateTime?>? arrivalTime,
-    Value<String>? status,
-    Value<int>? totalSeats,
-    Value<int>? availableSeats,
+  LocalTripsCompanion copyWith({
+    Value<String>? id,
     Value<String>? agentId,
-    Value<String>? agentCode,
+    Value<String>? fleetId,
+    Value<String>? routeId,
+    Value<String?>? deviceId,
+    Value<String>? depotId,
+    Value<String>? status,
     Value<bool>? startedOffline,
-    Value<bool>? isSynced,
-    Value<DateTime>? createdAt,
-    Value<DateTime>? updatedAt,
+    Value<DateTime>? startedAt,
+    Value<DateTime?>? endedAt,
+    Value<String?>? fleetNumber,
+    Value<String?>? routeOrigin,
+    Value<String?>? routeDestination,
+    Value<String>? syncStatus,
+    Value<int>? rowid,
   }) {
-    return TripsCompanion(
+    return LocalTripsCompanion(
       id: id ?? this.id,
-      serverId: serverId ?? this.serverId,
-      localId: localId ?? this.localId,
-      tripCode: tripCode ?? this.tripCode,
-      routeId: routeId ?? this.routeId,
-      fleetId: fleetId ?? this.fleetId,
-      busNumber: busNumber ?? this.busNumber,
-      driverName: driverName ?? this.driverName,
-      departureTime: departureTime ?? this.departureTime,
-      arrivalTime: arrivalTime ?? this.arrivalTime,
-      status: status ?? this.status,
-      totalSeats: totalSeats ?? this.totalSeats,
-      availableSeats: availableSeats ?? this.availableSeats,
       agentId: agentId ?? this.agentId,
-      agentCode: agentCode ?? this.agentCode,
+      fleetId: fleetId ?? this.fleetId,
+      routeId: routeId ?? this.routeId,
+      deviceId: deviceId ?? this.deviceId,
+      depotId: depotId ?? this.depotId,
+      status: status ?? this.status,
       startedOffline: startedOffline ?? this.startedOffline,
-      isSynced: isSynced ?? this.isSynced,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      startedAt: startedAt ?? this.startedAt,
+      endedAt: endedAt ?? this.endedAt,
+      fleetNumber: fleetNumber ?? this.fleetNumber,
+      routeOrigin: routeOrigin ?? this.routeOrigin,
+      routeDestination: routeDestination ?? this.routeDestination,
+      syncStatus: syncStatus ?? this.syncStatus,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -3243,166 +1888,132 @@ class TripsCompanion extends UpdateCompanion<Trip> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     if (id.present) {
-      map['id'] = Variable<int>(id.value);
-    }
-    if (serverId.present) {
-      map['server_id'] = Variable<String>(serverId.value);
-    }
-    if (localId.present) {
-      map['local_id'] = Variable<String>(localId.value);
-    }
-    if (tripCode.present) {
-      map['trip_code'] = Variable<String>(tripCode.value);
-    }
-    if (routeId.present) {
-      map['route_id'] = Variable<String>(routeId.value);
-    }
-    if (fleetId.present) {
-      map['fleet_id'] = Variable<String>(fleetId.value);
-    }
-    if (busNumber.present) {
-      map['bus_number'] = Variable<String>(busNumber.value);
-    }
-    if (driverName.present) {
-      map['driver_name'] = Variable<String>(driverName.value);
-    }
-    if (departureTime.present) {
-      map['departure_time'] = Variable<DateTime>(departureTime.value);
-    }
-    if (arrivalTime.present) {
-      map['arrival_time'] = Variable<DateTime>(arrivalTime.value);
-    }
-    if (status.present) {
-      map['status'] = Variable<String>(status.value);
-    }
-    if (totalSeats.present) {
-      map['total_seats'] = Variable<int>(totalSeats.value);
-    }
-    if (availableSeats.present) {
-      map['available_seats'] = Variable<int>(availableSeats.value);
+      map['id'] = Variable<String>(id.value);
     }
     if (agentId.present) {
       map['agent_id'] = Variable<String>(agentId.value);
     }
-    if (agentCode.present) {
-      map['agent_code'] = Variable<String>(agentCode.value);
+    if (fleetId.present) {
+      map['fleet_id'] = Variable<String>(fleetId.value);
+    }
+    if (routeId.present) {
+      map['route_id'] = Variable<String>(routeId.value);
+    }
+    if (deviceId.present) {
+      map['device_id'] = Variable<String>(deviceId.value);
+    }
+    if (depotId.present) {
+      map['depot_id'] = Variable<String>(depotId.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
     }
     if (startedOffline.present) {
       map['started_offline'] = Variable<bool>(startedOffline.value);
     }
-    if (isSynced.present) {
-      map['is_synced'] = Variable<bool>(isSynced.value);
+    if (startedAt.present) {
+      map['started_at'] = Variable<DateTime>(startedAt.value);
     }
-    if (createdAt.present) {
-      map['created_at'] = Variable<DateTime>(createdAt.value);
+    if (endedAt.present) {
+      map['ended_at'] = Variable<DateTime>(endedAt.value);
     }
-    if (updatedAt.present) {
-      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    if (fleetNumber.present) {
+      map['fleet_number'] = Variable<String>(fleetNumber.value);
+    }
+    if (routeOrigin.present) {
+      map['route_origin'] = Variable<String>(routeOrigin.value);
+    }
+    if (routeDestination.present) {
+      map['route_destination'] = Variable<String>(routeDestination.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
     }
     return map;
   }
 
   @override
   String toString() {
-    return (StringBuffer('TripsCompanion(')
+    return (StringBuffer('LocalTripsCompanion(')
           ..write('id: $id, ')
-          ..write('serverId: $serverId, ')
-          ..write('localId: $localId, ')
-          ..write('tripCode: $tripCode, ')
-          ..write('routeId: $routeId, ')
-          ..write('fleetId: $fleetId, ')
-          ..write('busNumber: $busNumber, ')
-          ..write('driverName: $driverName, ')
-          ..write('departureTime: $departureTime, ')
-          ..write('arrivalTime: $arrivalTime, ')
-          ..write('status: $status, ')
-          ..write('totalSeats: $totalSeats, ')
-          ..write('availableSeats: $availableSeats, ')
           ..write('agentId: $agentId, ')
-          ..write('agentCode: $agentCode, ')
+          ..write('fleetId: $fleetId, ')
+          ..write('routeId: $routeId, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('depotId: $depotId, ')
+          ..write('status: $status, ')
           ..write('startedOffline: $startedOffline, ')
-          ..write('isSynced: $isSynced, ')
-          ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('startedAt: $startedAt, ')
+          ..write('endedAt: $endedAt, ')
+          ..write('fleetNumber: $fleetNumber, ')
+          ..write('routeOrigin: $routeOrigin, ')
+          ..write('routeDestination: $routeDestination, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
 }
 
-class $TicketsTable extends Tickets with TableInfo<$TicketsTable, Ticket> {
+class $LocalTicketsTable extends LocalTickets
+    with TableInfo<$LocalTicketsTable, LocalTicket> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $TicketsTable(this.attachedDatabase, [this._alias]);
+  $LocalTicketsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
-  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
     'id',
-    aliasedName,
-    false,
-    hasAutoIncrement: true,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'PRIMARY KEY AUTOINCREMENT',
-    ),
-  );
-  static const VerificationMeta _localIdMeta = const VerificationMeta(
-    'localId',
-  );
-  @override
-  late final GeneratedColumn<String> localId = GeneratedColumn<String>(
-    'local_id',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
-    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
   );
-  static const VerificationMeta _serverIdMeta = const VerificationMeta(
-    'serverId',
+  static const VerificationMeta _tripIdMeta = const VerificationMeta('tripId');
+  @override
+  late final GeneratedColumn<String> tripId = GeneratedColumn<String>(
+    'trip_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _agentIdMeta = const VerificationMeta(
+    'agentId',
   );
   @override
-  late final GeneratedColumn<String> serverId = GeneratedColumn<String>(
-    'server_id',
+  late final GeneratedColumn<String> agentId = GeneratedColumn<String>(
+    'agent_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deviceIdMeta = const VerificationMeta(
+    'deviceId',
+  );
+  @override
+  late final GeneratedColumn<String> deviceId = GeneratedColumn<String>(
+    'device_id',
     aliasedName,
     true,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
   );
-  static const VerificationMeta _tripLocalIdMeta = const VerificationMeta(
-    'tripLocalId',
-  );
-  @override
-  late final GeneratedColumn<String> tripLocalId = GeneratedColumn<String>(
-    'trip_local_id',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _tripServerIdMeta = const VerificationMeta(
-    'tripServerId',
+  static const VerificationMeta _depotIdMeta = const VerificationMeta(
+    'depotId',
   );
   @override
-  late final GeneratedColumn<String> tripServerId = GeneratedColumn<String>(
-    'trip_server_id',
+  late final GeneratedColumn<String> depotId = GeneratedColumn<String>(
+    'depot_id',
     aliasedName,
-    true,
+    false,
     type: DriftSqlType.string,
-    requiredDuringInsert: false,
-  );
-  static const VerificationMeta _serialNumberMeta = const VerificationMeta(
-    'serialNumber',
-  );
-  @override
-  late final GeneratedColumn<String> serialNumber = GeneratedColumn<String>(
-    'serial_number',
-    aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
+    requiredDuringInsert: true,
   );
   static const VerificationMeta _ticketCategoryMeta = const VerificationMeta(
     'ticketCategory',
@@ -3457,38 +2068,38 @@ class $TicketsTable extends Tickets with TableInfo<$TicketsTable, Ticket> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _linkedPassengerTicketIdMeta =
-      const VerificationMeta('linkedPassengerTicketId');
-  @override
-  late final GeneratedColumn<String> linkedPassengerTicketId =
-      GeneratedColumn<String>(
-        'linked_passenger_ticket_id',
-        aliasedName,
-        true,
-        type: DriftSqlType.string,
-        requiredDuringInsert: false,
-      );
-  static const VerificationMeta _agentIdMeta = const VerificationMeta(
-    'agentId',
+  static const VerificationMeta _passengerNameMeta = const VerificationMeta(
+    'passengerName',
   );
   @override
-  late final GeneratedColumn<String> agentId = GeneratedColumn<String>(
-    'agent_id',
+  late final GeneratedColumn<String> passengerName = GeneratedColumn<String>(
+    'passenger_name',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
-  static const VerificationMeta _agentCodeMeta = const VerificationMeta(
-    'agentCode',
+  static const VerificationMeta _passengerPhoneMeta = const VerificationMeta(
+    'passengerPhone',
   );
   @override
-  late final GeneratedColumn<String> agentCode = GeneratedColumn<String>(
-    'agent_code',
+  late final GeneratedColumn<String> passengerPhone = GeneratedColumn<String>(
+    'passenger_phone',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _serialNumberMeta = const VerificationMeta(
+    'serialNumber',
+  );
+  @override
+  late final GeneratedColumn<int> serialNumber = GeneratedColumn<int>(
+    'serial_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _issuedAtMeta = const VerificationMeta(
     'issuedAt',
@@ -3501,136 +2112,119 @@ class $TicketsTable extends Tickets with TableInfo<$TicketsTable, Ticket> {
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _issuedOfflineMeta = const VerificationMeta(
-    'issuedOffline',
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
   );
   @override
-  late final GeneratedColumn<bool> issuedOffline = GeneratedColumn<bool>(
-    'issued_offline',
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
     aliasedName,
     false,
-    type: DriftSqlType.bool,
+    type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("issued_offline" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
+    defaultValue: const Constant('pending'),
   );
-  static const VerificationMeta _isSyncedMeta = const VerificationMeta(
-    'isSynced',
+  static const VerificationMeta _idempotencyKeyMeta = const VerificationMeta(
+    'idempotencyKey',
   );
   @override
-  late final GeneratedColumn<bool> isSynced = GeneratedColumn<bool>(
-    'is_synced',
+  late final GeneratedColumn<String> idempotencyKey = GeneratedColumn<String>(
+    'idempotency_key',
     aliasedName,
     false,
-    type: DriftSqlType.bool,
-    requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_synced" IN (0, 1))',
-    ),
-    defaultValue: const Constant(false),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
   );
-  static const VerificationMeta _syncErrorMeta = const VerificationMeta(
-    'syncError',
+  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
+    'lastError',
   );
   @override
-  late final GeneratedColumn<String> syncError = GeneratedColumn<String>(
-    'sync_error',
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+    'last_error',
     aliasedName,
     true,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
-  static const VerificationMeta _lastSyncAttemptAtMeta = const VerificationMeta(
-    'lastSyncAttemptAt',
+  static const VerificationMeta _retryCountMeta = const VerificationMeta(
+    'retryCount',
   );
   @override
-  late final GeneratedColumn<DateTime> lastSyncAttemptAt =
-      GeneratedColumn<DateTime>(
-        'last_sync_attempt_at',
-        aliasedName,
-        true,
-        type: DriftSqlType.dateTime,
-        requiredDuringInsert: false,
-      );
+  late final GeneratedColumn<int> retryCount = GeneratedColumn<int>(
+    'retry_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
-    localId,
-    serverId,
-    tripLocalId,
-    tripServerId,
-    serialNumber,
+    tripId,
+    agentId,
+    deviceId,
+    depotId,
     ticketCategory,
     currency,
     amount,
     departure,
     destination,
-    linkedPassengerTicketId,
-    agentId,
-    agentCode,
+    passengerName,
+    passengerPhone,
+    serialNumber,
     issuedAt,
-    issuedOffline,
-    isSynced,
-    syncError,
-    lastSyncAttemptAt,
+    syncStatus,
+    idempotencyKey,
+    lastError,
+    retryCount,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'tickets';
+  static const String $name = 'local_tickets';
   @override
   VerificationContext validateIntegrity(
-    Insertable<Ticket> instance, {
+    Insertable<LocalTicket> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
     if (data.containsKey('id')) {
       context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
     }
-    if (data.containsKey('local_id')) {
+    if (data.containsKey('trip_id')) {
       context.handle(
-        _localIdMeta,
-        localId.isAcceptableOrUnknown(data['local_id']!, _localIdMeta),
+        _tripIdMeta,
+        tripId.isAcceptableOrUnknown(data['trip_id']!, _tripIdMeta),
       );
     } else if (isInserting) {
-      context.missing(_localIdMeta);
+      context.missing(_tripIdMeta);
     }
-    if (data.containsKey('server_id')) {
+    if (data.containsKey('agent_id')) {
       context.handle(
-        _serverIdMeta,
-        serverId.isAcceptableOrUnknown(data['server_id']!, _serverIdMeta),
+        _agentIdMeta,
+        agentId.isAcceptableOrUnknown(data['agent_id']!, _agentIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_agentIdMeta);
+    }
+    if (data.containsKey('device_id')) {
+      context.handle(
+        _deviceIdMeta,
+        deviceId.isAcceptableOrUnknown(data['device_id']!, _deviceIdMeta),
       );
     }
-    if (data.containsKey('trip_local_id')) {
+    if (data.containsKey('depot_id')) {
       context.handle(
-        _tripLocalIdMeta,
-        tripLocalId.isAcceptableOrUnknown(
-          data['trip_local_id']!,
-          _tripLocalIdMeta,
-        ),
+        _depotIdMeta,
+        depotId.isAcceptableOrUnknown(data['depot_id']!, _depotIdMeta),
       );
-    }
-    if (data.containsKey('trip_server_id')) {
-      context.handle(
-        _tripServerIdMeta,
-        tripServerId.isAcceptableOrUnknown(
-          data['trip_server_id']!,
-          _tripServerIdMeta,
-        ),
-      );
-    }
-    if (data.containsKey('serial_number')) {
-      context.handle(
-        _serialNumberMeta,
-        serialNumber.isAcceptableOrUnknown(
-          data['serial_number']!,
-          _serialNumberMeta,
-        ),
-      );
+    } else if (isInserting) {
+      context.missing(_depotIdMeta);
     }
     if (data.containsKey('ticket_category')) {
       context.handle(
@@ -3674,30 +2268,32 @@ class $TicketsTable extends Tickets with TableInfo<$TicketsTable, Ticket> {
         ),
       );
     }
-    if (data.containsKey('linked_passenger_ticket_id')) {
+    if (data.containsKey('passenger_name')) {
       context.handle(
-        _linkedPassengerTicketIdMeta,
-        linkedPassengerTicketId.isAcceptableOrUnknown(
-          data['linked_passenger_ticket_id']!,
-          _linkedPassengerTicketIdMeta,
+        _passengerNameMeta,
+        passengerName.isAcceptableOrUnknown(
+          data['passenger_name']!,
+          _passengerNameMeta,
         ),
       );
     }
-    if (data.containsKey('agent_id')) {
+    if (data.containsKey('passenger_phone')) {
       context.handle(
-        _agentIdMeta,
-        agentId.isAcceptableOrUnknown(data['agent_id']!, _agentIdMeta),
+        _passengerPhoneMeta,
+        passengerPhone.isAcceptableOrUnknown(
+          data['passenger_phone']!,
+          _passengerPhoneMeta,
+        ),
       );
-    } else if (isInserting) {
-      context.missing(_agentIdMeta);
     }
-    if (data.containsKey('agent_code')) {
+    if (data.containsKey('serial_number')) {
       context.handle(
-        _agentCodeMeta,
-        agentCode.isAcceptableOrUnknown(data['agent_code']!, _agentCodeMeta),
+        _serialNumberMeta,
+        serialNumber.isAcceptableOrUnknown(
+          data['serial_number']!,
+          _serialNumberMeta,
+        ),
       );
-    } else if (isInserting) {
-      context.missing(_agentCodeMeta);
     }
     if (data.containsKey('issued_at')) {
       context.handle(
@@ -3707,34 +2303,33 @@ class $TicketsTable extends Tickets with TableInfo<$TicketsTable, Ticket> {
     } else if (isInserting) {
       context.missing(_issuedAtMeta);
     }
-    if (data.containsKey('issued_offline')) {
+    if (data.containsKey('sync_status')) {
       context.handle(
-        _issuedOfflineMeta,
-        issuedOffline.isAcceptableOrUnknown(
-          data['issued_offline']!,
-          _issuedOfflineMeta,
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    if (data.containsKey('idempotency_key')) {
+      context.handle(
+        _idempotencyKeyMeta,
+        idempotencyKey.isAcceptableOrUnknown(
+          data['idempotency_key']!,
+          _idempotencyKeyMeta,
         ),
       );
+    } else if (isInserting) {
+      context.missing(_idempotencyKeyMeta);
     }
-    if (data.containsKey('is_synced')) {
+    if (data.containsKey('last_error')) {
       context.handle(
-        _isSyncedMeta,
-        isSynced.isAcceptableOrUnknown(data['is_synced']!, _isSyncedMeta),
+        _lastErrorMeta,
+        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
       );
     }
-    if (data.containsKey('sync_error')) {
+    if (data.containsKey('retry_count')) {
       context.handle(
-        _syncErrorMeta,
-        syncError.isAcceptableOrUnknown(data['sync_error']!, _syncErrorMeta),
-      );
-    }
-    if (data.containsKey('last_sync_attempt_at')) {
-      context.handle(
-        _lastSyncAttemptAtMeta,
-        lastSyncAttemptAt.isAcceptableOrUnknown(
-          data['last_sync_attempt_at']!,
-          _lastSyncAttemptAtMeta,
-        ),
+        _retryCountMeta,
+        retryCount.isAcceptableOrUnknown(data['retry_count']!, _retryCountMeta),
       );
     }
     return context;
@@ -3743,33 +2338,33 @@ class $TicketsTable extends Tickets with TableInfo<$TicketsTable, Ticket> {
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  Ticket map(Map<String, dynamic> data, {String? tablePrefix}) {
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {idempotencyKey},
+  ];
+  @override
+  LocalTicket map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return Ticket(
+    return LocalTicket(
       id: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.string,
         data['${effectivePrefix}id'],
       )!,
-      localId: attachedDatabase.typeMapping.read(
+      tripId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}local_id'],
+        data['${effectivePrefix}trip_id'],
       )!,
-      serverId: attachedDatabase.typeMapping.read(
+      agentId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}server_id'],
-      ),
-      tripLocalId: attachedDatabase.typeMapping.read(
+        data['${effectivePrefix}agent_id'],
+      )!,
+      deviceId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}trip_local_id'],
+        data['${effectivePrefix}device_id'],
       ),
-      tripServerId: attachedDatabase.typeMapping.read(
+      depotId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}trip_server_id'],
-      ),
-      serialNumber: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}serial_number'],
-      ),
+        data['${effectivePrefix}depot_id'],
+      )!,
       ticketCategory: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}ticket_category'],
@@ -3790,105 +2385,96 @@ class $TicketsTable extends Tickets with TableInfo<$TicketsTable, Ticket> {
         DriftSqlType.string,
         data['${effectivePrefix}destination'],
       ),
-      linkedPassengerTicketId: attachedDatabase.typeMapping.read(
+      passengerName: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}linked_passenger_ticket_id'],
+        data['${effectivePrefix}passenger_name'],
       ),
-      agentId: attachedDatabase.typeMapping.read(
+      passengerPhone: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}agent_id'],
-      )!,
-      agentCode: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}agent_code'],
-      )!,
+        data['${effectivePrefix}passenger_phone'],
+      ),
+      serialNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}serial_number'],
+      ),
       issuedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}issued_at'],
       )!,
-      issuedOffline: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}issued_offline'],
-      )!,
-      isSynced: attachedDatabase.typeMapping.read(
-        DriftSqlType.bool,
-        data['${effectivePrefix}is_synced'],
-      )!,
-      syncError: attachedDatabase.typeMapping.read(
+      syncStatus: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}sync_error'],
+        data['${effectivePrefix}sync_status'],
+      )!,
+      idempotencyKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}idempotency_key'],
+      )!,
+      lastError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error'],
       ),
-      lastSyncAttemptAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}last_sync_attempt_at'],
-      ),
+      retryCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}retry_count'],
+      )!,
     );
   }
 
   @override
-  $TicketsTable createAlias(String alias) {
-    return $TicketsTable(attachedDatabase, alias);
+  $LocalTicketsTable createAlias(String alias) {
+    return $LocalTicketsTable(attachedDatabase, alias);
   }
 }
 
-class Ticket extends DataClass implements Insertable<Ticket> {
-  final int id;
-  final String localId;
-  final String? serverId;
-  final String? tripLocalId;
-  final String? tripServerId;
-  final String? serialNumber;
+class LocalTicket extends DataClass implements Insertable<LocalTicket> {
+  final String id;
+  final String tripId;
+  final String agentId;
+  final String? deviceId;
+  final String depotId;
   final String ticketCategory;
   final String currency;
   final double amount;
   final String? departure;
   final String? destination;
-  final String? linkedPassengerTicketId;
-  final String agentId;
-  final String agentCode;
+  final String? passengerName;
+  final String? passengerPhone;
+  final int? serialNumber;
   final DateTime issuedAt;
-  final bool issuedOffline;
-  final bool isSynced;
-  final String? syncError;
-  final DateTime? lastSyncAttemptAt;
-  const Ticket({
+  final String syncStatus;
+  final String idempotencyKey;
+  final String? lastError;
+  final int retryCount;
+  const LocalTicket({
     required this.id,
-    required this.localId,
-    this.serverId,
-    this.tripLocalId,
-    this.tripServerId,
-    this.serialNumber,
+    required this.tripId,
+    required this.agentId,
+    this.deviceId,
+    required this.depotId,
     required this.ticketCategory,
     required this.currency,
     required this.amount,
     this.departure,
     this.destination,
-    this.linkedPassengerTicketId,
-    required this.agentId,
-    required this.agentCode,
+    this.passengerName,
+    this.passengerPhone,
+    this.serialNumber,
     required this.issuedAt,
-    required this.issuedOffline,
-    required this.isSynced,
-    this.syncError,
-    this.lastSyncAttemptAt,
+    required this.syncStatus,
+    required this.idempotencyKey,
+    this.lastError,
+    required this.retryCount,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['id'] = Variable<int>(id);
-    map['local_id'] = Variable<String>(localId);
-    if (!nullToAbsent || serverId != null) {
-      map['server_id'] = Variable<String>(serverId);
+    map['id'] = Variable<String>(id);
+    map['trip_id'] = Variable<String>(tripId);
+    map['agent_id'] = Variable<String>(agentId);
+    if (!nullToAbsent || deviceId != null) {
+      map['device_id'] = Variable<String>(deviceId);
     }
-    if (!nullToAbsent || tripLocalId != null) {
-      map['trip_local_id'] = Variable<String>(tripLocalId);
-    }
-    if (!nullToAbsent || tripServerId != null) {
-      map['trip_server_id'] = Variable<String>(tripServerId);
-    }
-    if (!nullToAbsent || serialNumber != null) {
-      map['serial_number'] = Variable<String>(serialNumber);
-    }
+    map['depot_id'] = Variable<String>(depotId);
     map['ticket_category'] = Variable<String>(ticketCategory);
     map['currency'] = Variable<String>(currency);
     map['amount'] = Variable<double>(amount);
@@ -3898,41 +2484,34 @@ class Ticket extends DataClass implements Insertable<Ticket> {
     if (!nullToAbsent || destination != null) {
       map['destination'] = Variable<String>(destination);
     }
-    if (!nullToAbsent || linkedPassengerTicketId != null) {
-      map['linked_passenger_ticket_id'] = Variable<String>(
-        linkedPassengerTicketId,
-      );
+    if (!nullToAbsent || passengerName != null) {
+      map['passenger_name'] = Variable<String>(passengerName);
     }
-    map['agent_id'] = Variable<String>(agentId);
-    map['agent_code'] = Variable<String>(agentCode);
+    if (!nullToAbsent || passengerPhone != null) {
+      map['passenger_phone'] = Variable<String>(passengerPhone);
+    }
+    if (!nullToAbsent || serialNumber != null) {
+      map['serial_number'] = Variable<int>(serialNumber);
+    }
     map['issued_at'] = Variable<DateTime>(issuedAt);
-    map['issued_offline'] = Variable<bool>(issuedOffline);
-    map['is_synced'] = Variable<bool>(isSynced);
-    if (!nullToAbsent || syncError != null) {
-      map['sync_error'] = Variable<String>(syncError);
+    map['sync_status'] = Variable<String>(syncStatus);
+    map['idempotency_key'] = Variable<String>(idempotencyKey);
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
     }
-    if (!nullToAbsent || lastSyncAttemptAt != null) {
-      map['last_sync_attempt_at'] = Variable<DateTime>(lastSyncAttemptAt);
-    }
+    map['retry_count'] = Variable<int>(retryCount);
     return map;
   }
 
-  TicketsCompanion toCompanion(bool nullToAbsent) {
-    return TicketsCompanion(
+  LocalTicketsCompanion toCompanion(bool nullToAbsent) {
+    return LocalTicketsCompanion(
       id: Value(id),
-      localId: Value(localId),
-      serverId: serverId == null && nullToAbsent
+      tripId: Value(tripId),
+      agentId: Value(agentId),
+      deviceId: deviceId == null && nullToAbsent
           ? const Value.absent()
-          : Value(serverId),
-      tripLocalId: tripLocalId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(tripLocalId),
-      tripServerId: tripServerId == null && nullToAbsent
-          ? const Value.absent()
-          : Value(tripServerId),
-      serialNumber: serialNumber == null && nullToAbsent
-          ? const Value.absent()
-          : Value(serialNumber),
+          : Value(deviceId),
+      depotId: Value(depotId),
       ticketCategory: Value(ticketCategory),
       currency: Value(currency),
       amount: Value(amount),
@@ -3942,141 +2521,126 @@ class Ticket extends DataClass implements Insertable<Ticket> {
       destination: destination == null && nullToAbsent
           ? const Value.absent()
           : Value(destination),
-      linkedPassengerTicketId: linkedPassengerTicketId == null && nullToAbsent
+      passengerName: passengerName == null && nullToAbsent
           ? const Value.absent()
-          : Value(linkedPassengerTicketId),
-      agentId: Value(agentId),
-      agentCode: Value(agentCode),
+          : Value(passengerName),
+      passengerPhone: passengerPhone == null && nullToAbsent
+          ? const Value.absent()
+          : Value(passengerPhone),
+      serialNumber: serialNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(serialNumber),
       issuedAt: Value(issuedAt),
-      issuedOffline: Value(issuedOffline),
-      isSynced: Value(isSynced),
-      syncError: syncError == null && nullToAbsent
+      syncStatus: Value(syncStatus),
+      idempotencyKey: Value(idempotencyKey),
+      lastError: lastError == null && nullToAbsent
           ? const Value.absent()
-          : Value(syncError),
-      lastSyncAttemptAt: lastSyncAttemptAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(lastSyncAttemptAt),
+          : Value(lastError),
+      retryCount: Value(retryCount),
     );
   }
 
-  factory Ticket.fromJson(
+  factory LocalTicket.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return Ticket(
-      id: serializer.fromJson<int>(json['id']),
-      localId: serializer.fromJson<String>(json['localId']),
-      serverId: serializer.fromJson<String?>(json['serverId']),
-      tripLocalId: serializer.fromJson<String?>(json['tripLocalId']),
-      tripServerId: serializer.fromJson<String?>(json['tripServerId']),
-      serialNumber: serializer.fromJson<String?>(json['serialNumber']),
+    return LocalTicket(
+      id: serializer.fromJson<String>(json['id']),
+      tripId: serializer.fromJson<String>(json['tripId']),
+      agentId: serializer.fromJson<String>(json['agentId']),
+      deviceId: serializer.fromJson<String?>(json['deviceId']),
+      depotId: serializer.fromJson<String>(json['depotId']),
       ticketCategory: serializer.fromJson<String>(json['ticketCategory']),
       currency: serializer.fromJson<String>(json['currency']),
       amount: serializer.fromJson<double>(json['amount']),
       departure: serializer.fromJson<String?>(json['departure']),
       destination: serializer.fromJson<String?>(json['destination']),
-      linkedPassengerTicketId: serializer.fromJson<String?>(
-        json['linkedPassengerTicketId'],
-      ),
-      agentId: serializer.fromJson<String>(json['agentId']),
-      agentCode: serializer.fromJson<String>(json['agentCode']),
+      passengerName: serializer.fromJson<String?>(json['passengerName']),
+      passengerPhone: serializer.fromJson<String?>(json['passengerPhone']),
+      serialNumber: serializer.fromJson<int?>(json['serialNumber']),
       issuedAt: serializer.fromJson<DateTime>(json['issuedAt']),
-      issuedOffline: serializer.fromJson<bool>(json['issuedOffline']),
-      isSynced: serializer.fromJson<bool>(json['isSynced']),
-      syncError: serializer.fromJson<String?>(json['syncError']),
-      lastSyncAttemptAt: serializer.fromJson<DateTime?>(
-        json['lastSyncAttemptAt'],
-      ),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
+      idempotencyKey: serializer.fromJson<String>(json['idempotencyKey']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
+      retryCount: serializer.fromJson<int>(json['retryCount']),
     );
   }
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'id': serializer.toJson<int>(id),
-      'localId': serializer.toJson<String>(localId),
-      'serverId': serializer.toJson<String?>(serverId),
-      'tripLocalId': serializer.toJson<String?>(tripLocalId),
-      'tripServerId': serializer.toJson<String?>(tripServerId),
-      'serialNumber': serializer.toJson<String?>(serialNumber),
+      'id': serializer.toJson<String>(id),
+      'tripId': serializer.toJson<String>(tripId),
+      'agentId': serializer.toJson<String>(agentId),
+      'deviceId': serializer.toJson<String?>(deviceId),
+      'depotId': serializer.toJson<String>(depotId),
       'ticketCategory': serializer.toJson<String>(ticketCategory),
       'currency': serializer.toJson<String>(currency),
       'amount': serializer.toJson<double>(amount),
       'departure': serializer.toJson<String?>(departure),
       'destination': serializer.toJson<String?>(destination),
-      'linkedPassengerTicketId': serializer.toJson<String?>(
-        linkedPassengerTicketId,
-      ),
-      'agentId': serializer.toJson<String>(agentId),
-      'agentCode': serializer.toJson<String>(agentCode),
+      'passengerName': serializer.toJson<String?>(passengerName),
+      'passengerPhone': serializer.toJson<String?>(passengerPhone),
+      'serialNumber': serializer.toJson<int?>(serialNumber),
       'issuedAt': serializer.toJson<DateTime>(issuedAt),
-      'issuedOffline': serializer.toJson<bool>(issuedOffline),
-      'isSynced': serializer.toJson<bool>(isSynced),
-      'syncError': serializer.toJson<String?>(syncError),
-      'lastSyncAttemptAt': serializer.toJson<DateTime?>(lastSyncAttemptAt),
+      'syncStatus': serializer.toJson<String>(syncStatus),
+      'idempotencyKey': serializer.toJson<String>(idempotencyKey),
+      'lastError': serializer.toJson<String?>(lastError),
+      'retryCount': serializer.toJson<int>(retryCount),
     };
   }
 
-  Ticket copyWith({
-    int? id,
-    String? localId,
-    Value<String?> serverId = const Value.absent(),
-    Value<String?> tripLocalId = const Value.absent(),
-    Value<String?> tripServerId = const Value.absent(),
-    Value<String?> serialNumber = const Value.absent(),
+  LocalTicket copyWith({
+    String? id,
+    String? tripId,
+    String? agentId,
+    Value<String?> deviceId = const Value.absent(),
+    String? depotId,
     String? ticketCategory,
     String? currency,
     double? amount,
     Value<String?> departure = const Value.absent(),
     Value<String?> destination = const Value.absent(),
-    Value<String?> linkedPassengerTicketId = const Value.absent(),
-    String? agentId,
-    String? agentCode,
+    Value<String?> passengerName = const Value.absent(),
+    Value<String?> passengerPhone = const Value.absent(),
+    Value<int?> serialNumber = const Value.absent(),
     DateTime? issuedAt,
-    bool? issuedOffline,
-    bool? isSynced,
-    Value<String?> syncError = const Value.absent(),
-    Value<DateTime?> lastSyncAttemptAt = const Value.absent(),
-  }) => Ticket(
+    String? syncStatus,
+    String? idempotencyKey,
+    Value<String?> lastError = const Value.absent(),
+    int? retryCount,
+  }) => LocalTicket(
     id: id ?? this.id,
-    localId: localId ?? this.localId,
-    serverId: serverId.present ? serverId.value : this.serverId,
-    tripLocalId: tripLocalId.present ? tripLocalId.value : this.tripLocalId,
-    tripServerId: tripServerId.present ? tripServerId.value : this.tripServerId,
-    serialNumber: serialNumber.present ? serialNumber.value : this.serialNumber,
+    tripId: tripId ?? this.tripId,
+    agentId: agentId ?? this.agentId,
+    deviceId: deviceId.present ? deviceId.value : this.deviceId,
+    depotId: depotId ?? this.depotId,
     ticketCategory: ticketCategory ?? this.ticketCategory,
     currency: currency ?? this.currency,
     amount: amount ?? this.amount,
     departure: departure.present ? departure.value : this.departure,
     destination: destination.present ? destination.value : this.destination,
-    linkedPassengerTicketId: linkedPassengerTicketId.present
-        ? linkedPassengerTicketId.value
-        : this.linkedPassengerTicketId,
-    agentId: agentId ?? this.agentId,
-    agentCode: agentCode ?? this.agentCode,
+    passengerName: passengerName.present
+        ? passengerName.value
+        : this.passengerName,
+    passengerPhone: passengerPhone.present
+        ? passengerPhone.value
+        : this.passengerPhone,
+    serialNumber: serialNumber.present ? serialNumber.value : this.serialNumber,
     issuedAt: issuedAt ?? this.issuedAt,
-    issuedOffline: issuedOffline ?? this.issuedOffline,
-    isSynced: isSynced ?? this.isSynced,
-    syncError: syncError.present ? syncError.value : this.syncError,
-    lastSyncAttemptAt: lastSyncAttemptAt.present
-        ? lastSyncAttemptAt.value
-        : this.lastSyncAttemptAt,
+    syncStatus: syncStatus ?? this.syncStatus,
+    idempotencyKey: idempotencyKey ?? this.idempotencyKey,
+    lastError: lastError.present ? lastError.value : this.lastError,
+    retryCount: retryCount ?? this.retryCount,
   );
-  Ticket copyWithCompanion(TicketsCompanion data) {
-    return Ticket(
+  LocalTicket copyWithCompanion(LocalTicketsCompanion data) {
+    return LocalTicket(
       id: data.id.present ? data.id.value : this.id,
-      localId: data.localId.present ? data.localId.value : this.localId,
-      serverId: data.serverId.present ? data.serverId.value : this.serverId,
-      tripLocalId: data.tripLocalId.present
-          ? data.tripLocalId.value
-          : this.tripLocalId,
-      tripServerId: data.tripServerId.present
-          ? data.tripServerId.value
-          : this.tripServerId,
-      serialNumber: data.serialNumber.present
-          ? data.serialNumber.value
-          : this.serialNumber,
+      tripId: data.tripId.present ? data.tripId.value : this.tripId,
+      agentId: data.agentId.present ? data.agentId.value : this.agentId,
+      deviceId: data.deviceId.present ? data.deviceId.value : this.deviceId,
+      depotId: data.depotId.present ? data.depotId.value : this.depotId,
       ticketCategory: data.ticketCategory.present
           ? data.ticketCategory.value
           : this.ticketCategory,
@@ -4086,45 +2650,50 @@ class Ticket extends DataClass implements Insertable<Ticket> {
       destination: data.destination.present
           ? data.destination.value
           : this.destination,
-      linkedPassengerTicketId: data.linkedPassengerTicketId.present
-          ? data.linkedPassengerTicketId.value
-          : this.linkedPassengerTicketId,
-      agentId: data.agentId.present ? data.agentId.value : this.agentId,
-      agentCode: data.agentCode.present ? data.agentCode.value : this.agentCode,
+      passengerName: data.passengerName.present
+          ? data.passengerName.value
+          : this.passengerName,
+      passengerPhone: data.passengerPhone.present
+          ? data.passengerPhone.value
+          : this.passengerPhone,
+      serialNumber: data.serialNumber.present
+          ? data.serialNumber.value
+          : this.serialNumber,
       issuedAt: data.issuedAt.present ? data.issuedAt.value : this.issuedAt,
-      issuedOffline: data.issuedOffline.present
-          ? data.issuedOffline.value
-          : this.issuedOffline,
-      isSynced: data.isSynced.present ? data.isSynced.value : this.isSynced,
-      syncError: data.syncError.present ? data.syncError.value : this.syncError,
-      lastSyncAttemptAt: data.lastSyncAttemptAt.present
-          ? data.lastSyncAttemptAt.value
-          : this.lastSyncAttemptAt,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+      idempotencyKey: data.idempotencyKey.present
+          ? data.idempotencyKey.value
+          : this.idempotencyKey,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
+      retryCount: data.retryCount.present
+          ? data.retryCount.value
+          : this.retryCount,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('Ticket(')
+    return (StringBuffer('LocalTicket(')
           ..write('id: $id, ')
-          ..write('localId: $localId, ')
-          ..write('serverId: $serverId, ')
-          ..write('tripLocalId: $tripLocalId, ')
-          ..write('tripServerId: $tripServerId, ')
-          ..write('serialNumber: $serialNumber, ')
+          ..write('tripId: $tripId, ')
+          ..write('agentId: $agentId, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('depotId: $depotId, ')
           ..write('ticketCategory: $ticketCategory, ')
           ..write('currency: $currency, ')
           ..write('amount: $amount, ')
           ..write('departure: $departure, ')
           ..write('destination: $destination, ')
-          ..write('linkedPassengerTicketId: $linkedPassengerTicketId, ')
-          ..write('agentId: $agentId, ')
-          ..write('agentCode: $agentCode, ')
+          ..write('passengerName: $passengerName, ')
+          ..write('passengerPhone: $passengerPhone, ')
+          ..write('serialNumber: $serialNumber, ')
           ..write('issuedAt: $issuedAt, ')
-          ..write('issuedOffline: $issuedOffline, ')
-          ..write('isSynced: $isSynced, ')
-          ..write('syncError: $syncError, ')
-          ..write('lastSyncAttemptAt: $lastSyncAttemptAt')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('idempotencyKey: $idempotencyKey, ')
+          ..write('lastError: $lastError, ')
+          ..write('retryCount: $retryCount')
           ..write(')'))
         .toString();
   }
@@ -4132,205 +2701,203 @@ class Ticket extends DataClass implements Insertable<Ticket> {
   @override
   int get hashCode => Object.hash(
     id,
-    localId,
-    serverId,
-    tripLocalId,
-    tripServerId,
-    serialNumber,
+    tripId,
+    agentId,
+    deviceId,
+    depotId,
     ticketCategory,
     currency,
     amount,
     departure,
     destination,
-    linkedPassengerTicketId,
-    agentId,
-    agentCode,
+    passengerName,
+    passengerPhone,
+    serialNumber,
     issuedAt,
-    issuedOffline,
-    isSynced,
-    syncError,
-    lastSyncAttemptAt,
+    syncStatus,
+    idempotencyKey,
+    lastError,
+    retryCount,
   );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Ticket &&
+      (other is LocalTicket &&
           other.id == this.id &&
-          other.localId == this.localId &&
-          other.serverId == this.serverId &&
-          other.tripLocalId == this.tripLocalId &&
-          other.tripServerId == this.tripServerId &&
-          other.serialNumber == this.serialNumber &&
+          other.tripId == this.tripId &&
+          other.agentId == this.agentId &&
+          other.deviceId == this.deviceId &&
+          other.depotId == this.depotId &&
           other.ticketCategory == this.ticketCategory &&
           other.currency == this.currency &&
           other.amount == this.amount &&
           other.departure == this.departure &&
           other.destination == this.destination &&
-          other.linkedPassengerTicketId == this.linkedPassengerTicketId &&
-          other.agentId == this.agentId &&
-          other.agentCode == this.agentCode &&
+          other.passengerName == this.passengerName &&
+          other.passengerPhone == this.passengerPhone &&
+          other.serialNumber == this.serialNumber &&
           other.issuedAt == this.issuedAt &&
-          other.issuedOffline == this.issuedOffline &&
-          other.isSynced == this.isSynced &&
-          other.syncError == this.syncError &&
-          other.lastSyncAttemptAt == this.lastSyncAttemptAt);
+          other.syncStatus == this.syncStatus &&
+          other.idempotencyKey == this.idempotencyKey &&
+          other.lastError == this.lastError &&
+          other.retryCount == this.retryCount);
 }
 
-class TicketsCompanion extends UpdateCompanion<Ticket> {
-  final Value<int> id;
-  final Value<String> localId;
-  final Value<String?> serverId;
-  final Value<String?> tripLocalId;
-  final Value<String?> tripServerId;
-  final Value<String?> serialNumber;
+class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
+  final Value<String> id;
+  final Value<String> tripId;
+  final Value<String> agentId;
+  final Value<String?> deviceId;
+  final Value<String> depotId;
   final Value<String> ticketCategory;
   final Value<String> currency;
   final Value<double> amount;
   final Value<String?> departure;
   final Value<String?> destination;
-  final Value<String?> linkedPassengerTicketId;
-  final Value<String> agentId;
-  final Value<String> agentCode;
+  final Value<String?> passengerName;
+  final Value<String?> passengerPhone;
+  final Value<int?> serialNumber;
   final Value<DateTime> issuedAt;
-  final Value<bool> issuedOffline;
-  final Value<bool> isSynced;
-  final Value<String?> syncError;
-  final Value<DateTime?> lastSyncAttemptAt;
-  const TicketsCompanion({
+  final Value<String> syncStatus;
+  final Value<String> idempotencyKey;
+  final Value<String?> lastError;
+  final Value<int> retryCount;
+  final Value<int> rowid;
+  const LocalTicketsCompanion({
     this.id = const Value.absent(),
-    this.localId = const Value.absent(),
-    this.serverId = const Value.absent(),
-    this.tripLocalId = const Value.absent(),
-    this.tripServerId = const Value.absent(),
-    this.serialNumber = const Value.absent(),
+    this.tripId = const Value.absent(),
+    this.agentId = const Value.absent(),
+    this.deviceId = const Value.absent(),
+    this.depotId = const Value.absent(),
     this.ticketCategory = const Value.absent(),
     this.currency = const Value.absent(),
     this.amount = const Value.absent(),
     this.departure = const Value.absent(),
     this.destination = const Value.absent(),
-    this.linkedPassengerTicketId = const Value.absent(),
-    this.agentId = const Value.absent(),
-    this.agentCode = const Value.absent(),
-    this.issuedAt = const Value.absent(),
-    this.issuedOffline = const Value.absent(),
-    this.isSynced = const Value.absent(),
-    this.syncError = const Value.absent(),
-    this.lastSyncAttemptAt = const Value.absent(),
-  });
-  TicketsCompanion.insert({
-    this.id = const Value.absent(),
-    required String localId,
-    this.serverId = const Value.absent(),
-    this.tripLocalId = const Value.absent(),
-    this.tripServerId = const Value.absent(),
+    this.passengerName = const Value.absent(),
+    this.passengerPhone = const Value.absent(),
     this.serialNumber = const Value.absent(),
+    this.issuedAt = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.idempotencyKey = const Value.absent(),
+    this.lastError = const Value.absent(),
+    this.retryCount = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalTicketsCompanion.insert({
+    required String id,
+    required String tripId,
+    required String agentId,
+    this.deviceId = const Value.absent(),
+    required String depotId,
     required String ticketCategory,
     required String currency,
     required double amount,
     this.departure = const Value.absent(),
     this.destination = const Value.absent(),
-    this.linkedPassengerTicketId = const Value.absent(),
-    required String agentId,
-    required String agentCode,
+    this.passengerName = const Value.absent(),
+    this.passengerPhone = const Value.absent(),
+    this.serialNumber = const Value.absent(),
     required DateTime issuedAt,
-    this.issuedOffline = const Value.absent(),
-    this.isSynced = const Value.absent(),
-    this.syncError = const Value.absent(),
-    this.lastSyncAttemptAt = const Value.absent(),
-  }) : localId = Value(localId),
+    this.syncStatus = const Value.absent(),
+    required String idempotencyKey,
+    this.lastError = const Value.absent(),
+    this.retryCount = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       tripId = Value(tripId),
+       agentId = Value(agentId),
+       depotId = Value(depotId),
        ticketCategory = Value(ticketCategory),
        currency = Value(currency),
        amount = Value(amount),
-       agentId = Value(agentId),
-       agentCode = Value(agentCode),
-       issuedAt = Value(issuedAt);
-  static Insertable<Ticket> custom({
-    Expression<int>? id,
-    Expression<String>? localId,
-    Expression<String>? serverId,
-    Expression<String>? tripLocalId,
-    Expression<String>? tripServerId,
-    Expression<String>? serialNumber,
+       issuedAt = Value(issuedAt),
+       idempotencyKey = Value(idempotencyKey);
+  static Insertable<LocalTicket> custom({
+    Expression<String>? id,
+    Expression<String>? tripId,
+    Expression<String>? agentId,
+    Expression<String>? deviceId,
+    Expression<String>? depotId,
     Expression<String>? ticketCategory,
     Expression<String>? currency,
     Expression<double>? amount,
     Expression<String>? departure,
     Expression<String>? destination,
-    Expression<String>? linkedPassengerTicketId,
-    Expression<String>? agentId,
-    Expression<String>? agentCode,
+    Expression<String>? passengerName,
+    Expression<String>? passengerPhone,
+    Expression<int>? serialNumber,
     Expression<DateTime>? issuedAt,
-    Expression<bool>? issuedOffline,
-    Expression<bool>? isSynced,
-    Expression<String>? syncError,
-    Expression<DateTime>? lastSyncAttemptAt,
+    Expression<String>? syncStatus,
+    Expression<String>? idempotencyKey,
+    Expression<String>? lastError,
+    Expression<int>? retryCount,
+    Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
-      if (localId != null) 'local_id': localId,
-      if (serverId != null) 'server_id': serverId,
-      if (tripLocalId != null) 'trip_local_id': tripLocalId,
-      if (tripServerId != null) 'trip_server_id': tripServerId,
-      if (serialNumber != null) 'serial_number': serialNumber,
+      if (tripId != null) 'trip_id': tripId,
+      if (agentId != null) 'agent_id': agentId,
+      if (deviceId != null) 'device_id': deviceId,
+      if (depotId != null) 'depot_id': depotId,
       if (ticketCategory != null) 'ticket_category': ticketCategory,
       if (currency != null) 'currency': currency,
       if (amount != null) 'amount': amount,
       if (departure != null) 'departure': departure,
       if (destination != null) 'destination': destination,
-      if (linkedPassengerTicketId != null)
-        'linked_passenger_ticket_id': linkedPassengerTicketId,
-      if (agentId != null) 'agent_id': agentId,
-      if (agentCode != null) 'agent_code': agentCode,
+      if (passengerName != null) 'passenger_name': passengerName,
+      if (passengerPhone != null) 'passenger_phone': passengerPhone,
+      if (serialNumber != null) 'serial_number': serialNumber,
       if (issuedAt != null) 'issued_at': issuedAt,
-      if (issuedOffline != null) 'issued_offline': issuedOffline,
-      if (isSynced != null) 'is_synced': isSynced,
-      if (syncError != null) 'sync_error': syncError,
-      if (lastSyncAttemptAt != null) 'last_sync_attempt_at': lastSyncAttemptAt,
+      if (syncStatus != null) 'sync_status': syncStatus,
+      if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+      if (lastError != null) 'last_error': lastError,
+      if (retryCount != null) 'retry_count': retryCount,
+      if (rowid != null) 'rowid': rowid,
     });
   }
 
-  TicketsCompanion copyWith({
-    Value<int>? id,
-    Value<String>? localId,
-    Value<String?>? serverId,
-    Value<String?>? tripLocalId,
-    Value<String?>? tripServerId,
-    Value<String?>? serialNumber,
+  LocalTicketsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? tripId,
+    Value<String>? agentId,
+    Value<String?>? deviceId,
+    Value<String>? depotId,
     Value<String>? ticketCategory,
     Value<String>? currency,
     Value<double>? amount,
     Value<String?>? departure,
     Value<String?>? destination,
-    Value<String?>? linkedPassengerTicketId,
-    Value<String>? agentId,
-    Value<String>? agentCode,
+    Value<String?>? passengerName,
+    Value<String?>? passengerPhone,
+    Value<int?>? serialNumber,
     Value<DateTime>? issuedAt,
-    Value<bool>? issuedOffline,
-    Value<bool>? isSynced,
-    Value<String?>? syncError,
-    Value<DateTime?>? lastSyncAttemptAt,
+    Value<String>? syncStatus,
+    Value<String>? idempotencyKey,
+    Value<String?>? lastError,
+    Value<int>? retryCount,
+    Value<int>? rowid,
   }) {
-    return TicketsCompanion(
+    return LocalTicketsCompanion(
       id: id ?? this.id,
-      localId: localId ?? this.localId,
-      serverId: serverId ?? this.serverId,
-      tripLocalId: tripLocalId ?? this.tripLocalId,
-      tripServerId: tripServerId ?? this.tripServerId,
-      serialNumber: serialNumber ?? this.serialNumber,
+      tripId: tripId ?? this.tripId,
+      agentId: agentId ?? this.agentId,
+      deviceId: deviceId ?? this.deviceId,
+      depotId: depotId ?? this.depotId,
       ticketCategory: ticketCategory ?? this.ticketCategory,
       currency: currency ?? this.currency,
       amount: amount ?? this.amount,
       departure: departure ?? this.departure,
       destination: destination ?? this.destination,
-      linkedPassengerTicketId:
-          linkedPassengerTicketId ?? this.linkedPassengerTicketId,
-      agentId: agentId ?? this.agentId,
-      agentCode: agentCode ?? this.agentCode,
+      passengerName: passengerName ?? this.passengerName,
+      passengerPhone: passengerPhone ?? this.passengerPhone,
+      serialNumber: serialNumber ?? this.serialNumber,
       issuedAt: issuedAt ?? this.issuedAt,
-      issuedOffline: issuedOffline ?? this.issuedOffline,
-      isSynced: isSynced ?? this.isSynced,
-      syncError: syncError ?? this.syncError,
-      lastSyncAttemptAt: lastSyncAttemptAt ?? this.lastSyncAttemptAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+      idempotencyKey: idempotencyKey ?? this.idempotencyKey,
+      lastError: lastError ?? this.lastError,
+      retryCount: retryCount ?? this.retryCount,
+      rowid: rowid ?? this.rowid,
     );
   }
 
@@ -4338,22 +2905,19 @@ class TicketsCompanion extends UpdateCompanion<Ticket> {
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     if (id.present) {
-      map['id'] = Variable<int>(id.value);
+      map['id'] = Variable<String>(id.value);
     }
-    if (localId.present) {
-      map['local_id'] = Variable<String>(localId.value);
+    if (tripId.present) {
+      map['trip_id'] = Variable<String>(tripId.value);
     }
-    if (serverId.present) {
-      map['server_id'] = Variable<String>(serverId.value);
+    if (agentId.present) {
+      map['agent_id'] = Variable<String>(agentId.value);
     }
-    if (tripLocalId.present) {
-      map['trip_local_id'] = Variable<String>(tripLocalId.value);
+    if (deviceId.present) {
+      map['device_id'] = Variable<String>(deviceId.value);
     }
-    if (tripServerId.present) {
-      map['trip_server_id'] = Variable<String>(tripServerId.value);
-    }
-    if (serialNumber.present) {
-      map['serial_number'] = Variable<String>(serialNumber.value);
+    if (depotId.present) {
+      map['depot_id'] = Variable<String>(depotId.value);
     }
     if (ticketCategory.present) {
       map['ticket_category'] = Variable<String>(ticketCategory.value);
@@ -4370,68 +2934,69 @@ class TicketsCompanion extends UpdateCompanion<Ticket> {
     if (destination.present) {
       map['destination'] = Variable<String>(destination.value);
     }
-    if (linkedPassengerTicketId.present) {
-      map['linked_passenger_ticket_id'] = Variable<String>(
-        linkedPassengerTicketId.value,
-      );
+    if (passengerName.present) {
+      map['passenger_name'] = Variable<String>(passengerName.value);
     }
-    if (agentId.present) {
-      map['agent_id'] = Variable<String>(agentId.value);
+    if (passengerPhone.present) {
+      map['passenger_phone'] = Variable<String>(passengerPhone.value);
     }
-    if (agentCode.present) {
-      map['agent_code'] = Variable<String>(agentCode.value);
+    if (serialNumber.present) {
+      map['serial_number'] = Variable<int>(serialNumber.value);
     }
     if (issuedAt.present) {
       map['issued_at'] = Variable<DateTime>(issuedAt.value);
     }
-    if (issuedOffline.present) {
-      map['issued_offline'] = Variable<bool>(issuedOffline.value);
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
     }
-    if (isSynced.present) {
-      map['is_synced'] = Variable<bool>(isSynced.value);
+    if (idempotencyKey.present) {
+      map['idempotency_key'] = Variable<String>(idempotencyKey.value);
     }
-    if (syncError.present) {
-      map['sync_error'] = Variable<String>(syncError.value);
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
     }
-    if (lastSyncAttemptAt.present) {
-      map['last_sync_attempt_at'] = Variable<DateTime>(lastSyncAttemptAt.value);
+    if (retryCount.present) {
+      map['retry_count'] = Variable<int>(retryCount.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
     }
     return map;
   }
 
   @override
   String toString() {
-    return (StringBuffer('TicketsCompanion(')
+    return (StringBuffer('LocalTicketsCompanion(')
           ..write('id: $id, ')
-          ..write('localId: $localId, ')
-          ..write('serverId: $serverId, ')
-          ..write('tripLocalId: $tripLocalId, ')
-          ..write('tripServerId: $tripServerId, ')
-          ..write('serialNumber: $serialNumber, ')
+          ..write('tripId: $tripId, ')
+          ..write('agentId: $agentId, ')
+          ..write('deviceId: $deviceId, ')
+          ..write('depotId: $depotId, ')
           ..write('ticketCategory: $ticketCategory, ')
           ..write('currency: $currency, ')
           ..write('amount: $amount, ')
           ..write('departure: $departure, ')
           ..write('destination: $destination, ')
-          ..write('linkedPassengerTicketId: $linkedPassengerTicketId, ')
-          ..write('agentId: $agentId, ')
-          ..write('agentCode: $agentCode, ')
+          ..write('passengerName: $passengerName, ')
+          ..write('passengerPhone: $passengerPhone, ')
+          ..write('serialNumber: $serialNumber, ')
           ..write('issuedAt: $issuedAt, ')
-          ..write('issuedOffline: $issuedOffline, ')
-          ..write('isSynced: $isSynced, ')
-          ..write('syncError: $syncError, ')
-          ..write('lastSyncAttemptAt: $lastSyncAttemptAt')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('idempotencyKey: $idempotencyKey, ')
+          ..write('lastError: $lastError, ')
+          ..write('retryCount: $retryCount, ')
+          ..write('rowid: $rowid')
           ..write(')'))
         .toString();
   }
 }
 
-class $SyncQueueTable extends SyncQueue
-    with TableInfo<$SyncQueueTable, SyncQueueData> {
+class $SyncQueueItemsTable extends SyncQueueItems
+    with TableInfo<$SyncQueueItemsTable, SyncQueueItem> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $SyncQueueTable(this.attachedDatabase, [this._alias]);
+  $SyncQueueItemsTable(this.attachedDatabase, [this._alias]);
   static const VerificationMeta _idMeta = const VerificationMeta('id');
   @override
   late final GeneratedColumn<int> id = GeneratedColumn<int>(
@@ -4460,11 +3025,11 @@ class $SyncQueueTable extends SyncQueue
     'entityId',
   );
   @override
-  late final GeneratedColumn<int> entityId = GeneratedColumn<int>(
+  late final GeneratedColumn<String> entityId = GeneratedColumn<String>(
     'entity_id',
     aliasedName,
     false,
-    type: DriftSqlType.int,
+    type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
   static const VerificationMeta _operationMeta = const VerificationMeta(
@@ -4478,14 +3043,26 @@ class $SyncQueueTable extends SyncQueue
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _dataMeta = const VerificationMeta('data');
+  static const VerificationMeta _payloadJsonMeta = const VerificationMeta(
+    'payloadJson',
+  );
   @override
-  late final GeneratedColumn<String> data = GeneratedColumn<String>(
-    'data',
+  late final GeneratedColumn<String> payloadJson = GeneratedColumn<String>(
+    'payload_json',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
   );
   static const VerificationMeta _retryCountMeta = const VerificationMeta(
     'retryCount',
@@ -4499,6 +3076,17 @@ class $SyncQueueTable extends SyncQueue
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _lastErrorMeta = const VerificationMeta(
+    'lastError',
+  );
+  @override
+  late final GeneratedColumn<String> lastError = GeneratedColumn<String>(
+    'last_error',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -4510,26 +3098,16 @@ class $SyncQueueTable extends SyncQueue
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _lastAttemptAtMeta = const VerificationMeta(
-    'lastAttemptAt',
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
   );
   @override
-  late final GeneratedColumn<DateTime> lastAttemptAt =
-      GeneratedColumn<DateTime>(
-        'last_attempt_at',
-        aliasedName,
-        true,
-        type: DriftSqlType.dateTime,
-        requiredDuringInsert: false,
-      );
-  static const VerificationMeta _errorMeta = const VerificationMeta('error');
-  @override
-  late final GeneratedColumn<String> error = GeneratedColumn<String>(
-    'error',
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
     aliasedName,
-    true,
-    type: DriftSqlType.string,
-    requiredDuringInsert: false,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
   );
   @override
   List<GeneratedColumn> get $columns => [
@@ -4537,20 +3115,21 @@ class $SyncQueueTable extends SyncQueue
     entityType,
     entityId,
     operation,
-    data,
+    payloadJson,
+    status,
     retryCount,
+    lastError,
     createdAt,
-    lastAttemptAt,
-    error,
+    updatedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'sync_queue';
+  static const String $name = 'sync_queue_items';
   @override
   VerificationContext validateIntegrity(
-    Insertable<SyncQueueData> instance, {
+    Insertable<SyncQueueItem> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
@@ -4582,18 +3161,33 @@ class $SyncQueueTable extends SyncQueue
     } else if (isInserting) {
       context.missing(_operationMeta);
     }
-    if (data.containsKey('data')) {
+    if (data.containsKey('payload_json')) {
       context.handle(
-        _dataMeta,
-        this.data.isAcceptableOrUnknown(data['data']!, _dataMeta),
+        _payloadJsonMeta,
+        payloadJson.isAcceptableOrUnknown(
+          data['payload_json']!,
+          _payloadJsonMeta,
+        ),
       );
     } else if (isInserting) {
-      context.missing(_dataMeta);
+      context.missing(_payloadJsonMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
     }
     if (data.containsKey('retry_count')) {
       context.handle(
         _retryCountMeta,
         retryCount.isAcceptableOrUnknown(data['retry_count']!, _retryCountMeta),
+      );
+    }
+    if (data.containsKey('last_error')) {
+      context.handle(
+        _lastErrorMeta,
+        lastError.isAcceptableOrUnknown(data['last_error']!, _lastErrorMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -4604,20 +3198,13 @@ class $SyncQueueTable extends SyncQueue
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
-    if (data.containsKey('last_attempt_at')) {
+    if (data.containsKey('updated_at')) {
       context.handle(
-        _lastAttemptAtMeta,
-        lastAttemptAt.isAcceptableOrUnknown(
-          data['last_attempt_at']!,
-          _lastAttemptAtMeta,
-        ),
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
       );
-    }
-    if (data.containsKey('error')) {
-      context.handle(
-        _errorMeta,
-        error.isAcceptableOrUnknown(data['error']!, _errorMeta),
-      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
     }
     return context;
   }
@@ -4625,9 +3212,9 @@ class $SyncQueueTable extends SyncQueue
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  SyncQueueData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  SyncQueueItem map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return SyncQueueData(
+    return SyncQueueItem(
       id: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}id'],
@@ -4637,115 +3224,120 @@ class $SyncQueueTable extends SyncQueue
         data['${effectivePrefix}entity_type'],
       )!,
       entityId: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.string,
         data['${effectivePrefix}entity_id'],
       )!,
       operation: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}operation'],
       )!,
-      data: attachedDatabase.typeMapping.read(
+      payloadJson: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}data'],
+        data['${effectivePrefix}payload_json'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
       )!,
       retryCount: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}retry_count'],
       )!,
+      lastError: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}last_error'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
-      lastAttemptAt: attachedDatabase.typeMapping.read(
+      updatedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
-        data['${effectivePrefix}last_attempt_at'],
-      ),
-      error: attachedDatabase.typeMapping.read(
-        DriftSqlType.string,
-        data['${effectivePrefix}error'],
-      ),
+        data['${effectivePrefix}updated_at'],
+      )!,
     );
   }
 
   @override
-  $SyncQueueTable createAlias(String alias) {
-    return $SyncQueueTable(attachedDatabase, alias);
+  $SyncQueueItemsTable createAlias(String alias) {
+    return $SyncQueueItemsTable(attachedDatabase, alias);
   }
 }
 
-class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
+class SyncQueueItem extends DataClass implements Insertable<SyncQueueItem> {
   final int id;
   final String entityType;
-  final int entityId;
+  final String entityId;
   final String operation;
-  final String data;
+  final String payloadJson;
+  final String status;
   final int retryCount;
+  final String? lastError;
   final DateTime createdAt;
-  final DateTime? lastAttemptAt;
-  final String? error;
-  const SyncQueueData({
+  final DateTime updatedAt;
+  const SyncQueueItem({
     required this.id,
     required this.entityType,
     required this.entityId,
     required this.operation,
-    required this.data,
+    required this.payloadJson,
+    required this.status,
     required this.retryCount,
+    this.lastError,
     required this.createdAt,
-    this.lastAttemptAt,
-    this.error,
+    required this.updatedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['entity_type'] = Variable<String>(entityType);
-    map['entity_id'] = Variable<int>(entityId);
+    map['entity_id'] = Variable<String>(entityId);
     map['operation'] = Variable<String>(operation);
-    map['data'] = Variable<String>(data);
+    map['payload_json'] = Variable<String>(payloadJson);
+    map['status'] = Variable<String>(status);
     map['retry_count'] = Variable<int>(retryCount);
+    if (!nullToAbsent || lastError != null) {
+      map['last_error'] = Variable<String>(lastError);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
-    if (!nullToAbsent || lastAttemptAt != null) {
-      map['last_attempt_at'] = Variable<DateTime>(lastAttemptAt);
-    }
-    if (!nullToAbsent || error != null) {
-      map['error'] = Variable<String>(error);
-    }
+    map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
   }
 
-  SyncQueueCompanion toCompanion(bool nullToAbsent) {
-    return SyncQueueCompanion(
+  SyncQueueItemsCompanion toCompanion(bool nullToAbsent) {
+    return SyncQueueItemsCompanion(
       id: Value(id),
       entityType: Value(entityType),
       entityId: Value(entityId),
       operation: Value(operation),
-      data: Value(data),
+      payloadJson: Value(payloadJson),
+      status: Value(status),
       retryCount: Value(retryCount),
+      lastError: lastError == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastError),
       createdAt: Value(createdAt),
-      lastAttemptAt: lastAttemptAt == null && nullToAbsent
-          ? const Value.absent()
-          : Value(lastAttemptAt),
-      error: error == null && nullToAbsent
-          ? const Value.absent()
-          : Value(error),
+      updatedAt: Value(updatedAt),
     );
   }
 
-  factory SyncQueueData.fromJson(
+  factory SyncQueueItem.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return SyncQueueData(
+    return SyncQueueItem(
       id: serializer.fromJson<int>(json['id']),
       entityType: serializer.fromJson<String>(json['entityType']),
-      entityId: serializer.fromJson<int>(json['entityId']),
+      entityId: serializer.fromJson<String>(json['entityId']),
       operation: serializer.fromJson<String>(json['operation']),
-      data: serializer.fromJson<String>(json['data']),
+      payloadJson: serializer.fromJson<String>(json['payloadJson']),
+      status: serializer.fromJson<String>(json['status']),
       retryCount: serializer.fromJson<int>(json['retryCount']),
+      lastError: serializer.fromJson<String?>(json['lastError']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
-      lastAttemptAt: serializer.fromJson<DateTime?>(json['lastAttemptAt']),
-      error: serializer.fromJson<String?>(json['error']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
   }
   @override
@@ -4754,71 +3346,74 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'entityType': serializer.toJson<String>(entityType),
-      'entityId': serializer.toJson<int>(entityId),
+      'entityId': serializer.toJson<String>(entityId),
       'operation': serializer.toJson<String>(operation),
-      'data': serializer.toJson<String>(data),
+      'payloadJson': serializer.toJson<String>(payloadJson),
+      'status': serializer.toJson<String>(status),
       'retryCount': serializer.toJson<int>(retryCount),
+      'lastError': serializer.toJson<String?>(lastError),
       'createdAt': serializer.toJson<DateTime>(createdAt),
-      'lastAttemptAt': serializer.toJson<DateTime?>(lastAttemptAt),
-      'error': serializer.toJson<String?>(error),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
   }
 
-  SyncQueueData copyWith({
+  SyncQueueItem copyWith({
     int? id,
     String? entityType,
-    int? entityId,
+    String? entityId,
     String? operation,
-    String? data,
+    String? payloadJson,
+    String? status,
     int? retryCount,
+    Value<String?> lastError = const Value.absent(),
     DateTime? createdAt,
-    Value<DateTime?> lastAttemptAt = const Value.absent(),
-    Value<String?> error = const Value.absent(),
-  }) => SyncQueueData(
+    DateTime? updatedAt,
+  }) => SyncQueueItem(
     id: id ?? this.id,
     entityType: entityType ?? this.entityType,
     entityId: entityId ?? this.entityId,
     operation: operation ?? this.operation,
-    data: data ?? this.data,
+    payloadJson: payloadJson ?? this.payloadJson,
+    status: status ?? this.status,
     retryCount: retryCount ?? this.retryCount,
+    lastError: lastError.present ? lastError.value : this.lastError,
     createdAt: createdAt ?? this.createdAt,
-    lastAttemptAt: lastAttemptAt.present
-        ? lastAttemptAt.value
-        : this.lastAttemptAt,
-    error: error.present ? error.value : this.error,
+    updatedAt: updatedAt ?? this.updatedAt,
   );
-  SyncQueueData copyWithCompanion(SyncQueueCompanion data) {
-    return SyncQueueData(
+  SyncQueueItem copyWithCompanion(SyncQueueItemsCompanion data) {
+    return SyncQueueItem(
       id: data.id.present ? data.id.value : this.id,
       entityType: data.entityType.present
           ? data.entityType.value
           : this.entityType,
       entityId: data.entityId.present ? data.entityId.value : this.entityId,
       operation: data.operation.present ? data.operation.value : this.operation,
-      data: data.data.present ? data.data.value : this.data,
+      payloadJson: data.payloadJson.present
+          ? data.payloadJson.value
+          : this.payloadJson,
+      status: data.status.present ? data.status.value : this.status,
       retryCount: data.retryCount.present
           ? data.retryCount.value
           : this.retryCount,
+      lastError: data.lastError.present ? data.lastError.value : this.lastError,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
-      lastAttemptAt: data.lastAttemptAt.present
-          ? data.lastAttemptAt.value
-          : this.lastAttemptAt,
-      error: data.error.present ? data.error.value : this.error,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('SyncQueueData(')
+    return (StringBuffer('SyncQueueItem(')
           ..write('id: $id, ')
           ..write('entityType: $entityType, ')
           ..write('entityId: $entityId, ')
           ..write('operation: $operation, ')
-          ..write('data: $data, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('status: $status, ')
           ..write('retryCount: $retryCount, ')
+          ..write('lastError: $lastError, ')
           ..write('createdAt: $createdAt, ')
-          ..write('lastAttemptAt: $lastAttemptAt, ')
-          ..write('error: $error')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
@@ -4829,108 +3424,118 @@ class SyncQueueData extends DataClass implements Insertable<SyncQueueData> {
     entityType,
     entityId,
     operation,
-    data,
+    payloadJson,
+    status,
     retryCount,
+    lastError,
     createdAt,
-    lastAttemptAt,
-    error,
+    updatedAt,
   );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is SyncQueueData &&
+      (other is SyncQueueItem &&
           other.id == this.id &&
           other.entityType == this.entityType &&
           other.entityId == this.entityId &&
           other.operation == this.operation &&
-          other.data == this.data &&
+          other.payloadJson == this.payloadJson &&
+          other.status == this.status &&
           other.retryCount == this.retryCount &&
+          other.lastError == this.lastError &&
           other.createdAt == this.createdAt &&
-          other.lastAttemptAt == this.lastAttemptAt &&
-          other.error == this.error);
+          other.updatedAt == this.updatedAt);
 }
 
-class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
+class SyncQueueItemsCompanion extends UpdateCompanion<SyncQueueItem> {
   final Value<int> id;
   final Value<String> entityType;
-  final Value<int> entityId;
+  final Value<String> entityId;
   final Value<String> operation;
-  final Value<String> data;
+  final Value<String> payloadJson;
+  final Value<String> status;
   final Value<int> retryCount;
+  final Value<String?> lastError;
   final Value<DateTime> createdAt;
-  final Value<DateTime?> lastAttemptAt;
-  final Value<String?> error;
-  const SyncQueueCompanion({
+  final Value<DateTime> updatedAt;
+  const SyncQueueItemsCompanion({
     this.id = const Value.absent(),
     this.entityType = const Value.absent(),
     this.entityId = const Value.absent(),
     this.operation = const Value.absent(),
-    this.data = const Value.absent(),
+    this.payloadJson = const Value.absent(),
+    this.status = const Value.absent(),
     this.retryCount = const Value.absent(),
+    this.lastError = const Value.absent(),
     this.createdAt = const Value.absent(),
-    this.lastAttemptAt = const Value.absent(),
-    this.error = const Value.absent(),
+    this.updatedAt = const Value.absent(),
   });
-  SyncQueueCompanion.insert({
+  SyncQueueItemsCompanion.insert({
     this.id = const Value.absent(),
     required String entityType,
-    required int entityId,
+    required String entityId,
     required String operation,
-    required String data,
+    required String payloadJson,
+    this.status = const Value.absent(),
     this.retryCount = const Value.absent(),
+    this.lastError = const Value.absent(),
     required DateTime createdAt,
-    this.lastAttemptAt = const Value.absent(),
-    this.error = const Value.absent(),
+    required DateTime updatedAt,
   }) : entityType = Value(entityType),
        entityId = Value(entityId),
        operation = Value(operation),
-       data = Value(data),
-       createdAt = Value(createdAt);
-  static Insertable<SyncQueueData> custom({
+       payloadJson = Value(payloadJson),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<SyncQueueItem> custom({
     Expression<int>? id,
     Expression<String>? entityType,
-    Expression<int>? entityId,
+    Expression<String>? entityId,
     Expression<String>? operation,
-    Expression<String>? data,
+    Expression<String>? payloadJson,
+    Expression<String>? status,
     Expression<int>? retryCount,
+    Expression<String>? lastError,
     Expression<DateTime>? createdAt,
-    Expression<DateTime>? lastAttemptAt,
-    Expression<String>? error,
+    Expression<DateTime>? updatedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (entityType != null) 'entity_type': entityType,
       if (entityId != null) 'entity_id': entityId,
       if (operation != null) 'operation': operation,
-      if (data != null) 'data': data,
+      if (payloadJson != null) 'payload_json': payloadJson,
+      if (status != null) 'status': status,
       if (retryCount != null) 'retry_count': retryCount,
+      if (lastError != null) 'last_error': lastError,
       if (createdAt != null) 'created_at': createdAt,
-      if (lastAttemptAt != null) 'last_attempt_at': lastAttemptAt,
-      if (error != null) 'error': error,
+      if (updatedAt != null) 'updated_at': updatedAt,
     });
   }
 
-  SyncQueueCompanion copyWith({
+  SyncQueueItemsCompanion copyWith({
     Value<int>? id,
     Value<String>? entityType,
-    Value<int>? entityId,
+    Value<String>? entityId,
     Value<String>? operation,
-    Value<String>? data,
+    Value<String>? payloadJson,
+    Value<String>? status,
     Value<int>? retryCount,
+    Value<String?>? lastError,
     Value<DateTime>? createdAt,
-    Value<DateTime?>? lastAttemptAt,
-    Value<String?>? error,
+    Value<DateTime>? updatedAt,
   }) {
-    return SyncQueueCompanion(
+    return SyncQueueItemsCompanion(
       id: id ?? this.id,
       entityType: entityType ?? this.entityType,
       entityId: entityId ?? this.entityId,
       operation: operation ?? this.operation,
-      data: data ?? this.data,
+      payloadJson: payloadJson ?? this.payloadJson,
+      status: status ?? this.status,
       retryCount: retryCount ?? this.retryCount,
+      lastError: lastError ?? this.lastError,
       createdAt: createdAt ?? this.createdAt,
-      lastAttemptAt: lastAttemptAt ?? this.lastAttemptAt,
-      error: error ?? this.error,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -4944,290 +3549,229 @@ class SyncQueueCompanion extends UpdateCompanion<SyncQueueData> {
       map['entity_type'] = Variable<String>(entityType.value);
     }
     if (entityId.present) {
-      map['entity_id'] = Variable<int>(entityId.value);
+      map['entity_id'] = Variable<String>(entityId.value);
     }
     if (operation.present) {
       map['operation'] = Variable<String>(operation.value);
     }
-    if (data.present) {
-      map['data'] = Variable<String>(data.value);
+    if (payloadJson.present) {
+      map['payload_json'] = Variable<String>(payloadJson.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
     }
     if (retryCount.present) {
       map['retry_count'] = Variable<int>(retryCount.value);
     }
+    if (lastError.present) {
+      map['last_error'] = Variable<String>(lastError.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
-    if (lastAttemptAt.present) {
-      map['last_attempt_at'] = Variable<DateTime>(lastAttemptAt.value);
-    }
-    if (error.present) {
-      map['error'] = Variable<String>(error.value);
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
     return map;
   }
 
   @override
   String toString() {
-    return (StringBuffer('SyncQueueCompanion(')
+    return (StringBuffer('SyncQueueItemsCompanion(')
           ..write('id: $id, ')
           ..write('entityType: $entityType, ')
           ..write('entityId: $entityId, ')
           ..write('operation: $operation, ')
-          ..write('data: $data, ')
+          ..write('payloadJson: $payloadJson, ')
+          ..write('status: $status, ')
           ..write('retryCount: $retryCount, ')
+          ..write('lastError: $lastError, ')
           ..write('createdAt: $createdAt, ')
-          ..write('lastAttemptAt: $lastAttemptAt, ')
-          ..write('error: $error')
+          ..write('updatedAt: $updatedAt')
           ..write(')'))
         .toString();
   }
 }
 
-class $CacheMetadataTable extends CacheMetadata
-    with TableInfo<$CacheMetadataTable, CacheMetadataData> {
+class $SyncMetadataTable extends SyncMetadata
+    with TableInfo<$SyncMetadataTable, SyncMetadataData> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
-  $CacheMetadataTable(this.attachedDatabase, [this._alias]);
-  static const VerificationMeta _dataTypeMeta = const VerificationMeta(
-    'dataType',
-  );
+  $SyncMetadataTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _keyMeta = const VerificationMeta('key');
   @override
-  late final GeneratedColumn<String> dataType = GeneratedColumn<String>(
-    'data_type',
+  late final GeneratedColumn<String> key = GeneratedColumn<String>(
+    'key',
     aliasedName,
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _lastCachedAtMeta = const VerificationMeta(
-    'lastCachedAt',
-  );
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
   @override
-  late final GeneratedColumn<DateTime> lastCachedAt = GeneratedColumn<DateTime>(
-    'last_cached_at',
+  late final GeneratedColumn<String> value = GeneratedColumn<String>(
+    'value',
     aliasedName,
     false,
-    type: DriftSqlType.dateTime,
+    type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
-  static const VerificationMeta _recordCountMeta = const VerificationMeta(
-    'recordCount',
-  );
   @override
-  late final GeneratedColumn<int> recordCount = GeneratedColumn<int>(
-    'record_count',
-    aliasedName,
-    false,
-    type: DriftSqlType.int,
-    requiredDuringInsert: false,
-    defaultValue: const Constant(0),
-  );
-  @override
-  List<GeneratedColumn> get $columns => [dataType, lastCachedAt, recordCount];
+  List<GeneratedColumn> get $columns => [key, value];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
   String get actualTableName => $name;
-  static const String $name = 'cache_metadata';
+  static const String $name = 'sync_metadata';
   @override
   VerificationContext validateIntegrity(
-    Insertable<CacheMetadataData> instance, {
+    Insertable<SyncMetadataData> instance, {
     bool isInserting = false,
   }) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
-    if (data.containsKey('data_type')) {
+    if (data.containsKey('key')) {
       context.handle(
-        _dataTypeMeta,
-        dataType.isAcceptableOrUnknown(data['data_type']!, _dataTypeMeta),
+        _keyMeta,
+        key.isAcceptableOrUnknown(data['key']!, _keyMeta),
       );
     } else if (isInserting) {
-      context.missing(_dataTypeMeta);
+      context.missing(_keyMeta);
     }
-    if (data.containsKey('last_cached_at')) {
+    if (data.containsKey('value')) {
       context.handle(
-        _lastCachedAtMeta,
-        lastCachedAt.isAcceptableOrUnknown(
-          data['last_cached_at']!,
-          _lastCachedAtMeta,
-        ),
+        _valueMeta,
+        value.isAcceptableOrUnknown(data['value']!, _valueMeta),
       );
     } else if (isInserting) {
-      context.missing(_lastCachedAtMeta);
-    }
-    if (data.containsKey('record_count')) {
-      context.handle(
-        _recordCountMeta,
-        recordCount.isAcceptableOrUnknown(
-          data['record_count']!,
-          _recordCountMeta,
-        ),
-      );
+      context.missing(_valueMeta);
     }
     return context;
   }
 
   @override
-  Set<GeneratedColumn> get $primaryKey => {dataType};
+  Set<GeneratedColumn> get $primaryKey => {key};
   @override
-  CacheMetadataData map(Map<String, dynamic> data, {String? tablePrefix}) {
+  SyncMetadataData map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return CacheMetadataData(
-      dataType: attachedDatabase.typeMapping.read(
+    return SyncMetadataData(
+      key: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
-        data['${effectivePrefix}data_type'],
+        data['${effectivePrefix}key'],
       )!,
-      lastCachedAt: attachedDatabase.typeMapping.read(
-        DriftSqlType.dateTime,
-        data['${effectivePrefix}last_cached_at'],
-      )!,
-      recordCount: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
-        data['${effectivePrefix}record_count'],
+      value: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}value'],
       )!,
     );
   }
 
   @override
-  $CacheMetadataTable createAlias(String alias) {
-    return $CacheMetadataTable(attachedDatabase, alias);
+  $SyncMetadataTable createAlias(String alias) {
+    return $SyncMetadataTable(attachedDatabase, alias);
   }
 }
 
-class CacheMetadataData extends DataClass
-    implements Insertable<CacheMetadataData> {
-  final String dataType;
-  final DateTime lastCachedAt;
-  final int recordCount;
-  const CacheMetadataData({
-    required this.dataType,
-    required this.lastCachedAt,
-    required this.recordCount,
-  });
+class SyncMetadataData extends DataClass
+    implements Insertable<SyncMetadataData> {
+  final String key;
+  final String value;
+  const SyncMetadataData({required this.key, required this.value});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    map['data_type'] = Variable<String>(dataType);
-    map['last_cached_at'] = Variable<DateTime>(lastCachedAt);
-    map['record_count'] = Variable<int>(recordCount);
+    map['key'] = Variable<String>(key);
+    map['value'] = Variable<String>(value);
     return map;
   }
 
-  CacheMetadataCompanion toCompanion(bool nullToAbsent) {
-    return CacheMetadataCompanion(
-      dataType: Value(dataType),
-      lastCachedAt: Value(lastCachedAt),
-      recordCount: Value(recordCount),
-    );
+  SyncMetadataCompanion toCompanion(bool nullToAbsent) {
+    return SyncMetadataCompanion(key: Value(key), value: Value(value));
   }
 
-  factory CacheMetadataData.fromJson(
+  factory SyncMetadataData.fromJson(
     Map<String, dynamic> json, {
     ValueSerializer? serializer,
   }) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return CacheMetadataData(
-      dataType: serializer.fromJson<String>(json['dataType']),
-      lastCachedAt: serializer.fromJson<DateTime>(json['lastCachedAt']),
-      recordCount: serializer.fromJson<int>(json['recordCount']),
+    return SyncMetadataData(
+      key: serializer.fromJson<String>(json['key']),
+      value: serializer.fromJson<String>(json['value']),
     );
   }
   @override
   Map<String, dynamic> toJson({ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
     return <String, dynamic>{
-      'dataType': serializer.toJson<String>(dataType),
-      'lastCachedAt': serializer.toJson<DateTime>(lastCachedAt),
-      'recordCount': serializer.toJson<int>(recordCount),
+      'key': serializer.toJson<String>(key),
+      'value': serializer.toJson<String>(value),
     };
   }
 
-  CacheMetadataData copyWith({
-    String? dataType,
-    DateTime? lastCachedAt,
-    int? recordCount,
-  }) => CacheMetadataData(
-    dataType: dataType ?? this.dataType,
-    lastCachedAt: lastCachedAt ?? this.lastCachedAt,
-    recordCount: recordCount ?? this.recordCount,
-  );
-  CacheMetadataData copyWithCompanion(CacheMetadataCompanion data) {
-    return CacheMetadataData(
-      dataType: data.dataType.present ? data.dataType.value : this.dataType,
-      lastCachedAt: data.lastCachedAt.present
-          ? data.lastCachedAt.value
-          : this.lastCachedAt,
-      recordCount: data.recordCount.present
-          ? data.recordCount.value
-          : this.recordCount,
+  SyncMetadataData copyWith({String? key, String? value}) =>
+      SyncMetadataData(key: key ?? this.key, value: value ?? this.value);
+  SyncMetadataData copyWithCompanion(SyncMetadataCompanion data) {
+    return SyncMetadataData(
+      key: data.key.present ? data.key.value : this.key,
+      value: data.value.present ? data.value.value : this.value,
     );
   }
 
   @override
   String toString() {
-    return (StringBuffer('CacheMetadataData(')
-          ..write('dataType: $dataType, ')
-          ..write('lastCachedAt: $lastCachedAt, ')
-          ..write('recordCount: $recordCount')
+    return (StringBuffer('SyncMetadataData(')
+          ..write('key: $key, ')
+          ..write('value: $value')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(dataType, lastCachedAt, recordCount);
+  int get hashCode => Object.hash(key, value);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is CacheMetadataData &&
-          other.dataType == this.dataType &&
-          other.lastCachedAt == this.lastCachedAt &&
-          other.recordCount == this.recordCount);
+      (other is SyncMetadataData &&
+          other.key == this.key &&
+          other.value == this.value);
 }
 
-class CacheMetadataCompanion extends UpdateCompanion<CacheMetadataData> {
-  final Value<String> dataType;
-  final Value<DateTime> lastCachedAt;
-  final Value<int> recordCount;
+class SyncMetadataCompanion extends UpdateCompanion<SyncMetadataData> {
+  final Value<String> key;
+  final Value<String> value;
   final Value<int> rowid;
-  const CacheMetadataCompanion({
-    this.dataType = const Value.absent(),
-    this.lastCachedAt = const Value.absent(),
-    this.recordCount = const Value.absent(),
+  const SyncMetadataCompanion({
+    this.key = const Value.absent(),
+    this.value = const Value.absent(),
     this.rowid = const Value.absent(),
   });
-  CacheMetadataCompanion.insert({
-    required String dataType,
-    required DateTime lastCachedAt,
-    this.recordCount = const Value.absent(),
+  SyncMetadataCompanion.insert({
+    required String key,
+    required String value,
     this.rowid = const Value.absent(),
-  }) : dataType = Value(dataType),
-       lastCachedAt = Value(lastCachedAt);
-  static Insertable<CacheMetadataData> custom({
-    Expression<String>? dataType,
-    Expression<DateTime>? lastCachedAt,
-    Expression<int>? recordCount,
+  }) : key = Value(key),
+       value = Value(value);
+  static Insertable<SyncMetadataData> custom({
+    Expression<String>? key,
+    Expression<String>? value,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
-      if (dataType != null) 'data_type': dataType,
-      if (lastCachedAt != null) 'last_cached_at': lastCachedAt,
-      if (recordCount != null) 'record_count': recordCount,
+      if (key != null) 'key': key,
+      if (value != null) 'value': value,
       if (rowid != null) 'rowid': rowid,
     });
   }
 
-  CacheMetadataCompanion copyWith({
-    Value<String>? dataType,
-    Value<DateTime>? lastCachedAt,
-    Value<int>? recordCount,
+  SyncMetadataCompanion copyWith({
+    Value<String>? key,
+    Value<String>? value,
     Value<int>? rowid,
   }) {
-    return CacheMetadataCompanion(
-      dataType: dataType ?? this.dataType,
-      lastCachedAt: lastCachedAt ?? this.lastCachedAt,
-      recordCount: recordCount ?? this.recordCount,
+    return SyncMetadataCompanion(
+      key: key ?? this.key,
+      value: value ?? this.value,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -5235,14 +3779,11 @@ class CacheMetadataCompanion extends UpdateCompanion<CacheMetadataData> {
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
-    if (dataType.present) {
-      map['data_type'] = Variable<String>(dataType.value);
+    if (key.present) {
+      map['key'] = Variable<String>(key.value);
     }
-    if (lastCachedAt.present) {
-      map['last_cached_at'] = Variable<DateTime>(lastCachedAt.value);
-    }
-    if (recordCount.present) {
-      map['record_count'] = Variable<int>(recordCount.value);
+    if (value.present) {
+      map['value'] = Variable<String>(value.value);
     }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
@@ -5252,10 +3793,9 @@ class CacheMetadataCompanion extends UpdateCompanion<CacheMetadataData> {
 
   @override
   String toString() {
-    return (StringBuffer('CacheMetadataCompanion(')
-          ..write('dataType: $dataType, ')
-          ..write('lastCachedAt: $lastCachedAt, ')
-          ..write('recordCount: $recordCount, ')
+    return (StringBuffer('SyncMetadataCompanion(')
+          ..write('key: $key, ')
+          ..write('value: $value, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5265,241 +3805,202 @@ class CacheMetadataCompanion extends UpdateCompanion<CacheMetadataData> {
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
-  late final $DevicesTable devices = $DevicesTable(this);
-  late final $AgentsTable agents = $AgentsTable(this);
-  late final $RoutesTable routes = $RoutesTable(this);
-  late final $FleetsTable fleets = $FleetsTable(this);
-  late final $TripsTable trips = $TripsTable(this);
-  late final $TicketsTable tickets = $TicketsTable(this);
-  late final $SyncQueueTable syncQueue = $SyncQueueTable(this);
-  late final $CacheMetadataTable cacheMetadata = $CacheMetadataTable(this);
+  late final $CachedFleetsTable cachedFleets = $CachedFleetsTable(this);
+  late final $CachedRoutesTable cachedRoutes = $CachedRoutesTable(this);
+  late final $CachedFaresTable cachedFares = $CachedFaresTable(this);
+  late final $LocalTripsTable localTrips = $LocalTripsTable(this);
+  late final $LocalTicketsTable localTickets = $LocalTicketsTable(this);
+  late final $SyncQueueItemsTable syncQueueItems = $SyncQueueItemsTable(this);
+  late final $SyncMetadataTable syncMetadata = $SyncMetadataTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
-    devices,
-    agents,
-    routes,
-    fleets,
-    trips,
-    tickets,
-    syncQueue,
-    cacheMetadata,
+    cachedFleets,
+    cachedRoutes,
+    cachedFares,
+    localTrips,
+    localTickets,
+    syncQueueItems,
+    syncMetadata,
   ];
 }
 
-typedef $$DevicesTableCreateCompanionBuilder =
-    DevicesCompanion Function({
-      Value<int> id,
-      required String deviceToken,
-      required String merchantCode,
-      required String deviceName,
-      required String deviceModel,
-      required DateTime pairedAt,
-      Value<bool> isActive,
+typedef $$CachedFleetsTableCreateCompanionBuilder =
+    CachedFleetsCompanion Function({
+      required String id,
+      required String number,
+      Value<String> status,
+      Value<int> capacity,
+      required DateTime cachedAt,
+      Value<int> rowid,
     });
-typedef $$DevicesTableUpdateCompanionBuilder =
-    DevicesCompanion Function({
-      Value<int> id,
-      Value<String> deviceToken,
-      Value<String> merchantCode,
-      Value<String> deviceName,
-      Value<String> deviceModel,
-      Value<DateTime> pairedAt,
-      Value<bool> isActive,
+typedef $$CachedFleetsTableUpdateCompanionBuilder =
+    CachedFleetsCompanion Function({
+      Value<String> id,
+      Value<String> number,
+      Value<String> status,
+      Value<int> capacity,
+      Value<DateTime> cachedAt,
+      Value<int> rowid,
     });
 
-class $$DevicesTableFilterComposer
-    extends Composer<_$AppDatabase, $DevicesTable> {
-  $$DevicesTableFilterComposer({
+class $$CachedFleetsTableFilterComposer
+    extends Composer<_$AppDatabase, $CachedFleetsTable> {
+  $$CachedFleetsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
+  ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get deviceToken => $composableBuilder(
-    column: $table.deviceToken,
+  ColumnFilters<String> get number => $composableBuilder(
+    column: $table.number,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get merchantCode => $composableBuilder(
-    column: $table.merchantCode,
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get deviceName => $composableBuilder(
-    column: $table.deviceName,
+  ColumnFilters<int> get capacity => $composableBuilder(
+    column: $table.capacity,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get deviceModel => $composableBuilder(
-    column: $table.deviceModel,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get pairedAt => $composableBuilder(
-    column: $table.pairedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get isActive => $composableBuilder(
-    column: $table.isActive,
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
 
-class $$DevicesTableOrderingComposer
-    extends Composer<_$AppDatabase, $DevicesTable> {
-  $$DevicesTableOrderingComposer({
+class $$CachedFleetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CachedFleetsTable> {
+  $$CachedFleetsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
+  ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get deviceToken => $composableBuilder(
-    column: $table.deviceToken,
+  ColumnOrderings<String> get number => $composableBuilder(
+    column: $table.number,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get merchantCode => $composableBuilder(
-    column: $table.merchantCode,
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get deviceName => $composableBuilder(
-    column: $table.deviceName,
+  ColumnOrderings<int> get capacity => $composableBuilder(
+    column: $table.capacity,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get deviceModel => $composableBuilder(
-    column: $table.deviceModel,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get pairedAt => $composableBuilder(
-    column: $table.pairedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get isActive => $composableBuilder(
-    column: $table.isActive,
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
     builder: (column) => ColumnOrderings(column),
   );
 }
 
-class $$DevicesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $DevicesTable> {
-  $$DevicesTableAnnotationComposer({
+class $$CachedFleetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CachedFleetsTable> {
+  $$CachedFleetsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
+  GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get deviceToken => $composableBuilder(
-    column: $table.deviceToken,
-    builder: (column) => column,
-  );
+  GeneratedColumn<String> get number =>
+      $composableBuilder(column: $table.number, builder: (column) => column);
 
-  GeneratedColumn<String> get merchantCode => $composableBuilder(
-    column: $table.merchantCode,
-    builder: (column) => column,
-  );
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
 
-  GeneratedColumn<String> get deviceName => $composableBuilder(
-    column: $table.deviceName,
-    builder: (column) => column,
-  );
+  GeneratedColumn<int> get capacity =>
+      $composableBuilder(column: $table.capacity, builder: (column) => column);
 
-  GeneratedColumn<String> get deviceModel => $composableBuilder(
-    column: $table.deviceModel,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<DateTime> get pairedAt =>
-      $composableBuilder(column: $table.pairedAt, builder: (column) => column);
-
-  GeneratedColumn<bool> get isActive =>
-      $composableBuilder(column: $table.isActive, builder: (column) => column);
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
 }
 
-class $$DevicesTableTableManager
+class $$CachedFleetsTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $DevicesTable,
-          Device,
-          $$DevicesTableFilterComposer,
-          $$DevicesTableOrderingComposer,
-          $$DevicesTableAnnotationComposer,
-          $$DevicesTableCreateCompanionBuilder,
-          $$DevicesTableUpdateCompanionBuilder,
-          (Device, BaseReferences<_$AppDatabase, $DevicesTable, Device>),
-          Device,
+          $CachedFleetsTable,
+          CachedFleet,
+          $$CachedFleetsTableFilterComposer,
+          $$CachedFleetsTableOrderingComposer,
+          $$CachedFleetsTableAnnotationComposer,
+          $$CachedFleetsTableCreateCompanionBuilder,
+          $$CachedFleetsTableUpdateCompanionBuilder,
+          (
+            CachedFleet,
+            BaseReferences<_$AppDatabase, $CachedFleetsTable, CachedFleet>,
+          ),
+          CachedFleet,
           PrefetchHooks Function()
         > {
-  $$DevicesTableTableManager(_$AppDatabase db, $DevicesTable table)
+  $$CachedFleetsTableTableManager(_$AppDatabase db, $CachedFleetsTable table)
     : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$DevicesTableFilterComposer($db: db, $table: table),
+              $$CachedFleetsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$DevicesTableOrderingComposer($db: db, $table: table),
+              $$CachedFleetsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$DevicesTableAnnotationComposer($db: db, $table: table),
+              $$CachedFleetsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                Value<String> deviceToken = const Value.absent(),
-                Value<String> merchantCode = const Value.absent(),
-                Value<String> deviceName = const Value.absent(),
-                Value<String> deviceModel = const Value.absent(),
-                Value<DateTime> pairedAt = const Value.absent(),
-                Value<bool> isActive = const Value.absent(),
-              }) => DevicesCompanion(
+                Value<String> id = const Value.absent(),
+                Value<String> number = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> capacity = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CachedFleetsCompanion(
                 id: id,
-                deviceToken: deviceToken,
-                merchantCode: merchantCode,
-                deviceName: deviceName,
-                deviceModel: deviceModel,
-                pairedAt: pairedAt,
-                isActive: isActive,
+                number: number,
+                status: status,
+                capacity: capacity,
+                cachedAt: cachedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                required String deviceToken,
-                required String merchantCode,
-                required String deviceName,
-                required String deviceModel,
-                required DateTime pairedAt,
-                Value<bool> isActive = const Value.absent(),
-              }) => DevicesCompanion.insert(
+                required String id,
+                required String number,
+                Value<String> status = const Value.absent(),
+                Value<int> capacity = const Value.absent(),
+                required DateTime cachedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => CachedFleetsCompanion.insert(
                 id: id,
-                deviceToken: deviceToken,
-                merchantCode: merchantCode,
-                deviceName: deviceName,
-                deviceModel: deviceModel,
-                pairedAt: pairedAt,
-                isActive: isActive,
+                number: number,
+                status: status,
+                capacity: capacity,
+                cachedAt: cachedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -5509,400 +4010,53 @@ class $$DevicesTableTableManager
       );
 }
 
-typedef $$DevicesTableProcessedTableManager =
+typedef $$CachedFleetsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $DevicesTable,
-      Device,
-      $$DevicesTableFilterComposer,
-      $$DevicesTableOrderingComposer,
-      $$DevicesTableAnnotationComposer,
-      $$DevicesTableCreateCompanionBuilder,
-      $$DevicesTableUpdateCompanionBuilder,
-      (Device, BaseReferences<_$AppDatabase, $DevicesTable, Device>),
-      Device,
+      $CachedFleetsTable,
+      CachedFleet,
+      $$CachedFleetsTableFilterComposer,
+      $$CachedFleetsTableOrderingComposer,
+      $$CachedFleetsTableAnnotationComposer,
+      $$CachedFleetsTableCreateCompanionBuilder,
+      $$CachedFleetsTableUpdateCompanionBuilder,
+      (
+        CachedFleet,
+        BaseReferences<_$AppDatabase, $CachedFleetsTable, CachedFleet>,
+      ),
+      CachedFleet,
       PrefetchHooks Function()
     >;
-typedef $$AgentsTableCreateCompanionBuilder =
-    AgentsCompanion Function({
-      Value<int> id,
-      required String agentCode,
-      required String firstName,
-      required String lastName,
-      required String role,
-      required String merchantCode,
-      required String merchantName,
-      required String depotCode,
-      required String depotName,
-      Value<DateTime?> lastLogin,
-      required DateTime createdAt,
-      required DateTime updatedAt,
-    });
-typedef $$AgentsTableUpdateCompanionBuilder =
-    AgentsCompanion Function({
-      Value<int> id,
-      Value<String> agentCode,
-      Value<String> firstName,
-      Value<String> lastName,
-      Value<String> role,
-      Value<String> merchantCode,
-      Value<String> merchantName,
-      Value<String> depotCode,
-      Value<String> depotName,
-      Value<DateTime?> lastLogin,
-      Value<DateTime> createdAt,
-      Value<DateTime> updatedAt,
-    });
-
-class $$AgentsTableFilterComposer
-    extends Composer<_$AppDatabase, $AgentsTable> {
-  $$AgentsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get agentCode => $composableBuilder(
-    column: $table.agentCode,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get firstName => $composableBuilder(
-    column: $table.firstName,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get lastName => $composableBuilder(
-    column: $table.lastName,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get role => $composableBuilder(
-    column: $table.role,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get merchantCode => $composableBuilder(
-    column: $table.merchantCode,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get merchantName => $composableBuilder(
-    column: $table.merchantName,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get depotCode => $composableBuilder(
-    column: $table.depotCode,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get depotName => $composableBuilder(
-    column: $table.depotName,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get lastLogin => $composableBuilder(
-    column: $table.lastLogin,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$AgentsTableOrderingComposer
-    extends Composer<_$AppDatabase, $AgentsTable> {
-  $$AgentsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get agentCode => $composableBuilder(
-    column: $table.agentCode,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get firstName => $composableBuilder(
-    column: $table.firstName,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get lastName => $composableBuilder(
-    column: $table.lastName,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get role => $composableBuilder(
-    column: $table.role,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get merchantCode => $composableBuilder(
-    column: $table.merchantCode,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get merchantName => $composableBuilder(
-    column: $table.merchantName,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get depotCode => $composableBuilder(
-    column: $table.depotCode,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get depotName => $composableBuilder(
-    column: $table.depotName,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get lastLogin => $composableBuilder(
-    column: $table.lastLogin,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$AgentsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $AgentsTable> {
-  $$AgentsTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get agentCode =>
-      $composableBuilder(column: $table.agentCode, builder: (column) => column);
-
-  GeneratedColumn<String> get firstName =>
-      $composableBuilder(column: $table.firstName, builder: (column) => column);
-
-  GeneratedColumn<String> get lastName =>
-      $composableBuilder(column: $table.lastName, builder: (column) => column);
-
-  GeneratedColumn<String> get role =>
-      $composableBuilder(column: $table.role, builder: (column) => column);
-
-  GeneratedColumn<String> get merchantCode => $composableBuilder(
-    column: $table.merchantCode,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get merchantName => $composableBuilder(
-    column: $table.merchantName,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get depotCode =>
-      $composableBuilder(column: $table.depotCode, builder: (column) => column);
-
-  GeneratedColumn<String> get depotName =>
-      $composableBuilder(column: $table.depotName, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get lastLogin =>
-      $composableBuilder(column: $table.lastLogin, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-}
-
-class $$AgentsTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $AgentsTable,
-          Agent,
-          $$AgentsTableFilterComposer,
-          $$AgentsTableOrderingComposer,
-          $$AgentsTableAnnotationComposer,
-          $$AgentsTableCreateCompanionBuilder,
-          $$AgentsTableUpdateCompanionBuilder,
-          (Agent, BaseReferences<_$AppDatabase, $AgentsTable, Agent>),
-          Agent,
-          PrefetchHooks Function()
-        > {
-  $$AgentsTableTableManager(_$AppDatabase db, $AgentsTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$AgentsTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$AgentsTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$AgentsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<String> agentCode = const Value.absent(),
-                Value<String> firstName = const Value.absent(),
-                Value<String> lastName = const Value.absent(),
-                Value<String> role = const Value.absent(),
-                Value<String> merchantCode = const Value.absent(),
-                Value<String> merchantName = const Value.absent(),
-                Value<String> depotCode = const Value.absent(),
-                Value<String> depotName = const Value.absent(),
-                Value<DateTime?> lastLogin = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
-                Value<DateTime> updatedAt = const Value.absent(),
-              }) => AgentsCompanion(
-                id: id,
-                agentCode: agentCode,
-                firstName: firstName,
-                lastName: lastName,
-                role: role,
-                merchantCode: merchantCode,
-                merchantName: merchantName,
-                depotCode: depotCode,
-                depotName: depotName,
-                lastLogin: lastLogin,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
-              ),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required String agentCode,
-                required String firstName,
-                required String lastName,
-                required String role,
-                required String merchantCode,
-                required String merchantName,
-                required String depotCode,
-                required String depotName,
-                Value<DateTime?> lastLogin = const Value.absent(),
-                required DateTime createdAt,
-                required DateTime updatedAt,
-              }) => AgentsCompanion.insert(
-                id: id,
-                agentCode: agentCode,
-                firstName: firstName,
-                lastName: lastName,
-                role: role,
-                merchantCode: merchantCode,
-                merchantName: merchantName,
-                depotCode: depotCode,
-                depotName: depotName,
-                lastLogin: lastLogin,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$AgentsTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $AgentsTable,
-      Agent,
-      $$AgentsTableFilterComposer,
-      $$AgentsTableOrderingComposer,
-      $$AgentsTableAnnotationComposer,
-      $$AgentsTableCreateCompanionBuilder,
-      $$AgentsTableUpdateCompanionBuilder,
-      (Agent, BaseReferences<_$AppDatabase, $AgentsTable, Agent>),
-      Agent,
-      PrefetchHooks Function()
-    >;
-typedef $$RoutesTableCreateCompanionBuilder =
-    RoutesCompanion Function({
-      Value<int> id,
-      required String serverId,
-      required String routeCode,
-      required String routeName,
+typedef $$CachedRoutesTableCreateCompanionBuilder =
+    CachedRoutesCompanion Function({
+      required String id,
       required String origin,
       required String destination,
-      required double fare,
-      required int distanceKm,
       Value<bool> isActive,
-      required DateTime createdAt,
-      required DateTime updatedAt,
+      required DateTime cachedAt,
+      Value<int> rowid,
     });
-typedef $$RoutesTableUpdateCompanionBuilder =
-    RoutesCompanion Function({
-      Value<int> id,
-      Value<String> serverId,
-      Value<String> routeCode,
-      Value<String> routeName,
+typedef $$CachedRoutesTableUpdateCompanionBuilder =
+    CachedRoutesCompanion Function({
+      Value<String> id,
       Value<String> origin,
       Value<String> destination,
-      Value<double> fare,
-      Value<int> distanceKm,
       Value<bool> isActive,
-      Value<DateTime> createdAt,
-      Value<DateTime> updatedAt,
+      Value<DateTime> cachedAt,
+      Value<int> rowid,
     });
 
-class $$RoutesTableFilterComposer
-    extends Composer<_$AppDatabase, $RoutesTable> {
-  $$RoutesTableFilterComposer({
+class $$CachedRoutesTableFilterComposer
+    extends Composer<_$AppDatabase, $CachedRoutesTable> {
+  $$CachedRoutesTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
+  ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get serverId => $composableBuilder(
-    column: $table.serverId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get routeCode => $composableBuilder(
-    column: $table.routeCode,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get routeName => $composableBuilder(
-    column: $table.routeName,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5916,58 +4070,28 @@ class $$RoutesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<double> get fare => $composableBuilder(
-    column: $table.fare,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get distanceKm => $composableBuilder(
-    column: $table.distanceKm,
-    builder: (column) => ColumnFilters(column),
-  );
-
   ColumnFilters<bool> get isActive => $composableBuilder(
     column: $table.isActive,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
 
-class $$RoutesTableOrderingComposer
-    extends Composer<_$AppDatabase, $RoutesTable> {
-  $$RoutesTableOrderingComposer({
+class $$CachedRoutesTableOrderingComposer
+    extends Composer<_$AppDatabase, $CachedRoutesTable> {
+  $$CachedRoutesTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
+  ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get serverId => $composableBuilder(
-    column: $table.serverId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get routeCode => $composableBuilder(
-    column: $table.routeCode,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get routeName => $composableBuilder(
-    column: $table.routeName,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -5981,274 +4105,6 @@ class $$RoutesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<double> get fare => $composableBuilder(
-    column: $table.fare,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get distanceKm => $composableBuilder(
-    column: $table.distanceKm,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get isActive => $composableBuilder(
-    column: $table.isActive,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-}
-
-class $$RoutesTableAnnotationComposer
-    extends Composer<_$AppDatabase, $RoutesTable> {
-  $$RoutesTableAnnotationComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  GeneratedColumn<int> get id =>
-      $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get serverId =>
-      $composableBuilder(column: $table.serverId, builder: (column) => column);
-
-  GeneratedColumn<String> get routeCode =>
-      $composableBuilder(column: $table.routeCode, builder: (column) => column);
-
-  GeneratedColumn<String> get routeName =>
-      $composableBuilder(column: $table.routeName, builder: (column) => column);
-
-  GeneratedColumn<String> get origin =>
-      $composableBuilder(column: $table.origin, builder: (column) => column);
-
-  GeneratedColumn<String> get destination => $composableBuilder(
-    column: $table.destination,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<double> get fare =>
-      $composableBuilder(column: $table.fare, builder: (column) => column);
-
-  GeneratedColumn<int> get distanceKm => $composableBuilder(
-    column: $table.distanceKm,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<bool> get isActive =>
-      $composableBuilder(column: $table.isActive, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
-}
-
-class $$RoutesTableTableManager
-    extends
-        RootTableManager<
-          _$AppDatabase,
-          $RoutesTable,
-          Route,
-          $$RoutesTableFilterComposer,
-          $$RoutesTableOrderingComposer,
-          $$RoutesTableAnnotationComposer,
-          $$RoutesTableCreateCompanionBuilder,
-          $$RoutesTableUpdateCompanionBuilder,
-          (Route, BaseReferences<_$AppDatabase, $RoutesTable, Route>),
-          Route,
-          PrefetchHooks Function()
-        > {
-  $$RoutesTableTableManager(_$AppDatabase db, $RoutesTable table)
-    : super(
-        TableManagerState(
-          db: db,
-          table: table,
-          createFilteringComposer: () =>
-              $$RoutesTableFilterComposer($db: db, $table: table),
-          createOrderingComposer: () =>
-              $$RoutesTableOrderingComposer($db: db, $table: table),
-          createComputedFieldComposer: () =>
-              $$RoutesTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                Value<String> serverId = const Value.absent(),
-                Value<String> routeCode = const Value.absent(),
-                Value<String> routeName = const Value.absent(),
-                Value<String> origin = const Value.absent(),
-                Value<String> destination = const Value.absent(),
-                Value<double> fare = const Value.absent(),
-                Value<int> distanceKm = const Value.absent(),
-                Value<bool> isActive = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
-                Value<DateTime> updatedAt = const Value.absent(),
-              }) => RoutesCompanion(
-                id: id,
-                serverId: serverId,
-                routeCode: routeCode,
-                routeName: routeName,
-                origin: origin,
-                destination: destination,
-                fare: fare,
-                distanceKm: distanceKm,
-                isActive: isActive,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
-              ),
-          createCompanionCallback:
-              ({
-                Value<int> id = const Value.absent(),
-                required String serverId,
-                required String routeCode,
-                required String routeName,
-                required String origin,
-                required String destination,
-                required double fare,
-                required int distanceKm,
-                Value<bool> isActive = const Value.absent(),
-                required DateTime createdAt,
-                required DateTime updatedAt,
-              }) => RoutesCompanion.insert(
-                id: id,
-                serverId: serverId,
-                routeCode: routeCode,
-                routeName: routeName,
-                origin: origin,
-                destination: destination,
-                fare: fare,
-                distanceKm: distanceKm,
-                isActive: isActive,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
-              ),
-          withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
-              .toList(),
-          prefetchHooksCallback: null,
-        ),
-      );
-}
-
-typedef $$RoutesTableProcessedTableManager =
-    ProcessedTableManager<
-      _$AppDatabase,
-      $RoutesTable,
-      Route,
-      $$RoutesTableFilterComposer,
-      $$RoutesTableOrderingComposer,
-      $$RoutesTableAnnotationComposer,
-      $$RoutesTableCreateCompanionBuilder,
-      $$RoutesTableUpdateCompanionBuilder,
-      (Route, BaseReferences<_$AppDatabase, $RoutesTable, Route>),
-      Route,
-      PrefetchHooks Function()
-    >;
-typedef $$FleetsTableCreateCompanionBuilder =
-    FleetsCompanion Function({
-      Value<int> id,
-      required String serverId,
-      required String number,
-      required String depotId,
-      Value<bool> isActive,
-      required DateTime cachedAt,
-      required DateTime updatedAt,
-    });
-typedef $$FleetsTableUpdateCompanionBuilder =
-    FleetsCompanion Function({
-      Value<int> id,
-      Value<String> serverId,
-      Value<String> number,
-      Value<String> depotId,
-      Value<bool> isActive,
-      Value<DateTime> cachedAt,
-      Value<DateTime> updatedAt,
-    });
-
-class $$FleetsTableFilterComposer
-    extends Composer<_$AppDatabase, $FleetsTable> {
-  $$FleetsTableFilterComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnFilters<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get serverId => $composableBuilder(
-    column: $table.serverId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get number => $composableBuilder(
-    column: $table.number,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get depotId => $composableBuilder(
-    column: $table.depotId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get isActive => $composableBuilder(
-    column: $table.isActive,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
-    column: $table.cachedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-}
-
-class $$FleetsTableOrderingComposer
-    extends Composer<_$AppDatabase, $FleetsTable> {
-  $$FleetsTableOrderingComposer({
-    required super.$db,
-    required super.$table,
-    super.joinBuilder,
-    super.$addJoinBuilderToRootComposer,
-    super.$removeJoinBuilderFromRootComposer,
-  });
-  ColumnOrderings<int> get id => $composableBuilder(
-    column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get serverId => $composableBuilder(
-    column: $table.serverId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get number => $composableBuilder(
-    column: $table.number,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get depotId => $composableBuilder(
-    column: $table.depotId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
   ColumnOrderings<bool> get isActive => $composableBuilder(
     column: $table.isActive,
     builder: (column) => ColumnOrderings(column),
@@ -6258,105 +4114,95 @@ class $$FleetsTableOrderingComposer
     column: $table.cachedAt,
     builder: (column) => ColumnOrderings(column),
   );
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
 }
 
-class $$FleetsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $FleetsTable> {
-  $$FleetsTableAnnotationComposer({
+class $$CachedRoutesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CachedRoutesTable> {
+  $$CachedRoutesTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
+  GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get serverId =>
-      $composableBuilder(column: $table.serverId, builder: (column) => column);
+  GeneratedColumn<String> get origin =>
+      $composableBuilder(column: $table.origin, builder: (column) => column);
 
-  GeneratedColumn<String> get number =>
-      $composableBuilder(column: $table.number, builder: (column) => column);
-
-  GeneratedColumn<String> get depotId =>
-      $composableBuilder(column: $table.depotId, builder: (column) => column);
+  GeneratedColumn<String> get destination => $composableBuilder(
+    column: $table.destination,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
 
   GeneratedColumn<DateTime> get cachedAt =>
       $composableBuilder(column: $table.cachedAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
-class $$FleetsTableTableManager
+class $$CachedRoutesTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $FleetsTable,
-          Fleet,
-          $$FleetsTableFilterComposer,
-          $$FleetsTableOrderingComposer,
-          $$FleetsTableAnnotationComposer,
-          $$FleetsTableCreateCompanionBuilder,
-          $$FleetsTableUpdateCompanionBuilder,
-          (Fleet, BaseReferences<_$AppDatabase, $FleetsTable, Fleet>),
-          Fleet,
+          $CachedRoutesTable,
+          CachedRoute,
+          $$CachedRoutesTableFilterComposer,
+          $$CachedRoutesTableOrderingComposer,
+          $$CachedRoutesTableAnnotationComposer,
+          $$CachedRoutesTableCreateCompanionBuilder,
+          $$CachedRoutesTableUpdateCompanionBuilder,
+          (
+            CachedRoute,
+            BaseReferences<_$AppDatabase, $CachedRoutesTable, CachedRoute>,
+          ),
+          CachedRoute,
           PrefetchHooks Function()
         > {
-  $$FleetsTableTableManager(_$AppDatabase db, $FleetsTable table)
+  $$CachedRoutesTableTableManager(_$AppDatabase db, $CachedRoutesTable table)
     : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$FleetsTableFilterComposer($db: db, $table: table),
+              $$CachedRoutesTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$FleetsTableOrderingComposer($db: db, $table: table),
+              $$CachedRoutesTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$FleetsTableAnnotationComposer($db: db, $table: table),
+              $$CachedRoutesTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                Value<String> serverId = const Value.absent(),
-                Value<String> number = const Value.absent(),
-                Value<String> depotId = const Value.absent(),
+                Value<String> id = const Value.absent(),
+                Value<String> origin = const Value.absent(),
+                Value<String> destination = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime> cachedAt = const Value.absent(),
-                Value<DateTime> updatedAt = const Value.absent(),
-              }) => FleetsCompanion(
+                Value<int> rowid = const Value.absent(),
+              }) => CachedRoutesCompanion(
                 id: id,
-                serverId: serverId,
-                number: number,
-                depotId: depotId,
+                origin: origin,
+                destination: destination,
                 isActive: isActive,
                 cachedAt: cachedAt,
-                updatedAt: updatedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                required String serverId,
-                required String number,
-                required String depotId,
+                required String id,
+                required String origin,
+                required String destination,
                 Value<bool> isActive = const Value.absent(),
                 required DateTime cachedAt,
-                required DateTime updatedAt,
-              }) => FleetsCompanion.insert(
+                Value<int> rowid = const Value.absent(),
+              }) => CachedRoutesCompanion.insert(
                 id: id,
-                serverId: serverId,
-                number: number,
-                depotId: depotId,
+                origin: origin,
+                destination: destination,
                 isActive: isActive,
                 cachedAt: cachedAt,
-                updatedAt: updatedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -6366,90 +4212,55 @@ class $$FleetsTableTableManager
       );
 }
 
-typedef $$FleetsTableProcessedTableManager =
+typedef $$CachedRoutesTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $FleetsTable,
-      Fleet,
-      $$FleetsTableFilterComposer,
-      $$FleetsTableOrderingComposer,
-      $$FleetsTableAnnotationComposer,
-      $$FleetsTableCreateCompanionBuilder,
-      $$FleetsTableUpdateCompanionBuilder,
-      (Fleet, BaseReferences<_$AppDatabase, $FleetsTable, Fleet>),
-      Fleet,
+      $CachedRoutesTable,
+      CachedRoute,
+      $$CachedRoutesTableFilterComposer,
+      $$CachedRoutesTableOrderingComposer,
+      $$CachedRoutesTableAnnotationComposer,
+      $$CachedRoutesTableCreateCompanionBuilder,
+      $$CachedRoutesTableUpdateCompanionBuilder,
+      (
+        CachedRoute,
+        BaseReferences<_$AppDatabase, $CachedRoutesTable, CachedRoute>,
+      ),
+      CachedRoute,
       PrefetchHooks Function()
     >;
-typedef $$TripsTableCreateCompanionBuilder =
-    TripsCompanion Function({
-      Value<int> id,
-      Value<String?> serverId,
-      required String localId,
-      required String tripCode,
+typedef $$CachedFaresTableCreateCompanionBuilder =
+    CachedFaresCompanion Function({
+      required String id,
       required String routeId,
-      required String fleetId,
-      required String busNumber,
-      required String driverName,
-      required DateTime departureTime,
-      Value<DateTime?> arrivalTime,
-      required String status,
-      required int totalSeats,
-      required int availableSeats,
-      required String agentId,
-      required String agentCode,
-      Value<bool> startedOffline,
-      Value<bool> isSynced,
-      required DateTime createdAt,
-      required DateTime updatedAt,
+      required String currency,
+      required double amount,
+      Value<String?> routeLabel,
+      required DateTime cachedAt,
+      Value<int> rowid,
     });
-typedef $$TripsTableUpdateCompanionBuilder =
-    TripsCompanion Function({
-      Value<int> id,
-      Value<String?> serverId,
-      Value<String> localId,
-      Value<String> tripCode,
+typedef $$CachedFaresTableUpdateCompanionBuilder =
+    CachedFaresCompanion Function({
+      Value<String> id,
       Value<String> routeId,
-      Value<String> fleetId,
-      Value<String> busNumber,
-      Value<String> driverName,
-      Value<DateTime> departureTime,
-      Value<DateTime?> arrivalTime,
-      Value<String> status,
-      Value<int> totalSeats,
-      Value<int> availableSeats,
-      Value<String> agentId,
-      Value<String> agentCode,
-      Value<bool> startedOffline,
-      Value<bool> isSynced,
-      Value<DateTime> createdAt,
-      Value<DateTime> updatedAt,
+      Value<String> currency,
+      Value<double> amount,
+      Value<String?> routeLabel,
+      Value<DateTime> cachedAt,
+      Value<int> rowid,
     });
 
-class $$TripsTableFilterComposer extends Composer<_$AppDatabase, $TripsTable> {
-  $$TripsTableFilterComposer({
+class $$CachedFaresTableFilterComposer
+    extends Composer<_$AppDatabase, $CachedFaresTable> {
+  $$CachedFaresTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
+  ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get serverId => $composableBuilder(
-    column: $table.serverId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get localId => $composableBuilder(
-    column: $table.localId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get tripCode => $composableBuilder(
-    column: $table.tripCode,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6458,103 +4269,38 @@ class $$TripsTableFilterComposer extends Composer<_$AppDatabase, $TripsTable> {
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get fleetId => $composableBuilder(
-    column: $table.fleetId,
+  ColumnFilters<String> get currency => $composableBuilder(
+    column: $table.currency,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get busNumber => $composableBuilder(
-    column: $table.busNumber,
+  ColumnFilters<double> get amount => $composableBuilder(
+    column: $table.amount,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get driverName => $composableBuilder(
-    column: $table.driverName,
+  ColumnFilters<String> get routeLabel => $composableBuilder(
+    column: $table.routeLabel,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get departureTime => $composableBuilder(
-    column: $table.departureTime,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get arrivalTime => $composableBuilder(
-    column: $table.arrivalTime,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get status => $composableBuilder(
-    column: $table.status,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get totalSeats => $composableBuilder(
-    column: $table.totalSeats,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get availableSeats => $composableBuilder(
-    column: $table.availableSeats,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get agentId => $composableBuilder(
-    column: $table.agentId,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get agentCode => $composableBuilder(
-    column: $table.agentCode,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get startedOffline => $composableBuilder(
-    column: $table.startedOffline,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<bool> get isSynced => $composableBuilder(
-    column: $table.isSynced,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
 
-class $$TripsTableOrderingComposer
-    extends Composer<_$AppDatabase, $TripsTable> {
-  $$TripsTableOrderingComposer({
+class $$CachedFaresTableOrderingComposer
+    extends Composer<_$AppDatabase, $CachedFaresTable> {
+  $$CachedFaresTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
+  ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get serverId => $composableBuilder(
-    column: $table.serverId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get localId => $composableBuilder(
-    column: $table.localId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get tripCode => $composableBuilder(
-    column: $table.tripCode,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -6563,265 +4309,121 @@ class $$TripsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get fleetId => $composableBuilder(
-    column: $table.fleetId,
+  ColumnOrderings<String> get currency => $composableBuilder(
+    column: $table.currency,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get busNumber => $composableBuilder(
-    column: $table.busNumber,
+  ColumnOrderings<double> get amount => $composableBuilder(
+    column: $table.amount,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get driverName => $composableBuilder(
-    column: $table.driverName,
+  ColumnOrderings<String> get routeLabel => $composableBuilder(
+    column: $table.routeLabel,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get departureTime => $composableBuilder(
-    column: $table.departureTime,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get arrivalTime => $composableBuilder(
-    column: $table.arrivalTime,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get status => $composableBuilder(
-    column: $table.status,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get totalSeats => $composableBuilder(
-    column: $table.totalSeats,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get availableSeats => $composableBuilder(
-    column: $table.availableSeats,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get agentId => $composableBuilder(
-    column: $table.agentId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get agentCode => $composableBuilder(
-    column: $table.agentCode,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get startedOffline => $composableBuilder(
-    column: $table.startedOffline,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<bool> get isSynced => $composableBuilder(
-    column: $table.isSynced,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
-    column: $table.createdAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
-    column: $table.updatedAt,
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
     builder: (column) => ColumnOrderings(column),
   );
 }
 
-class $$TripsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $TripsTable> {
-  $$TripsTableAnnotationComposer({
+class $$CachedFaresTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CachedFaresTable> {
+  $$CachedFaresTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
+  GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
-
-  GeneratedColumn<String> get serverId =>
-      $composableBuilder(column: $table.serverId, builder: (column) => column);
-
-  GeneratedColumn<String> get localId =>
-      $composableBuilder(column: $table.localId, builder: (column) => column);
-
-  GeneratedColumn<String> get tripCode =>
-      $composableBuilder(column: $table.tripCode, builder: (column) => column);
 
   GeneratedColumn<String> get routeId =>
       $composableBuilder(column: $table.routeId, builder: (column) => column);
 
-  GeneratedColumn<String> get fleetId =>
-      $composableBuilder(column: $table.fleetId, builder: (column) => column);
+  GeneratedColumn<String> get currency =>
+      $composableBuilder(column: $table.currency, builder: (column) => column);
 
-  GeneratedColumn<String> get busNumber =>
-      $composableBuilder(column: $table.busNumber, builder: (column) => column);
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
 
-  GeneratedColumn<String> get driverName => $composableBuilder(
-    column: $table.driverName,
+  GeneratedColumn<String> get routeLabel => $composableBuilder(
+    column: $table.routeLabel,
     builder: (column) => column,
   );
 
-  GeneratedColumn<DateTime> get departureTime => $composableBuilder(
-    column: $table.departureTime,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<DateTime> get arrivalTime => $composableBuilder(
-    column: $table.arrivalTime,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get status =>
-      $composableBuilder(column: $table.status, builder: (column) => column);
-
-  GeneratedColumn<int> get totalSeats => $composableBuilder(
-    column: $table.totalSeats,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get availableSeats => $composableBuilder(
-    column: $table.availableSeats,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get agentId =>
-      $composableBuilder(column: $table.agentId, builder: (column) => column);
-
-  GeneratedColumn<String> get agentCode =>
-      $composableBuilder(column: $table.agentCode, builder: (column) => column);
-
-  GeneratedColumn<bool> get startedOffline => $composableBuilder(
-    column: $table.startedOffline,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<bool> get isSynced =>
-      $composableBuilder(column: $table.isSynced, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get createdAt =>
-      $composableBuilder(column: $table.createdAt, builder: (column) => column);
-
-  GeneratedColumn<DateTime> get updatedAt =>
-      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
 }
 
-class $$TripsTableTableManager
+class $$CachedFaresTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $TripsTable,
-          Trip,
-          $$TripsTableFilterComposer,
-          $$TripsTableOrderingComposer,
-          $$TripsTableAnnotationComposer,
-          $$TripsTableCreateCompanionBuilder,
-          $$TripsTableUpdateCompanionBuilder,
-          (Trip, BaseReferences<_$AppDatabase, $TripsTable, Trip>),
-          Trip,
+          $CachedFaresTable,
+          CachedFare,
+          $$CachedFaresTableFilterComposer,
+          $$CachedFaresTableOrderingComposer,
+          $$CachedFaresTableAnnotationComposer,
+          $$CachedFaresTableCreateCompanionBuilder,
+          $$CachedFaresTableUpdateCompanionBuilder,
+          (
+            CachedFare,
+            BaseReferences<_$AppDatabase, $CachedFaresTable, CachedFare>,
+          ),
+          CachedFare,
           PrefetchHooks Function()
         > {
-  $$TripsTableTableManager(_$AppDatabase db, $TripsTable table)
+  $$CachedFaresTableTableManager(_$AppDatabase db, $CachedFaresTable table)
     : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$TripsTableFilterComposer($db: db, $table: table),
+              $$CachedFaresTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$TripsTableOrderingComposer($db: db, $table: table),
+              $$CachedFaresTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$TripsTableAnnotationComposer($db: db, $table: table),
+              $$CachedFaresTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                Value<String?> serverId = const Value.absent(),
-                Value<String> localId = const Value.absent(),
-                Value<String> tripCode = const Value.absent(),
+                Value<String> id = const Value.absent(),
                 Value<String> routeId = const Value.absent(),
-                Value<String> fleetId = const Value.absent(),
-                Value<String> busNumber = const Value.absent(),
-                Value<String> driverName = const Value.absent(),
-                Value<DateTime> departureTime = const Value.absent(),
-                Value<DateTime?> arrivalTime = const Value.absent(),
-                Value<String> status = const Value.absent(),
-                Value<int> totalSeats = const Value.absent(),
-                Value<int> availableSeats = const Value.absent(),
-                Value<String> agentId = const Value.absent(),
-                Value<String> agentCode = const Value.absent(),
-                Value<bool> startedOffline = const Value.absent(),
-                Value<bool> isSynced = const Value.absent(),
-                Value<DateTime> createdAt = const Value.absent(),
-                Value<DateTime> updatedAt = const Value.absent(),
-              }) => TripsCompanion(
+                Value<String> currency = const Value.absent(),
+                Value<double> amount = const Value.absent(),
+                Value<String?> routeLabel = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CachedFaresCompanion(
                 id: id,
-                serverId: serverId,
-                localId: localId,
-                tripCode: tripCode,
                 routeId: routeId,
-                fleetId: fleetId,
-                busNumber: busNumber,
-                driverName: driverName,
-                departureTime: departureTime,
-                arrivalTime: arrivalTime,
-                status: status,
-                totalSeats: totalSeats,
-                availableSeats: availableSeats,
-                agentId: agentId,
-                agentCode: agentCode,
-                startedOffline: startedOffline,
-                isSynced: isSynced,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
+                currency: currency,
+                amount: amount,
+                routeLabel: routeLabel,
+                cachedAt: cachedAt,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                Value<String?> serverId = const Value.absent(),
-                required String localId,
-                required String tripCode,
+                required String id,
                 required String routeId,
-                required String fleetId,
-                required String busNumber,
-                required String driverName,
-                required DateTime departureTime,
-                Value<DateTime?> arrivalTime = const Value.absent(),
-                required String status,
-                required int totalSeats,
-                required int availableSeats,
-                required String agentId,
-                required String agentCode,
-                Value<bool> startedOffline = const Value.absent(),
-                Value<bool> isSynced = const Value.absent(),
-                required DateTime createdAt,
-                required DateTime updatedAt,
-              }) => TripsCompanion.insert(
+                required String currency,
+                required double amount,
+                Value<String?> routeLabel = const Value.absent(),
+                required DateTime cachedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => CachedFaresCompanion.insert(
                 id: id,
-                serverId: serverId,
-                localId: localId,
-                tripCode: tripCode,
                 routeId: routeId,
-                fleetId: fleetId,
-                busNumber: busNumber,
-                driverName: driverName,
-                departureTime: departureTime,
-                arrivalTime: arrivalTime,
-                status: status,
-                totalSeats: totalSeats,
-                availableSeats: availableSeats,
-                agentId: agentId,
-                agentCode: agentCode,
-                startedOffline: startedOffline,
-                isSynced: isSynced,
-                createdAt: createdAt,
-                updatedAt: updatedAt,
+                currency: currency,
+                amount: amount,
+                routeLabel: routeLabel,
+                cachedAt: cachedAt,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -6831,101 +4433,477 @@ class $$TripsTableTableManager
       );
 }
 
-typedef $$TripsTableProcessedTableManager =
+typedef $$CachedFaresTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $TripsTable,
-      Trip,
-      $$TripsTableFilterComposer,
-      $$TripsTableOrderingComposer,
-      $$TripsTableAnnotationComposer,
-      $$TripsTableCreateCompanionBuilder,
-      $$TripsTableUpdateCompanionBuilder,
-      (Trip, BaseReferences<_$AppDatabase, $TripsTable, Trip>),
-      Trip,
+      $CachedFaresTable,
+      CachedFare,
+      $$CachedFaresTableFilterComposer,
+      $$CachedFaresTableOrderingComposer,
+      $$CachedFaresTableAnnotationComposer,
+      $$CachedFaresTableCreateCompanionBuilder,
+      $$CachedFaresTableUpdateCompanionBuilder,
+      (
+        CachedFare,
+        BaseReferences<_$AppDatabase, $CachedFaresTable, CachedFare>,
+      ),
+      CachedFare,
       PrefetchHooks Function()
     >;
-typedef $$TicketsTableCreateCompanionBuilder =
-    TicketsCompanion Function({
-      Value<int> id,
-      required String localId,
-      Value<String?> serverId,
-      Value<String?> tripLocalId,
-      Value<String?> tripServerId,
-      Value<String?> serialNumber,
-      required String ticketCategory,
-      required String currency,
-      required double amount,
-      Value<String?> departure,
-      Value<String?> destination,
-      Value<String?> linkedPassengerTicketId,
+typedef $$LocalTripsTableCreateCompanionBuilder =
+    LocalTripsCompanion Function({
+      required String id,
       required String agentId,
-      required String agentCode,
-      required DateTime issuedAt,
-      Value<bool> issuedOffline,
-      Value<bool> isSynced,
-      Value<String?> syncError,
-      Value<DateTime?> lastSyncAttemptAt,
+      required String fleetId,
+      required String routeId,
+      Value<String?> deviceId,
+      required String depotId,
+      Value<String> status,
+      Value<bool> startedOffline,
+      required DateTime startedAt,
+      Value<DateTime?> endedAt,
+      Value<String?> fleetNumber,
+      Value<String?> routeOrigin,
+      Value<String?> routeDestination,
+      Value<String> syncStatus,
+      Value<int> rowid,
     });
-typedef $$TicketsTableUpdateCompanionBuilder =
-    TicketsCompanion Function({
-      Value<int> id,
-      Value<String> localId,
-      Value<String?> serverId,
-      Value<String?> tripLocalId,
-      Value<String?> tripServerId,
-      Value<String?> serialNumber,
-      Value<String> ticketCategory,
-      Value<String> currency,
-      Value<double> amount,
-      Value<String?> departure,
-      Value<String?> destination,
-      Value<String?> linkedPassengerTicketId,
+typedef $$LocalTripsTableUpdateCompanionBuilder =
+    LocalTripsCompanion Function({
+      Value<String> id,
       Value<String> agentId,
-      Value<String> agentCode,
-      Value<DateTime> issuedAt,
-      Value<bool> issuedOffline,
-      Value<bool> isSynced,
-      Value<String?> syncError,
-      Value<DateTime?> lastSyncAttemptAt,
+      Value<String> fleetId,
+      Value<String> routeId,
+      Value<String?> deviceId,
+      Value<String> depotId,
+      Value<String> status,
+      Value<bool> startedOffline,
+      Value<DateTime> startedAt,
+      Value<DateTime?> endedAt,
+      Value<String?> fleetNumber,
+      Value<String?> routeOrigin,
+      Value<String?> routeDestination,
+      Value<String> syncStatus,
+      Value<int> rowid,
     });
 
-class $$TicketsTableFilterComposer
-    extends Composer<_$AppDatabase, $TicketsTable> {
-  $$TicketsTableFilterComposer({
+class $$LocalTripsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalTripsTable> {
+  $$LocalTripsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<int> get id => $composableBuilder(
+  ColumnFilters<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get localId => $composableBuilder(
-    column: $table.localId,
+  ColumnFilters<String> get agentId => $composableBuilder(
+    column: $table.agentId,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get serverId => $composableBuilder(
-    column: $table.serverId,
+  ColumnFilters<String> get fleetId => $composableBuilder(
+    column: $table.fleetId,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get tripLocalId => $composableBuilder(
-    column: $table.tripLocalId,
+  ColumnFilters<String> get routeId => $composableBuilder(
+    column: $table.routeId,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get tripServerId => $composableBuilder(
-    column: $table.tripServerId,
+  ColumnFilters<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get serialNumber => $composableBuilder(
-    column: $table.serialNumber,
+  ColumnFilters<String> get depotId => $composableBuilder(
+    column: $table.depotId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get startedOffline => $composableBuilder(
+    column: $table.startedOffline,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get endedAt => $composableBuilder(
+    column: $table.endedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fleetNumber => $composableBuilder(
+    column: $table.fleetNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get routeOrigin => $composableBuilder(
+    column: $table.routeOrigin,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get routeDestination => $composableBuilder(
+    column: $table.routeDestination,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalTripsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalTripsTable> {
+  $$LocalTripsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get agentId => $composableBuilder(
+    column: $table.agentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fleetId => $composableBuilder(
+    column: $table.fleetId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get routeId => $composableBuilder(
+    column: $table.routeId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get depotId => $composableBuilder(
+    column: $table.depotId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get startedOffline => $composableBuilder(
+    column: $table.startedOffline,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get endedAt => $composableBuilder(
+    column: $table.endedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fleetNumber => $composableBuilder(
+    column: $table.fleetNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get routeOrigin => $composableBuilder(
+    column: $table.routeOrigin,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get routeDestination => $composableBuilder(
+    column: $table.routeDestination,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalTripsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalTripsTable> {
+  $$LocalTripsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get agentId =>
+      $composableBuilder(column: $table.agentId, builder: (column) => column);
+
+  GeneratedColumn<String> get fleetId =>
+      $composableBuilder(column: $table.fleetId, builder: (column) => column);
+
+  GeneratedColumn<String> get routeId =>
+      $composableBuilder(column: $table.routeId, builder: (column) => column);
+
+  GeneratedColumn<String> get deviceId =>
+      $composableBuilder(column: $table.deviceId, builder: (column) => column);
+
+  GeneratedColumn<String> get depotId =>
+      $composableBuilder(column: $table.depotId, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<bool> get startedOffline => $composableBuilder(
+    column: $table.startedOffline,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get endedAt =>
+      $composableBuilder(column: $table.endedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get fleetNumber => $composableBuilder(
+    column: $table.fleetNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get routeOrigin => $composableBuilder(
+    column: $table.routeOrigin,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get routeDestination => $composableBuilder(
+    column: $table.routeDestination,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+}
+
+class $$LocalTripsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $LocalTripsTable,
+          LocalTrip,
+          $$LocalTripsTableFilterComposer,
+          $$LocalTripsTableOrderingComposer,
+          $$LocalTripsTableAnnotationComposer,
+          $$LocalTripsTableCreateCompanionBuilder,
+          $$LocalTripsTableUpdateCompanionBuilder,
+          (
+            LocalTrip,
+            BaseReferences<_$AppDatabase, $LocalTripsTable, LocalTrip>,
+          ),
+          LocalTrip,
+          PrefetchHooks Function()
+        > {
+  $$LocalTripsTableTableManager(_$AppDatabase db, $LocalTripsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalTripsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocalTripsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$LocalTripsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> agentId = const Value.absent(),
+                Value<String> fleetId = const Value.absent(),
+                Value<String> routeId = const Value.absent(),
+                Value<String?> deviceId = const Value.absent(),
+                Value<String> depotId = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<bool> startedOffline = const Value.absent(),
+                Value<DateTime> startedAt = const Value.absent(),
+                Value<DateTime?> endedAt = const Value.absent(),
+                Value<String?> fleetNumber = const Value.absent(),
+                Value<String?> routeOrigin = const Value.absent(),
+                Value<String?> routeDestination = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalTripsCompanion(
+                id: id,
+                agentId: agentId,
+                fleetId: fleetId,
+                routeId: routeId,
+                deviceId: deviceId,
+                depotId: depotId,
+                status: status,
+                startedOffline: startedOffline,
+                startedAt: startedAt,
+                endedAt: endedAt,
+                fleetNumber: fleetNumber,
+                routeOrigin: routeOrigin,
+                routeDestination: routeDestination,
+                syncStatus: syncStatus,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String agentId,
+                required String fleetId,
+                required String routeId,
+                Value<String?> deviceId = const Value.absent(),
+                required String depotId,
+                Value<String> status = const Value.absent(),
+                Value<bool> startedOffline = const Value.absent(),
+                required DateTime startedAt,
+                Value<DateTime?> endedAt = const Value.absent(),
+                Value<String?> fleetNumber = const Value.absent(),
+                Value<String?> routeOrigin = const Value.absent(),
+                Value<String?> routeDestination = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalTripsCompanion.insert(
+                id: id,
+                agentId: agentId,
+                fleetId: fleetId,
+                routeId: routeId,
+                deviceId: deviceId,
+                depotId: depotId,
+                status: status,
+                startedOffline: startedOffline,
+                startedAt: startedAt,
+                endedAt: endedAt,
+                fleetNumber: fleetNumber,
+                routeOrigin: routeOrigin,
+                routeDestination: routeDestination,
+                syncStatus: syncStatus,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalTripsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $LocalTripsTable,
+      LocalTrip,
+      $$LocalTripsTableFilterComposer,
+      $$LocalTripsTableOrderingComposer,
+      $$LocalTripsTableAnnotationComposer,
+      $$LocalTripsTableCreateCompanionBuilder,
+      $$LocalTripsTableUpdateCompanionBuilder,
+      (LocalTrip, BaseReferences<_$AppDatabase, $LocalTripsTable, LocalTrip>),
+      LocalTrip,
+      PrefetchHooks Function()
+    >;
+typedef $$LocalTicketsTableCreateCompanionBuilder =
+    LocalTicketsCompanion Function({
+      required String id,
+      required String tripId,
+      required String agentId,
+      Value<String?> deviceId,
+      required String depotId,
+      required String ticketCategory,
+      required String currency,
+      required double amount,
+      Value<String?> departure,
+      Value<String?> destination,
+      Value<String?> passengerName,
+      Value<String?> passengerPhone,
+      Value<int?> serialNumber,
+      required DateTime issuedAt,
+      Value<String> syncStatus,
+      required String idempotencyKey,
+      Value<String?> lastError,
+      Value<int> retryCount,
+      Value<int> rowid,
+    });
+typedef $$LocalTicketsTableUpdateCompanionBuilder =
+    LocalTicketsCompanion Function({
+      Value<String> id,
+      Value<String> tripId,
+      Value<String> agentId,
+      Value<String?> deviceId,
+      Value<String> depotId,
+      Value<String> ticketCategory,
+      Value<String> currency,
+      Value<double> amount,
+      Value<String?> departure,
+      Value<String?> destination,
+      Value<String?> passengerName,
+      Value<String?> passengerPhone,
+      Value<int?> serialNumber,
+      Value<DateTime> issuedAt,
+      Value<String> syncStatus,
+      Value<String> idempotencyKey,
+      Value<String?> lastError,
+      Value<int> retryCount,
+      Value<int> rowid,
+    });
+
+class $$LocalTicketsTableFilterComposer
+    extends Composer<_$AppDatabase, $LocalTicketsTable> {
+  $$LocalTicketsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tripId => $composableBuilder(
+    column: $table.tripId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get agentId => $composableBuilder(
+    column: $table.agentId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get depotId => $composableBuilder(
+    column: $table.depotId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6954,18 +4932,18 @@ class $$TicketsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get linkedPassengerTicketId => $composableBuilder(
-    column: $table.linkedPassengerTicketId,
+  ColumnFilters<String> get passengerName => $composableBuilder(
+    column: $table.passengerName,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get agentId => $composableBuilder(
-    column: $table.agentId,
+  ColumnFilters<String> get passengerPhone => $composableBuilder(
+    column: $table.passengerPhone,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get agentCode => $composableBuilder(
-    column: $table.agentCode,
+  ColumnFilters<int> get serialNumber => $composableBuilder(
+    column: $table.serialNumber,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6974,63 +4952,58 @@ class $$TicketsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<bool> get issuedOffline => $composableBuilder(
-    column: $table.issuedOffline,
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<bool> get isSynced => $composableBuilder(
-    column: $table.isSynced,
+  ColumnFilters<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get syncError => $composableBuilder(
-    column: $table.syncError,
+  ColumnFilters<String> get lastError => $composableBuilder(
+    column: $table.lastError,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get lastSyncAttemptAt => $composableBuilder(
-    column: $table.lastSyncAttemptAt,
+  ColumnFilters<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
     builder: (column) => ColumnFilters(column),
   );
 }
 
-class $$TicketsTableOrderingComposer
-    extends Composer<_$AppDatabase, $TicketsTable> {
-  $$TicketsTableOrderingComposer({
+class $$LocalTicketsTableOrderingComposer
+    extends Composer<_$AppDatabase, $LocalTicketsTable> {
+  $$LocalTicketsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<int> get id => $composableBuilder(
+  ColumnOrderings<String> get id => $composableBuilder(
     column: $table.id,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get localId => $composableBuilder(
-    column: $table.localId,
+  ColumnOrderings<String> get tripId => $composableBuilder(
+    column: $table.tripId,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get serverId => $composableBuilder(
-    column: $table.serverId,
+  ColumnOrderings<String> get agentId => $composableBuilder(
+    column: $table.agentId,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get tripLocalId => $composableBuilder(
-    column: $table.tripLocalId,
+  ColumnOrderings<String> get deviceId => $composableBuilder(
+    column: $table.deviceId,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get tripServerId => $composableBuilder(
-    column: $table.tripServerId,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get serialNumber => $composableBuilder(
-    column: $table.serialNumber,
+  ColumnOrderings<String> get depotId => $composableBuilder(
+    column: $table.depotId,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -7059,18 +5032,18 @@ class $$TicketsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get linkedPassengerTicketId => $composableBuilder(
-    column: $table.linkedPassengerTicketId,
+  ColumnOrderings<String> get passengerName => $composableBuilder(
+    column: $table.passengerName,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get agentId => $composableBuilder(
-    column: $table.agentId,
+  ColumnOrderings<String> get passengerPhone => $composableBuilder(
+    column: $table.passengerPhone,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get agentCode => $composableBuilder(
-    column: $table.agentCode,
+  ColumnOrderings<int> get serialNumber => $composableBuilder(
+    column: $table.serialNumber,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -7079,59 +5052,50 @@ class $$TicketsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get issuedOffline => $composableBuilder(
-    column: $table.issuedOffline,
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<bool> get isSynced => $composableBuilder(
-    column: $table.isSynced,
+  ColumnOrderings<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get syncError => $composableBuilder(
-    column: $table.syncError,
+  ColumnOrderings<String> get lastError => $composableBuilder(
+    column: $table.lastError,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get lastSyncAttemptAt => $composableBuilder(
-    column: $table.lastSyncAttemptAt,
+  ColumnOrderings<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
     builder: (column) => ColumnOrderings(column),
   );
 }
 
-class $$TicketsTableAnnotationComposer
-    extends Composer<_$AppDatabase, $TicketsTable> {
-  $$TicketsTableAnnotationComposer({
+class $$LocalTicketsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $LocalTicketsTable> {
+  $$LocalTicketsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<int> get id =>
+  GeneratedColumn<String> get id =>
       $composableBuilder(column: $table.id, builder: (column) => column);
 
-  GeneratedColumn<String> get localId =>
-      $composableBuilder(column: $table.localId, builder: (column) => column);
+  GeneratedColumn<String> get tripId =>
+      $composableBuilder(column: $table.tripId, builder: (column) => column);
 
-  GeneratedColumn<String> get serverId =>
-      $composableBuilder(column: $table.serverId, builder: (column) => column);
+  GeneratedColumn<String> get agentId =>
+      $composableBuilder(column: $table.agentId, builder: (column) => column);
 
-  GeneratedColumn<String> get tripLocalId => $composableBuilder(
-    column: $table.tripLocalId,
-    builder: (column) => column,
-  );
+  GeneratedColumn<String> get deviceId =>
+      $composableBuilder(column: $table.deviceId, builder: (column) => column);
 
-  GeneratedColumn<String> get tripServerId => $composableBuilder(
-    column: $table.tripServerId,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get serialNumber => $composableBuilder(
-    column: $table.serialNumber,
-    builder: (column) => column,
-  );
+  GeneratedColumn<String> get depotId =>
+      $composableBuilder(column: $table.depotId, builder: (column) => column);
 
   GeneratedColumn<String> get ticketCategory => $composableBuilder(
     column: $table.ticketCategory,
@@ -7152,146 +5116,155 @@ class $$TicketsTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get linkedPassengerTicketId => $composableBuilder(
-    column: $table.linkedPassengerTicketId,
+  GeneratedColumn<String> get passengerName => $composableBuilder(
+    column: $table.passengerName,
     builder: (column) => column,
   );
 
-  GeneratedColumn<String> get agentId =>
-      $composableBuilder(column: $table.agentId, builder: (column) => column);
+  GeneratedColumn<String> get passengerPhone => $composableBuilder(
+    column: $table.passengerPhone,
+    builder: (column) => column,
+  );
 
-  GeneratedColumn<String> get agentCode =>
-      $composableBuilder(column: $table.agentCode, builder: (column) => column);
+  GeneratedColumn<int> get serialNumber => $composableBuilder(
+    column: $table.serialNumber,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get issuedAt =>
       $composableBuilder(column: $table.issuedAt, builder: (column) => column);
 
-  GeneratedColumn<bool> get issuedOffline => $composableBuilder(
-    column: $table.issuedOffline,
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
     builder: (column) => column,
   );
 
-  GeneratedColumn<bool> get isSynced =>
-      $composableBuilder(column: $table.isSynced, builder: (column) => column);
+  GeneratedColumn<String> get idempotencyKey => $composableBuilder(
+    column: $table.idempotencyKey,
+    builder: (column) => column,
+  );
 
-  GeneratedColumn<String> get syncError =>
-      $composableBuilder(column: $table.syncError, builder: (column) => column);
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get lastSyncAttemptAt => $composableBuilder(
-    column: $table.lastSyncAttemptAt,
+  GeneratedColumn<int> get retryCount => $composableBuilder(
+    column: $table.retryCount,
     builder: (column) => column,
   );
 }
 
-class $$TicketsTableTableManager
+class $$LocalTicketsTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $TicketsTable,
-          Ticket,
-          $$TicketsTableFilterComposer,
-          $$TicketsTableOrderingComposer,
-          $$TicketsTableAnnotationComposer,
-          $$TicketsTableCreateCompanionBuilder,
-          $$TicketsTableUpdateCompanionBuilder,
-          (Ticket, BaseReferences<_$AppDatabase, $TicketsTable, Ticket>),
-          Ticket,
+          $LocalTicketsTable,
+          LocalTicket,
+          $$LocalTicketsTableFilterComposer,
+          $$LocalTicketsTableOrderingComposer,
+          $$LocalTicketsTableAnnotationComposer,
+          $$LocalTicketsTableCreateCompanionBuilder,
+          $$LocalTicketsTableUpdateCompanionBuilder,
+          (
+            LocalTicket,
+            BaseReferences<_$AppDatabase, $LocalTicketsTable, LocalTicket>,
+          ),
+          LocalTicket,
           PrefetchHooks Function()
         > {
-  $$TicketsTableTableManager(_$AppDatabase db, $TicketsTable table)
+  $$LocalTicketsTableTableManager(_$AppDatabase db, $LocalTicketsTable table)
     : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$TicketsTableFilterComposer($db: db, $table: table),
+              $$LocalTicketsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$TicketsTableOrderingComposer($db: db, $table: table),
+              $$LocalTicketsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$TicketsTableAnnotationComposer($db: db, $table: table),
+              $$LocalTicketsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                Value<String> localId = const Value.absent(),
-                Value<String?> serverId = const Value.absent(),
-                Value<String?> tripLocalId = const Value.absent(),
-                Value<String?> tripServerId = const Value.absent(),
-                Value<String?> serialNumber = const Value.absent(),
+                Value<String> id = const Value.absent(),
+                Value<String> tripId = const Value.absent(),
+                Value<String> agentId = const Value.absent(),
+                Value<String?> deviceId = const Value.absent(),
+                Value<String> depotId = const Value.absent(),
                 Value<String> ticketCategory = const Value.absent(),
                 Value<String> currency = const Value.absent(),
                 Value<double> amount = const Value.absent(),
                 Value<String?> departure = const Value.absent(),
                 Value<String?> destination = const Value.absent(),
-                Value<String?> linkedPassengerTicketId = const Value.absent(),
-                Value<String> agentId = const Value.absent(),
-                Value<String> agentCode = const Value.absent(),
+                Value<String?> passengerName = const Value.absent(),
+                Value<String?> passengerPhone = const Value.absent(),
+                Value<int?> serialNumber = const Value.absent(),
                 Value<DateTime> issuedAt = const Value.absent(),
-                Value<bool> issuedOffline = const Value.absent(),
-                Value<bool> isSynced = const Value.absent(),
-                Value<String?> syncError = const Value.absent(),
-                Value<DateTime?> lastSyncAttemptAt = const Value.absent(),
-              }) => TicketsCompanion(
+                Value<String> syncStatus = const Value.absent(),
+                Value<String> idempotencyKey = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
+                Value<int> retryCount = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalTicketsCompanion(
                 id: id,
-                localId: localId,
-                serverId: serverId,
-                tripLocalId: tripLocalId,
-                tripServerId: tripServerId,
-                serialNumber: serialNumber,
+                tripId: tripId,
+                agentId: agentId,
+                deviceId: deviceId,
+                depotId: depotId,
                 ticketCategory: ticketCategory,
                 currency: currency,
                 amount: amount,
                 departure: departure,
                 destination: destination,
-                linkedPassengerTicketId: linkedPassengerTicketId,
-                agentId: agentId,
-                agentCode: agentCode,
+                passengerName: passengerName,
+                passengerPhone: passengerPhone,
+                serialNumber: serialNumber,
                 issuedAt: issuedAt,
-                issuedOffline: issuedOffline,
-                isSynced: isSynced,
-                syncError: syncError,
-                lastSyncAttemptAt: lastSyncAttemptAt,
+                syncStatus: syncStatus,
+                idempotencyKey: idempotencyKey,
+                lastError: lastError,
+                retryCount: retryCount,
+                rowid: rowid,
               ),
           createCompanionCallback:
               ({
-                Value<int> id = const Value.absent(),
-                required String localId,
-                Value<String?> serverId = const Value.absent(),
-                Value<String?> tripLocalId = const Value.absent(),
-                Value<String?> tripServerId = const Value.absent(),
-                Value<String?> serialNumber = const Value.absent(),
+                required String id,
+                required String tripId,
+                required String agentId,
+                Value<String?> deviceId = const Value.absent(),
+                required String depotId,
                 required String ticketCategory,
                 required String currency,
                 required double amount,
                 Value<String?> departure = const Value.absent(),
                 Value<String?> destination = const Value.absent(),
-                Value<String?> linkedPassengerTicketId = const Value.absent(),
-                required String agentId,
-                required String agentCode,
+                Value<String?> passengerName = const Value.absent(),
+                Value<String?> passengerPhone = const Value.absent(),
+                Value<int?> serialNumber = const Value.absent(),
                 required DateTime issuedAt,
-                Value<bool> issuedOffline = const Value.absent(),
-                Value<bool> isSynced = const Value.absent(),
-                Value<String?> syncError = const Value.absent(),
-                Value<DateTime?> lastSyncAttemptAt = const Value.absent(),
-              }) => TicketsCompanion.insert(
+                Value<String> syncStatus = const Value.absent(),
+                required String idempotencyKey,
+                Value<String?> lastError = const Value.absent(),
+                Value<int> retryCount = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalTicketsCompanion.insert(
                 id: id,
-                localId: localId,
-                serverId: serverId,
-                tripLocalId: tripLocalId,
-                tripServerId: tripServerId,
-                serialNumber: serialNumber,
+                tripId: tripId,
+                agentId: agentId,
+                deviceId: deviceId,
+                depotId: depotId,
                 ticketCategory: ticketCategory,
                 currency: currency,
                 amount: amount,
                 departure: departure,
                 destination: destination,
-                linkedPassengerTicketId: linkedPassengerTicketId,
-                agentId: agentId,
-                agentCode: agentCode,
+                passengerName: passengerName,
+                passengerPhone: passengerPhone,
+                serialNumber: serialNumber,
                 issuedAt: issuedAt,
-                issuedOffline: issuedOffline,
-                isSynced: isSynced,
-                syncError: syncError,
-                lastSyncAttemptAt: lastSyncAttemptAt,
+                syncStatus: syncStatus,
+                idempotencyKey: idempotencyKey,
+                lastError: lastError,
+                retryCount: retryCount,
+                rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -7301,48 +5274,53 @@ class $$TicketsTableTableManager
       );
 }
 
-typedef $$TicketsTableProcessedTableManager =
+typedef $$LocalTicketsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $TicketsTable,
-      Ticket,
-      $$TicketsTableFilterComposer,
-      $$TicketsTableOrderingComposer,
-      $$TicketsTableAnnotationComposer,
-      $$TicketsTableCreateCompanionBuilder,
-      $$TicketsTableUpdateCompanionBuilder,
-      (Ticket, BaseReferences<_$AppDatabase, $TicketsTable, Ticket>),
-      Ticket,
+      $LocalTicketsTable,
+      LocalTicket,
+      $$LocalTicketsTableFilterComposer,
+      $$LocalTicketsTableOrderingComposer,
+      $$LocalTicketsTableAnnotationComposer,
+      $$LocalTicketsTableCreateCompanionBuilder,
+      $$LocalTicketsTableUpdateCompanionBuilder,
+      (
+        LocalTicket,
+        BaseReferences<_$AppDatabase, $LocalTicketsTable, LocalTicket>,
+      ),
+      LocalTicket,
       PrefetchHooks Function()
     >;
-typedef $$SyncQueueTableCreateCompanionBuilder =
-    SyncQueueCompanion Function({
+typedef $$SyncQueueItemsTableCreateCompanionBuilder =
+    SyncQueueItemsCompanion Function({
       Value<int> id,
       required String entityType,
-      required int entityId,
+      required String entityId,
       required String operation,
-      required String data,
+      required String payloadJson,
+      Value<String> status,
       Value<int> retryCount,
+      Value<String?> lastError,
       required DateTime createdAt,
-      Value<DateTime?> lastAttemptAt,
-      Value<String?> error,
+      required DateTime updatedAt,
     });
-typedef $$SyncQueueTableUpdateCompanionBuilder =
-    SyncQueueCompanion Function({
+typedef $$SyncQueueItemsTableUpdateCompanionBuilder =
+    SyncQueueItemsCompanion Function({
       Value<int> id,
       Value<String> entityType,
-      Value<int> entityId,
+      Value<String> entityId,
       Value<String> operation,
-      Value<String> data,
+      Value<String> payloadJson,
+      Value<String> status,
       Value<int> retryCount,
+      Value<String?> lastError,
       Value<DateTime> createdAt,
-      Value<DateTime?> lastAttemptAt,
-      Value<String?> error,
+      Value<DateTime> updatedAt,
     });
 
-class $$SyncQueueTableFilterComposer
-    extends Composer<_$AppDatabase, $SyncQueueTable> {
-  $$SyncQueueTableFilterComposer({
+class $$SyncQueueItemsTableFilterComposer
+    extends Composer<_$AppDatabase, $SyncQueueItemsTable> {
+  $$SyncQueueItemsTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7359,7 +5337,7 @@ class $$SyncQueueTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get entityId => $composableBuilder(
+  ColumnFilters<String> get entityId => $composableBuilder(
     column: $table.entityId,
     builder: (column) => ColumnFilters(column),
   );
@@ -7369,8 +5347,13 @@ class $$SyncQueueTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<String> get data => $composableBuilder(
-    column: $table.data,
+  ColumnFilters<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -7379,25 +5362,25 @@ class $$SyncQueueTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get lastAttemptAt => $composableBuilder(
-    column: $table.lastAttemptAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<String> get error => $composableBuilder(
-    column: $table.error,
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
 
-class $$SyncQueueTableOrderingComposer
-    extends Composer<_$AppDatabase, $SyncQueueTable> {
-  $$SyncQueueTableOrderingComposer({
+class $$SyncQueueItemsTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyncQueueItemsTable> {
+  $$SyncQueueItemsTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7414,7 +5397,7 @@ class $$SyncQueueTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get entityId => $composableBuilder(
+  ColumnOrderings<String> get entityId => $composableBuilder(
     column: $table.entityId,
     builder: (column) => ColumnOrderings(column),
   );
@@ -7424,8 +5407,13 @@ class $$SyncQueueTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<String> get data => $composableBuilder(
-    column: $table.data,
+  ColumnOrderings<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -7434,25 +5422,25 @@ class $$SyncQueueTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get lastError => $composableBuilder(
+    column: $table.lastError,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get lastAttemptAt => $composableBuilder(
-    column: $table.lastAttemptAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<String> get error => $composableBuilder(
-    column: $table.error,
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
     builder: (column) => ColumnOrderings(column),
   );
 }
 
-class $$SyncQueueTableAnnotationComposer
-    extends Composer<_$AppDatabase, $SyncQueueTable> {
-  $$SyncQueueTableAnnotationComposer({
+class $$SyncQueueItemsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyncQueueItemsTable> {
+  $$SyncQueueItemsTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
@@ -7467,104 +5455,113 @@ class $$SyncQueueTableAnnotationComposer
     builder: (column) => column,
   );
 
-  GeneratedColumn<int> get entityId =>
+  GeneratedColumn<String> get entityId =>
       $composableBuilder(column: $table.entityId, builder: (column) => column);
 
   GeneratedColumn<String> get operation =>
       $composableBuilder(column: $table.operation, builder: (column) => column);
 
-  GeneratedColumn<String> get data =>
-      $composableBuilder(column: $table.data, builder: (column) => column);
+  GeneratedColumn<String> get payloadJson => $composableBuilder(
+    column: $table.payloadJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
 
   GeneratedColumn<int> get retryCount => $composableBuilder(
     column: $table.retryCount,
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get lastError =>
+      $composableBuilder(column: $table.lastError, builder: (column) => column);
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get lastAttemptAt => $composableBuilder(
-    column: $table.lastAttemptAt,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<String> get error =>
-      $composableBuilder(column: $table.error, builder: (column) => column);
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
 }
 
-class $$SyncQueueTableTableManager
+class $$SyncQueueItemsTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $SyncQueueTable,
-          SyncQueueData,
-          $$SyncQueueTableFilterComposer,
-          $$SyncQueueTableOrderingComposer,
-          $$SyncQueueTableAnnotationComposer,
-          $$SyncQueueTableCreateCompanionBuilder,
-          $$SyncQueueTableUpdateCompanionBuilder,
+          $SyncQueueItemsTable,
+          SyncQueueItem,
+          $$SyncQueueItemsTableFilterComposer,
+          $$SyncQueueItemsTableOrderingComposer,
+          $$SyncQueueItemsTableAnnotationComposer,
+          $$SyncQueueItemsTableCreateCompanionBuilder,
+          $$SyncQueueItemsTableUpdateCompanionBuilder,
           (
-            SyncQueueData,
-            BaseReferences<_$AppDatabase, $SyncQueueTable, SyncQueueData>,
+            SyncQueueItem,
+            BaseReferences<_$AppDatabase, $SyncQueueItemsTable, SyncQueueItem>,
           ),
-          SyncQueueData,
+          SyncQueueItem,
           PrefetchHooks Function()
         > {
-  $$SyncQueueTableTableManager(_$AppDatabase db, $SyncQueueTable table)
-    : super(
+  $$SyncQueueItemsTableTableManager(
+    _$AppDatabase db,
+    $SyncQueueItemsTable table,
+  ) : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$SyncQueueTableFilterComposer($db: db, $table: table),
+              $$SyncQueueItemsTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$SyncQueueTableOrderingComposer($db: db, $table: table),
+              $$SyncQueueItemsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$SyncQueueTableAnnotationComposer($db: db, $table: table),
+              $$SyncQueueItemsTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> entityType = const Value.absent(),
-                Value<int> entityId = const Value.absent(),
+                Value<String> entityId = const Value.absent(),
                 Value<String> operation = const Value.absent(),
-                Value<String> data = const Value.absent(),
+                Value<String> payloadJson = const Value.absent(),
+                Value<String> status = const Value.absent(),
                 Value<int> retryCount = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
-                Value<DateTime?> lastAttemptAt = const Value.absent(),
-                Value<String?> error = const Value.absent(),
-              }) => SyncQueueCompanion(
+                Value<DateTime> updatedAt = const Value.absent(),
+              }) => SyncQueueItemsCompanion(
                 id: id,
                 entityType: entityType,
                 entityId: entityId,
                 operation: operation,
-                data: data,
+                payloadJson: payloadJson,
+                status: status,
                 retryCount: retryCount,
+                lastError: lastError,
                 createdAt: createdAt,
-                lastAttemptAt: lastAttemptAt,
-                error: error,
+                updatedAt: updatedAt,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 required String entityType,
-                required int entityId,
+                required String entityId,
                 required String operation,
-                required String data,
+                required String payloadJson,
+                Value<String> status = const Value.absent(),
                 Value<int> retryCount = const Value.absent(),
+                Value<String?> lastError = const Value.absent(),
                 required DateTime createdAt,
-                Value<DateTime?> lastAttemptAt = const Value.absent(),
-                Value<String?> error = const Value.absent(),
-              }) => SyncQueueCompanion.insert(
+                required DateTime updatedAt,
+              }) => SyncQueueItemsCompanion.insert(
                 id: id,
                 entityType: entityType,
                 entityId: entityId,
                 operation: operation,
-                data: data,
+                payloadJson: payloadJson,
+                status: status,
                 retryCount: retryCount,
+                lastError: lastError,
                 createdAt: createdAt,
-                lastAttemptAt: lastAttemptAt,
-                error: error,
+                updatedAt: updatedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -7574,166 +5571,135 @@ class $$SyncQueueTableTableManager
       );
 }
 
-typedef $$SyncQueueTableProcessedTableManager =
+typedef $$SyncQueueItemsTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $SyncQueueTable,
-      SyncQueueData,
-      $$SyncQueueTableFilterComposer,
-      $$SyncQueueTableOrderingComposer,
-      $$SyncQueueTableAnnotationComposer,
-      $$SyncQueueTableCreateCompanionBuilder,
-      $$SyncQueueTableUpdateCompanionBuilder,
+      $SyncQueueItemsTable,
+      SyncQueueItem,
+      $$SyncQueueItemsTableFilterComposer,
+      $$SyncQueueItemsTableOrderingComposer,
+      $$SyncQueueItemsTableAnnotationComposer,
+      $$SyncQueueItemsTableCreateCompanionBuilder,
+      $$SyncQueueItemsTableUpdateCompanionBuilder,
       (
-        SyncQueueData,
-        BaseReferences<_$AppDatabase, $SyncQueueTable, SyncQueueData>,
+        SyncQueueItem,
+        BaseReferences<_$AppDatabase, $SyncQueueItemsTable, SyncQueueItem>,
       ),
-      SyncQueueData,
+      SyncQueueItem,
       PrefetchHooks Function()
     >;
-typedef $$CacheMetadataTableCreateCompanionBuilder =
-    CacheMetadataCompanion Function({
-      required String dataType,
-      required DateTime lastCachedAt,
-      Value<int> recordCount,
+typedef $$SyncMetadataTableCreateCompanionBuilder =
+    SyncMetadataCompanion Function({
+      required String key,
+      required String value,
       Value<int> rowid,
     });
-typedef $$CacheMetadataTableUpdateCompanionBuilder =
-    CacheMetadataCompanion Function({
-      Value<String> dataType,
-      Value<DateTime> lastCachedAt,
-      Value<int> recordCount,
+typedef $$SyncMetadataTableUpdateCompanionBuilder =
+    SyncMetadataCompanion Function({
+      Value<String> key,
+      Value<String> value,
       Value<int> rowid,
     });
 
-class $$CacheMetadataTableFilterComposer
-    extends Composer<_$AppDatabase, $CacheMetadataTable> {
-  $$CacheMetadataTableFilterComposer({
+class $$SyncMetadataTableFilterComposer
+    extends Composer<_$AppDatabase, $SyncMetadataTable> {
+  $$SyncMetadataTableFilterComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnFilters<String> get dataType => $composableBuilder(
-    column: $table.dataType,
+  ColumnFilters<String> get key => $composableBuilder(
+    column: $table.key,
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<DateTime> get lastCachedAt => $composableBuilder(
-    column: $table.lastCachedAt,
-    builder: (column) => ColumnFilters(column),
-  );
-
-  ColumnFilters<int> get recordCount => $composableBuilder(
-    column: $table.recordCount,
+  ColumnFilters<String> get value => $composableBuilder(
+    column: $table.value,
     builder: (column) => ColumnFilters(column),
   );
 }
 
-class $$CacheMetadataTableOrderingComposer
-    extends Composer<_$AppDatabase, $CacheMetadataTable> {
-  $$CacheMetadataTableOrderingComposer({
+class $$SyncMetadataTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyncMetadataTable> {
+  $$SyncMetadataTableOrderingComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  ColumnOrderings<String> get dataType => $composableBuilder(
-    column: $table.dataType,
+  ColumnOrderings<String> get key => $composableBuilder(
+    column: $table.key,
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<DateTime> get lastCachedAt => $composableBuilder(
-    column: $table.lastCachedAt,
-    builder: (column) => ColumnOrderings(column),
-  );
-
-  ColumnOrderings<int> get recordCount => $composableBuilder(
-    column: $table.recordCount,
+  ColumnOrderings<String> get value => $composableBuilder(
+    column: $table.value,
     builder: (column) => ColumnOrderings(column),
   );
 }
 
-class $$CacheMetadataTableAnnotationComposer
-    extends Composer<_$AppDatabase, $CacheMetadataTable> {
-  $$CacheMetadataTableAnnotationComposer({
+class $$SyncMetadataTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyncMetadataTable> {
+  $$SyncMetadataTableAnnotationComposer({
     required super.$db,
     required super.$table,
     super.joinBuilder,
     super.$addJoinBuilderToRootComposer,
     super.$removeJoinBuilderFromRootComposer,
   });
-  GeneratedColumn<String> get dataType =>
-      $composableBuilder(column: $table.dataType, builder: (column) => column);
+  GeneratedColumn<String> get key =>
+      $composableBuilder(column: $table.key, builder: (column) => column);
 
-  GeneratedColumn<DateTime> get lastCachedAt => $composableBuilder(
-    column: $table.lastCachedAt,
-    builder: (column) => column,
-  );
-
-  GeneratedColumn<int> get recordCount => $composableBuilder(
-    column: $table.recordCount,
-    builder: (column) => column,
-  );
+  GeneratedColumn<String> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
 }
 
-class $$CacheMetadataTableTableManager
+class $$SyncMetadataTableTableManager
     extends
         RootTableManager<
           _$AppDatabase,
-          $CacheMetadataTable,
-          CacheMetadataData,
-          $$CacheMetadataTableFilterComposer,
-          $$CacheMetadataTableOrderingComposer,
-          $$CacheMetadataTableAnnotationComposer,
-          $$CacheMetadataTableCreateCompanionBuilder,
-          $$CacheMetadataTableUpdateCompanionBuilder,
+          $SyncMetadataTable,
+          SyncMetadataData,
+          $$SyncMetadataTableFilterComposer,
+          $$SyncMetadataTableOrderingComposer,
+          $$SyncMetadataTableAnnotationComposer,
+          $$SyncMetadataTableCreateCompanionBuilder,
+          $$SyncMetadataTableUpdateCompanionBuilder,
           (
-            CacheMetadataData,
-            BaseReferences<
-              _$AppDatabase,
-              $CacheMetadataTable,
-              CacheMetadataData
-            >,
+            SyncMetadataData,
+            BaseReferences<_$AppDatabase, $SyncMetadataTable, SyncMetadataData>,
           ),
-          CacheMetadataData,
+          SyncMetadataData,
           PrefetchHooks Function()
         > {
-  $$CacheMetadataTableTableManager(_$AppDatabase db, $CacheMetadataTable table)
+  $$SyncMetadataTableTableManager(_$AppDatabase db, $SyncMetadataTable table)
     : super(
         TableManagerState(
           db: db,
           table: table,
           createFilteringComposer: () =>
-              $$CacheMetadataTableFilterComposer($db: db, $table: table),
+              $$SyncMetadataTableFilterComposer($db: db, $table: table),
           createOrderingComposer: () =>
-              $$CacheMetadataTableOrderingComposer($db: db, $table: table),
+              $$SyncMetadataTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
-              $$CacheMetadataTableAnnotationComposer($db: db, $table: table),
+              $$SyncMetadataTableAnnotationComposer($db: db, $table: table),
           updateCompanionCallback:
               ({
-                Value<String> dataType = const Value.absent(),
-                Value<DateTime> lastCachedAt = const Value.absent(),
-                Value<int> recordCount = const Value.absent(),
+                Value<String> key = const Value.absent(),
+                Value<String> value = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
-              }) => CacheMetadataCompanion(
-                dataType: dataType,
-                lastCachedAt: lastCachedAt,
-                recordCount: recordCount,
-                rowid: rowid,
-              ),
+              }) => SyncMetadataCompanion(key: key, value: value, rowid: rowid),
           createCompanionCallback:
               ({
-                required String dataType,
-                required DateTime lastCachedAt,
-                Value<int> recordCount = const Value.absent(),
+                required String key,
+                required String value,
                 Value<int> rowid = const Value.absent(),
-              }) => CacheMetadataCompanion.insert(
-                dataType: dataType,
-                lastCachedAt: lastCachedAt,
-                recordCount: recordCount,
+              }) => SyncMetadataCompanion.insert(
+                key: key,
+                value: value,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -7744,41 +5710,39 @@ class $$CacheMetadataTableTableManager
       );
 }
 
-typedef $$CacheMetadataTableProcessedTableManager =
+typedef $$SyncMetadataTableProcessedTableManager =
     ProcessedTableManager<
       _$AppDatabase,
-      $CacheMetadataTable,
-      CacheMetadataData,
-      $$CacheMetadataTableFilterComposer,
-      $$CacheMetadataTableOrderingComposer,
-      $$CacheMetadataTableAnnotationComposer,
-      $$CacheMetadataTableCreateCompanionBuilder,
-      $$CacheMetadataTableUpdateCompanionBuilder,
+      $SyncMetadataTable,
+      SyncMetadataData,
+      $$SyncMetadataTableFilterComposer,
+      $$SyncMetadataTableOrderingComposer,
+      $$SyncMetadataTableAnnotationComposer,
+      $$SyncMetadataTableCreateCompanionBuilder,
+      $$SyncMetadataTableUpdateCompanionBuilder,
       (
-        CacheMetadataData,
-        BaseReferences<_$AppDatabase, $CacheMetadataTable, CacheMetadataData>,
+        SyncMetadataData,
+        BaseReferences<_$AppDatabase, $SyncMetadataTable, SyncMetadataData>,
       ),
-      CacheMetadataData,
+      SyncMetadataData,
       PrefetchHooks Function()
     >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
   $AppDatabaseManager(this._db);
-  $$DevicesTableTableManager get devices =>
-      $$DevicesTableTableManager(_db, _db.devices);
-  $$AgentsTableTableManager get agents =>
-      $$AgentsTableTableManager(_db, _db.agents);
-  $$RoutesTableTableManager get routes =>
-      $$RoutesTableTableManager(_db, _db.routes);
-  $$FleetsTableTableManager get fleets =>
-      $$FleetsTableTableManager(_db, _db.fleets);
-  $$TripsTableTableManager get trips =>
-      $$TripsTableTableManager(_db, _db.trips);
-  $$TicketsTableTableManager get tickets =>
-      $$TicketsTableTableManager(_db, _db.tickets);
-  $$SyncQueueTableTableManager get syncQueue =>
-      $$SyncQueueTableTableManager(_db, _db.syncQueue);
-  $$CacheMetadataTableTableManager get cacheMetadata =>
-      $$CacheMetadataTableTableManager(_db, _db.cacheMetadata);
+  $$CachedFleetsTableTableManager get cachedFleets =>
+      $$CachedFleetsTableTableManager(_db, _db.cachedFleets);
+  $$CachedRoutesTableTableManager get cachedRoutes =>
+      $$CachedRoutesTableTableManager(_db, _db.cachedRoutes);
+  $$CachedFaresTableTableManager get cachedFares =>
+      $$CachedFaresTableTableManager(_db, _db.cachedFares);
+  $$LocalTripsTableTableManager get localTrips =>
+      $$LocalTripsTableTableManager(_db, _db.localTrips);
+  $$LocalTicketsTableTableManager get localTickets =>
+      $$LocalTicketsTableTableManager(_db, _db.localTickets);
+  $$SyncQueueItemsTableTableManager get syncQueueItems =>
+      $$SyncQueueItemsTableTableManager(_db, _db.syncQueueItems);
+  $$SyncMetadataTableTableManager get syncMetadata =>
+      $$SyncMetadataTableTableManager(_db, _db.syncMetadata);
 }

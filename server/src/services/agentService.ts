@@ -326,13 +326,14 @@ export const loginAgent = async (data: {
  * @returns Created trip with related data (agent, fleet, route)
  */
 export const startAgentTrip = async (data: {
+  id?: string;
   agentId: string;
   fleetId: string;
   routeId: string;
   deviceId?: string;
   startedOffline?: boolean;
 }) => {
-  const { agentId, fleetId, routeId, deviceId, startedOffline } = data;
+  const { id, agentId, fleetId, routeId, deviceId, startedOffline } = data;
 
   // Step 1: Verify agent exists and is active
   const agent = await prisma.tblAgents.findUnique({
@@ -360,6 +361,19 @@ export const startAgentTrip = async (data: {
   });
 
   if (existingActiveTrip) {
+    // Idempotent retry when the client resubmits the same trip id.
+    if (id && existingActiveTrip.id === id) {
+      return prisma.tblTrips.findUniqueOrThrow({
+        where: { id },
+        include: {
+          agent: {
+            select: { id: true, full_name: true, agent_code: true },
+          },
+          fleet: { select: { id: true, number: true } },
+          route: { select: { id: true, origin: true, destination: true } },
+        },
+      });
+    }
     throw new Error('Agent has an active trip');
   }
 
@@ -389,9 +403,10 @@ export const startAgentTrip = async (data: {
     throw new Error('Route does not belong to agent\'s depot');
   }
 
-  // Step 5: Create the trip record
+  // Step 5: Create the trip record (reuse client id when syncing offline trips)
   const trip = await prisma.tblTrips.create({
     data: {
+      ...(id ? { id } : {}),
       depot_id: depotId,
       agent_id: agentId,
       fleet_id: fleetId,

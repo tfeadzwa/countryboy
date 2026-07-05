@@ -1,6 +1,6 @@
 {
-    "name": "mobile",
-    "short_name": "mobile",
+    "name": "countryboy_conductor",
+    "short_name": "countryboy_conductor",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

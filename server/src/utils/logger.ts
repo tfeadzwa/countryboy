@@ -33,4 +33,18 @@ export const authLoginLogger = winston.createLogger({
   ],
 });
 
+// Dedicated sync push logger — captures mobile payloads for offline sync debugging.
+export const syncPushLogger = winston.createLogger({
+  level: 'debug',
+  format: combine(timestamp(), logFormat),
+  transports: [
+    new winston.transports.File({
+      filename: path.join(logsDir, 'sync-push.log'),
+      maxsize: 10 * 1024 * 1024,
+      maxFiles: 5,
+    }),
+    new winston.transports.Console(),
+  ],
+});
+
 export default logger;

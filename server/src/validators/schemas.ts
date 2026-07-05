@@ -104,7 +104,7 @@ export const endTripSchema = z.object({ params: z.object({ id: z.string() }) });
 export const ticketIssueSchema = z.object({
   body: z.object({
     trip_id: z.string(),
-    agent_id: z.string(),
+    agent_id: z.string().optional(), // Optional – falls back to the authenticated agent from JWT
     device_id: z.string().optional(),
     ticket_category: z.enum(['PASSENGER', 'PASSENGER_WITH_LUGGAGE', 'LUGGAGE']),
     currency: z.string(),
@@ -113,6 +113,36 @@ export const ticketIssueSchema = z.object({
     destination: z.string().optional(),
     issued_at: z.string().optional(),
     linked_passenger_ticket_id: z.string().optional(),
+    passenger_name: z.string().trim().min(2, 'Passenger name must be at least 2 characters').max(100).optional(),
+    passenger_phone: z
+      .string()
+      .trim()
+      .min(7, 'Passenger phone must be at least 7 digits')
+      .max(20, 'Passenger phone is too long')
+      .regex(/^[+]?[\d\s()-]+$/, 'Passenger phone contains invalid characters')
+      .optional(),
+  }).superRefine((data, ctx) => {
+    const requiresPassengerDetails =
+      data.ticket_category === 'PASSENGER' ||
+      data.ticket_category === 'PASSENGER_WITH_LUGGAGE' ||
+      data.ticket_category === 'LUGGAGE';
+
+    if (requiresPassengerDetails) {
+      if (!data.passenger_name) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['passenger_name'],
+          message: 'Passenger name is required for this ticket type',
+        });
+      }
+      if (!data.passenger_phone) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['passenger_phone'],
+          message: 'Passenger phone is required for this ticket type',
+        });
+      }
+    }
   }),
 });
 

@@ -145,7 +145,7 @@ model tblRoutes {
   destination String
   depot_id    String
   is_active   Boolean  @default(true)
-  distance_km Decimal?
+  distance_km Decimal? @db.Decimal(8, 2)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
   created_by  String?
@@ -163,7 +163,7 @@ model tblFares {
   route_id    String
   depot_id    String
   currency    String
-  amount      Decimal
+  amount      Decimal @db.Decimal(12, 2)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
   created_by  String?
@@ -206,9 +206,11 @@ model tblTickets {
   serial_number             Int?
   ticket_category           String
   currency                  String
-  amount                    Decimal
+  amount                    Decimal @db.Decimal(12, 2)
   departure                 String?
   destination               String?
+  passenger_name            String?
+  passenger_phone           String?
   linked_passenger_ticket_id String?
   issued_at                 DateTime
   created_at                DateTime @default(now())
@@ -285,7 +287,7 @@ model tblDailyAggregates {
   depot_id    String
   date        DateTime
   currency    String
-  revenue     Decimal  @default(0)
+  revenue     Decimal  @default(0) @db.Decimal(12, 2)
   ticket_count Int     @default(0)
 
   depot       tblDepots @relation(fields: [depot_id], references: [id])

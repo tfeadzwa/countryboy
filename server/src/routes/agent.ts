@@ -11,6 +11,10 @@ const router = Router();
 // Public endpoint for agent login (no auth required for mobile app initial login)
 router.post('/login', agentController.login);
 
+// Agent logout (authenticated) - JWT is stateless so actual invalidation is client-side;
+// this endpoint exists so the mobile app receives a clean 200 rather than a 404.
+router.post('/logout', authMiddleware, agentController.logout);
+
 // Agent management endpoints (admin only)
 // anyone authenticated can list, super and depot admins can manage
 router.get('/', authMiddleware, depotScopeMiddleware, agentController.list);

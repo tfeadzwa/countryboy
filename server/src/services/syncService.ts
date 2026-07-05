@@ -7,37 +7,115 @@ interface PushPayload {
   tickets?: any[];
 }
 
+/** Mobile sends Dart `toIso8601String()` without a timezone suffix — Prisma rejects those. */
+const parseSyncDateTime = (value: unknown, field: string): Date => {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+
+  if (typeof value === 'string' && value.trim()) {
+    let normalized = value.trim();
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(normalized)) {
+      normalized = `${normalized}Z`;
+    }
+    const parsed = new Date(normalized);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+
+  throw new Error(`Invalid ${field} datetime: ${String(value)}`);
+};
+
+const normalizeTripRecord = (raw: Record<string, unknown>, depotId: string) => ({
+  id: raw.id as string,
+  depot_id: depotId,
+  agent_id: raw.agent_id as string,
+  fleet_id: raw.fleet_id as string,
+  route_id: (raw.route_id as string | undefined) ?? null,
+  device_id: (raw.device_id as string | undefined) ?? null,
+  started_at: parseSyncDateTime(raw.started_at, 'started_at'),
+  ended_at: raw.ended_at != null ? parseSyncDateTime(raw.ended_at, 'ended_at') : null,
+  status: (raw.status as string | undefined) ?? 'ACTIVE',
+  started_offline: Boolean(raw.started_offline),
+});
+
+const normalizeTicketRecord = (raw: Record<string, unknown>, depotId: string) => ({
+  id: raw.id as string,
+  depot_id: depotId,
+  trip_id: raw.trip_id as string,
+  agent_id: raw.agent_id as string,
+  device_id: (raw.device_id as string | undefined) ?? null,
+  serial_number: (raw.serial_number as number | undefined) ?? undefined,
+  ticket_category: raw.ticket_category as string,
+  currency: raw.currency as string,
+  amount: raw.amount as number | string,
+  departure: (raw.departure as string | undefined) ?? null,
+  destination: (raw.destination as string | undefined) ?? null,
+  passenger_name: (raw.passenger_name as string | undefined) ?? null,
+  passenger_phone: (raw.passenger_phone as string | undefined) ?? null,
+  linked_passenger_ticket_id:
+    (raw.linked_passenger_ticket_id as string | undefined) ?? null,
+  issued_at: parseSyncDateTime(raw.issued_at, 'issued_at'),
+});
+
 export const pushData = async (depotId: string, payload: PushPayload) => {
   const results: any = { trips: [], tickets: [] };
   const start = Date.now();
   let tripCount = 0;
   let ticketCount = 0;
 
-  const tx = await prisma.$transaction(async (prismaTx) => {
+  await prisma.$transaction(async (prismaTx) => {
     if (payload.trips) {
       for (const t of payload.trips) {
+        const data = normalizeTripRecord(t, depotId);
+
+        // Offline sync may legitimately replace a stale server-side active trip.
+        if (data.status === 'ACTIVE') {
+          await prismaTx.tblTrips.updateMany({
+            where: {
+              agent_id: data.agent_id,
+              status: 'ACTIVE',
+              id: { not: data.id },
+            },
+            data: {
+              status: 'COMPLETED',
+              ended_at: new Date(),
+              updated_at: new Date(),
+            },
+          });
+        }
+
         const upserted = await prismaTx.tblTrips.upsert({
-          where: { id: t.id },
-          update: { ...t, depot_id: depotId, updated_at: new Date() },
-          create: { ...t, depot_id: depotId }
+          where: { id: data.id },
+          update: { ...data, updated_at: new Date() },
+          create: data,
         });
         results.trips.push(upserted);
         tripCount++;
       }
     }
     if (payload.tickets) {
-      for (const ti of payload.tickets) {
+      // Passenger tickets must exist before linked luggage tickets.
+      const sortedTickets = [...payload.tickets].sort((a, b) => {
+        const aLinked = a.linked_passenger_ticket_id ? 1 : 0;
+        const bLinked = b.linked_passenger_ticket_id ? 1 : 0;
+        return aLinked - bLinked;
+      });
+
+      for (const ti of sortedTickets) {
+        const data = normalizeTicketRecord(ti, depotId);
         const upserted = await prismaTx.tblTickets.upsert({
-          where: { id: ti.id },
-          update: { ...ti, depot_id: depotId, updated_at: new Date() },
-          create: { ...ti, depot_id: depotId }
+          where: { id: data.id },
+          update: { ...data, updated_at: new Date() },
+          create: data,
         });
-        // optionally allocate serial numbers
-        if (!upserted.serial_number && ti.currency) {
-          const serial = await allocateSerial(prismaTx, depotId, ti.currency, ti.device_id);
+        if (!upserted.serial_number && data.currency) {
+          const serial = await allocateSerial(
+            prismaTx,
+            depotId,
+            data.currency,
+            data.device_id ?? undefined,
+          );
           await prismaTx.tblTickets.update({
             where: { id: upserted.id },
-            data: { serial_number: serial }
+            data: { serial_number: serial },
           });
           upserted.serial_number = serial;
         }

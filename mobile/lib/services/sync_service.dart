@@ -1,397 +1,261 @@
-import 'dart:async';
 import 'dart:convert';
-import 'package:connectivity_plus/connectivity_plus.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+
+import '../../core/connectivity/connectivity_service.dart';
+import '../../core/network/api_error.dart';
+import '../../core/storage/secure_storage_service.dart';
+import '../data/api/api_services.dart';
 import '../data/local/database.dart';
-import '../data/api/trip_api_service.dart';
-import '../data/api/ticket_api_service.dart';
-import '../data/dto/trip_dto.dart' show StartTripRequest, TripDto;
-import '../data/dto/ticket_dto.dart' show IssueTicketRequest, TicketCategory;
-import '../domain/repositories/auth_repository.dart';
-import '../core/storage/storage_service.dart';
+const _uuid = Uuid();
 
-/// Service for syncing offline operations with the backend
+final syncServiceProvider = Provider<SyncService>((ref) {
+  return SyncService(
+    db: ref.watch(appDatabaseProvider),
+    syncApi: ref.watch(syncApiProvider),
+    tripApi: ref.watch(tripApiProvider),
+    storage: ref.watch(secureStorageServiceProvider),
+    connectivity: ref.watch(connectivityServiceProvider),
+  );
+});
+
 class SyncService {
-  final AppDatabase _database;
-  final TripApiService _apiService;
-  final TicketApiService _ticketApiService;
-  final AuthRepository _authRepository;
-  final StorageService _storageService;
-  final Connectivity _connectivity;
-  
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
-  Timer? _syncTimer;
-  bool _isSyncing = false;
-  
-  static const int _maxRetries = 3;
-  static const Duration _syncInterval = Duration(minutes: 5);
-  
   SyncService({
-    required AppDatabase database,
-    required TripApiService apiService,
-    required TicketApiService ticketApiService,
-    required AuthRepository authRepository,
-    required StorageService storageService,
-    Connectivity? connectivity,
-  })  : _database = database,
-        _apiService = apiService,
-        _ticketApiService = ticketApiService,
-        _authRepository = authRepository,
-        _storageService = storageService,
-        _connectivity = connectivity ?? Connectivity();
+    required AppDatabase db,
+    required SyncApi syncApi,
+    required TripApi tripApi,
+    required SecureStorageService storage,
+    required ConnectivityService connectivity,
+  })  : _db = db,
+        _syncApi = syncApi,
+        _tripApi = tripApi,
+        _storage = storage,
+        _connectivity = connectivity;
 
-  /// Start sync service (manual sync only)
-  /// 
-  /// Note: Auto-sync is disabled to match conductor workflow.
-  /// Conductors work offline all day and manually sync at depot.
-  void start() {
-    print('🔄 Starting SyncService (manual sync only)...');
-    
-    // AUTO-SYNC DISABLED: Conductors will manually sync at depot at end of shift
-    // This prevents conflicts and allows complete offline workflow
-    
-    // Commented out: Listen to connectivity changes
-    // _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
-    //   (results) {
-    //     final isOnline = results.any((result) => 
-    //       result != ConnectivityResult.none
-    //     );
-    //     
-    //     if (isOnline) {
-    //       print('📡 Online - triggering sync');
-    //       syncPending();
-    //     } else {
-    //       print('📡 Offline - skipping sync');
-    //     }
-    //   },
-    // );
-    
-    // Commented out: Start periodic sync timer
-    // _syncTimer = Timer.periodic(_syncInterval, (_) {
-    //   syncPending();
-    // });
-    
-    // Commented out: Initial sync attempt
-    // syncPending();
-    
-    print('✅ SyncService ready (manual sync via UI button)');
-  }
+  final AppDatabase _db;
+  final SyncApi _syncApi;
+  final TripApi _tripApi;
+  final SecureStorageService _storage;
+  final ConnectivityService _connectivity;
 
-  /// Stop monitoring and cleanup
-  void stop() {
-    print('🛑 Stopping SyncService...');
-    _connectivitySubscription?.cancel();
-    _syncTimer?.cancel();
-  }
+  bool _running = false;
 
-  /// Manually trigger sync
-  Future<void> syncPending() async {
-    if (_isSyncing) {
-      print('⏭️ Sync already in progress, skipping...');
-      return;
-    }
-    
-    _isSyncing = true;
-    
+  Future<void> syncIfOnline({bool force = false}) async {
+    if (_running && !force) return;
+    final reachable = await _connectivity.checkReachability();
+    if (!reachable) return;
+
+    _running = true;
+    _connectivity.setSyncing(true);
     try {
-      // Check connectivity
-      final connectivityResult = await _connectivity.checkConnectivity();
-      final isOnline = connectivityResult.any((result) => 
-        result != ConnectivityResult.none
-      );
-      
-      if (!isOnline) {
-        print('📡 Device offline, cannot sync');
-        return;
-      }
-      
-      print('🔄 Starting sync process...');
-      
-      // Ensure we have valid authentication
-      final isAuthenticated = await _ensureAuthenticated();
-      if (!isAuthenticated) {
-        print('⚠️ Cannot sync: Authentication required');
-        print('💡 User needs to login online to sync offline changes');
-        return;
-      }
-      
-      // Clean up old failed items
-      await cleanupFailedItems();
-      
-      // Get pending sync items
-      final pendingItems = await _database.getPendingSyncItems();
-      
-      if (pendingItems.isEmpty) {
-        print('✅ No pending items to sync');
-        return;
-      }
-      
-      print('📦 Found ${pendingItems.length} items to sync');
-      
-      // Process each item
-      for (final item in pendingItems) {
-        // Skip if max retries exceeded
-        if (item.retryCount >= _maxRetries) {
-          print('❌ Item ${item.id} exceeded max retries, skipping');
-          continue;
-        }
-        
-        try {
-          print('🔄 Syncing ${item.entityType} #${item.entityId}...');
-          
-          if (item.entityType == 'trip' && item.operation == 'create') {
-            await _syncTripCreation(item);
-          } else if (item.entityType == 'trip' && item.operation == 'end') {
-            await _syncTripEnd(item);
-          } else if (item.entityType == 'ticket' && item.operation == 'create') {
-            await _syncTicketIssue(item);
-          } else {
-            print('⚠️ Unknown sync operation: ${item.entityType}/${item.operation}');
-          }
-          
-          // Remove from queue on success
-          await _database.removeSyncQueueItem(item.id);
-          print('✅ Successfully synced item ${item.id}');
-          
-        } catch (e) {
-          print('❌ Failed to sync item ${item.id}: $e');
-          
-          // Check for conflict errors that shouldn't be retried
-          final errorStr = e.toString().toLowerCase();
-          if (errorStr.contains('already have an active trip')) {
-            print('⚠️ Removing conflicting trip creation (active trip exists)');
-            await _database.removeSyncQueueItem(item.id);
-          } else {
-            // Increment retry count for other errors
-            await _database.incrementSyncRetry(item.id, e.toString());
-          }
-        }
-      }
-      
-      print('🏁 Sync process completed');
-      
-    } catch (e) {
-      print('❌ Sync error: $e');
+      await _processTripQueue();
+      await _pushPendingTrips();
+      await _ensureTripsForPendingTickets();
+      await _processTicketQueue();
+      await _db.setSyncMeta('last_sync_at', DateTime.now().toIso8601String());
     } finally {
-      _isSyncing = false;
+      _running = false;
+      _connectivity.setSyncing(false);
     }
   }
 
-  /// Sync a trip creation to the backend
-  Future<void> _syncTripCreation(SyncQueueData item) async {
-    final data = jsonDecode(item.data) as Map<String, dynamic>;
-    
-    // Create trip request for API
-    final request = StartTripRequest(
-      routeId: data['routeId'] as String,
-      fleetId: data['fleetId'] as String,
-      startedOffline: true,
+  Future<void> _processTripQueue() async {
+    final items = await _db.getPendingSyncItems();
+    final tripItems = items.where(
+      (item) => item.operation == 'CREATE_TRIP' || item.operation == 'END_TRIP',
     );
-    
-    // Call API to create trip
-    final response = await _apiService.startTrip(request);
-    
-    // Update local trip with server ID
-    final localId = data['localId'] as String;
-    await _database.updateTripServerId(localId, response.trip.id);
-    
-    print('✅ Trip synced: local=$localId, server=${response.trip.id}');
-  }
-  
-  /// Sync a trip end to the backend
-  Future<void> _syncTripEnd(SyncQueueData item) async {
-    final data = jsonDecode(item.data) as Map<String, dynamic>;
-    
-    // Get IDs from sync data
-    String? serverId = data['serverId'] as String?;
-    final localId = data['localId'] as String?;
-    
-    // If no server ID in sync data, check database for latest state
-    if ((serverId == null || serverId.isEmpty) && localId != null) {
-      print('🔍 No server ID in sync data, checking database...');
-      final trip = await _database.getTripByLocalId(localId);
-      serverId = trip?.serverId;
-    }
-    
-    // If still no server ID, trip creation hasn't been synced yet
-    if (serverId == null || serverId.isEmpty) {
-      throw Exception(
-        'Cannot sync trip end yet: Trip creation not synced. '
-        'Will retry after trip creation is synced.'
-      );
-    }
-    
-    // Call API to end trip
-    final response = await _apiService.endTrip(serverId);
-    
-    print('✅ Trip end synced: server=$serverId, status=${response.trip.status}');
-  }
-  
-  /// Sync a ticket issue to the backend
-  Future<void> _syncTicketIssue(SyncQueueData item) async {
-    final data = jsonDecode(item.data) as Map<String, dynamic>;
-    
-    // Get IDs from sync data
-    final localId = data['localId'] as String;
-    String? tripServerId = data['tripServerId'] as String?;
-    final tripLocalId = data['tripLocalId'] as String?;
-    
-    // If no trip server ID but have trip local ID, check database for synced trip
-    if ((tripServerId == null || tripServerId.isEmpty) && tripLocalId != null) {
-      print('🔍 No trip server ID in sync data, checking database...');
-      final trip = await _database.getTripByLocalId(tripLocalId);
-      tripServerId = trip?.serverId;
-    }
-    
-    // If still no trip server ID, trip creation hasn't been synced yet
-    if (tripServerId == null || tripServerId.isEmpty) {
-      throw Exception(
-        'Cannot sync ticket yet: Trip creation not synced. '
-        'Will retry after trip creation is synced.'
-      );
-    }
-    
-    // Create ticket request for API
-    final request = IssueTicketRequest(
-      tripId: tripServerId,
-      ticketCategory: data['ticketCategory'] as String,
-      currency: data['currency'] as String,
-      amount: (data['amount'] as num).toDouble(),
-      departure: data['departure'] as String?,
-      destination: data['destination'] as String?,
-      issuedAt: data['issuedAt'] != null 
-          ? DateTime.parse(data['issuedAt'] as String) 
-          : null,
-      linkedPassengerTicketId: data['linkedPassengerTicketId'] as String?,
-    );
-    
-    // Handle linked passenger ticket ID (for luggage tickets)
-    if (request.linkedPassengerTicketId != null && 
-        request.ticketCategory == TicketCategory.luggage) {
-      // Check if the passenger ticket has been synced
-      final passengerTicket = await _database.getTicketByLocalId(
-        request.linkedPassengerTicketId!
-      );
-      
-      if (passengerTicket == null || !passengerTicket.isSynced) {
-        throw Exception(
-          'Cannot sync luggage ticket yet: Passenger ticket not synced. '
-          'Will retry after passenger ticket is synced.'
+
+    for (final item in tripItems) {
+      if (item.retryCount >= 5) continue;
+      await _db.updateSyncItem(item.id, status: 'syncing');
+      try {
+        final payload = jsonDecode(item.payloadJson) as Map<String, dynamic>;
+        switch (item.operation) {
+          case 'CREATE_TRIP':
+            await _syncCreateTrip(item, payload);
+          case 'END_TRIP':
+            await _tripApi.endTrip(item.entityId);
+            await _db.updateTripSyncStatus(item.entityId, 'synced');
+            await _db.updateSyncItem(item.id, status: 'synced');
+          default:
+            break;
+        }
+      } catch (e) {
+        await _db.updateSyncItem(
+          item.id,
+          status: 'failed',
+          error: e is ApiError ? e.message : 'Sync failed',
+          retryCount: item.retryCount + 1,
         );
       }
-      
-      // Update request with synced passenger ticket server ID
-      final updatedRequest = IssueTicketRequest(
-        tripId: request.tripId,
-        ticketCategory: request.ticketCategory,
-        currency: request.currency,
-        amount: request.amount,
-        departure: request.departure,
-        destination: request.destination,
-        issuedAt: request.issuedAt,
-        linkedPassengerTicketId: passengerTicket.serverId ?? passengerTicket.localId,
-      );
-      
-      // Call API to issue ticket
-      final response = await _ticketApiService.issueTicket(updatedRequest);
-      
-      // Update local ticket with server ID
-      await _database.markTicketAsSyncedByLocalId(
-        localId,
-        response.ticket.id,
-        response.ticket.serialNumber?.toString(),
-      );
-      
-      print('✅ Luggage ticket synced: local=$localId, server=${response.ticket.id}');
-    } else {
-      // Call API to issue ticket
-      final response = await _ticketApiService.issueTicket(request);
-      
-      // Update local ticket with server ID
-      await _database.markTicketAsSyncedByLocalId(
-        localId,
-        response.ticket.id,
-        response.ticket.serialNumber?.toString(),
-      );
-      
-      print('✅ Ticket synced: local=$localId, server=${response.ticket.id}');
-    }
-  }
-  
-  /// Ensure we have a valid access token for API calls
-  /// If logged in offline, attempts to re-authenticate online using stored credentials
-  Future<bool> _ensureAuthenticated() async {
-    // Check if we have an access token
-    final accessToken = await _storageService.getAccessToken();
-    
-    if (accessToken != null && accessToken.isNotEmpty) {
-      print('✅ Access token available');
-      return true;
-    }
-    
-    // No access token - check if we have offline credentials
-    final credentials = await _storageService.getOfflineCredentials();
-    if (credentials == null) {
-      print('❌ No credentials available for re-authentication');
-      return false;
-    }
-    
-    // Attempt to re-authenticate online
-    try {
-      print('🔐 Re-authenticating with stored credentials...');
-      
-      final merchantCode = credentials['merchant_code'] as String?;
-      final agentCode = credentials['agent_code'] as String?;
-      final pinHash = credentials['pin_hash'] as String?;
-      
-      if (merchantCode == null || agentCode == null || pinHash == null) {
-        print('❌ Incomplete credentials');
-        return false;
-      }
-      
-      final response = await _authRepository.login(
-        merchantCode: merchantCode,
-        agentCode: agentCode,
-        pin: pinHash,
-      );
-      
-      print('✅ Re-authentication successful!');
-      print('   Agent: ${response.agent.firstName} ${response.agent.lastName}');
-      return true;
-      
-    } catch (e) {
-      print('❌ Re-authentication failed: $e');
-      return false;
-    }
-  }
-  
-  /// Clean up old failed items that exceeded max retries
-  Future<void> cleanupFailedItems() async {
-    try {
-      final items = await _database.getPendingSyncItems();
-      final failedItems = items.where((item) => item.retryCount >= _maxRetries);
-      
-      if (failedItems.isEmpty) {
-        print('✅ No failed items to clean up');
-        return;
-      }
-      
-      print('🧹 Cleaning up ${failedItems.length} failed items...');
-      
-      for (final item in failedItems) {
-        await _database.removeSyncQueueItem(item.id);
-        print('   Removed item ${item.id} (${item.entityType}/${item.operation})');
-      }
-      
-      print('✅ Cleanup completed');
-    } catch (e) {
-      print('❌ Cleanup error: $e');
     }
   }
 
-  /// Get count of pending sync items
-  Future<int> getPendingSyncCount() async {
-    final items = await _database.getPendingSyncItems();
-    return items.length;
+  Future<void> _syncCreateTrip(
+    SyncQueueItem item,
+    Map<String, dynamic> payload,
+  ) async {
+    final localTripId = payload['id'] as String;
+
+    try {
+      await _tripApi.startTrip(
+        tripId: localTripId,
+        fleetId: payload['fleet_id'] as String,
+        routeId: payload['route_id'] as String,
+        deviceId: payload['device_id'] as String?,
+        startedOffline: payload['started_offline'] as bool? ?? true,
+      );
+    } on ApiError catch (e) {
+      if (e.statusCode == 409) {
+        final active = await _tripApi.getActiveTrip();
+        if (active != null && active['id'] == localTripId) {
+          await _db.updateTripSyncStatus(localTripId, 'synced');
+          await _db.updateSyncItem(item.id, status: 'synced');
+          return;
+        }
+        await _db.updateSyncItem(
+          item.id,
+          status: 'failed',
+          error:
+              'An active trip already exists on the server. End it before starting a new one.',
+          retryCount: item.retryCount + 1,
+        );
+        return;
+      }
+      rethrow;
+    }
+
+    await _db.updateTripSyncStatus(localTripId, 'synced');
+    await _db.updateSyncItem(item.id, status: 'synced');
   }
+
+  Future<void> _processTicketQueue() async {
+    final items = await _db.getPendingSyncItems();
+    final ticketItems =
+        items.where((item) => item.operation == 'CREATE_TICKET');
+
+    for (final item in ticketItems) {
+      if (item.retryCount >= 5) continue;
+      await _db.updateSyncItem(item.id, status: 'syncing');
+      try {
+        final payload = jsonDecode(item.payloadJson) as Map<String, dynamic>;
+        final tripId = payload['trip_id'] as String;
+        await _ensureTripOnServer(tripId);
+
+        final pushResult = await _syncApi.push(tickets: [payload]);
+        final syncedTickets = pushResult['tickets'] as List<dynamic>? ?? [];
+        final synced = syncedTickets.isNotEmpty
+            ? syncedTickets.first as Map<String, dynamic>
+            : payload;
+        await _db.updateTicketSyncStatus(
+          payload['id'] as String,
+          'synced',
+          serialNumber: synced['serial_number'] as int?,
+        );
+        await _db.updateSyncItem(item.id, status: 'synced');
+      } catch (e) {
+        await _db.updateSyncItem(
+          item.id,
+          status: 'failed',
+          error: e is ApiError ? e.message : 'Sync failed',
+          retryCount: item.retryCount + 1,
+        );
+      }
+    }
+  }
+
+  /// Upserts trips referenced by pending tickets — fixes stale "synced" trips
+  /// from older builds that never created the server row with the client id.
+  Future<void> _ensureTripsForPendingTickets() async {
+    final items = await _db.getPendingSyncItems();
+    final tripIds = <String>{};
+
+    for (final item in items) {
+      if (item.operation != 'CREATE_TICKET') continue;
+      final payload = jsonDecode(item.payloadJson) as Map<String, dynamic>;
+      tripIds.add(payload['trip_id'] as String);
+    }
+
+    for (final tripId in tripIds) {
+      await _ensureTripOnServer(tripId);
+    }
+  }
+
+  Future<void> _ensureTripOnServer(String tripId) async {
+    final trip = await _db.getTripById(tripId);
+    if (trip == null) {
+      throw ApiError(message: 'Trip not found on device.');
+    }
+
+    await _syncApi.push(trips: [_tripPayload(trip)]);
+    await _db.updateTripSyncStatus(tripId, 'synced');
+  }
+
+  Map<String, dynamic> _tripPayload(LocalTrip trip) => {
+        'id': trip.id,
+        'depot_id': trip.depotId,
+        'agent_id': trip.agentId,
+        'fleet_id': trip.fleetId,
+        'route_id': trip.routeId,
+        'device_id': trip.deviceId,
+        'started_at': trip.startedAt.toUtc().toIso8601String(),
+        'status': trip.status,
+        'started_offline': trip.startedOffline,
+        if (trip.endedAt != null)
+          'ended_at': trip.endedAt!.toUtc().toIso8601String(),
+      };
+
+  Future<void> _pushPendingTrips() async {
+    final agent = await _storage.getAgentProfile();
+    final depotId = await _storage.getDepotId();
+    if (agent == null || depotId == null) return;
+
+    final pendingTrips = await (_db.select(_db.localTrips)
+          ..where((t) => t.syncStatus.isNotIn(['synced'])))
+        .get();
+
+    if (pendingTrips.isEmpty) return;
+
+    final tripPayloads = pendingTrips.map(_tripPayload).toList();
+
+    final result = await _syncApi.push(trips: tripPayloads);
+
+    for (final trip in result['trips'] as List<dynamic>? ?? []) {
+      final id = trip['id'] as String;
+      await _db.updateTripSyncStatus(id, 'synced');
+    }
+  }
+
+  Future<void> retryItem(int queueId) async {
+    await _db.updateSyncItem(queueId, status: 'pending', error: null, retryCount: 0);
+    await syncIfOnline(force: true);
+  }
+
+  Future<void> retryAll() async {
+    final items = await _db.getPendingSyncItems();
+    for (final item in items) {
+      await _db.updateSyncItem(
+        item.id,
+        status: 'pending',
+        error: null,
+        retryCount: 0,
+      );
+      if (item.operation == 'CREATE_TICKET') {
+        final payload = jsonDecode(item.payloadJson) as Map<String, dynamic>;
+        await _db.updateTripSyncStatus(payload['trip_id'] as String, 'pending');
+      }
+    }
+    await syncIfOnline(force: true);
+  }
+
+  Future<int> pendingCount() => _db.countPendingSyncItems();
+
+  Future<DateTime?> lastSyncAt() async {
+    final raw = await _db.getSyncMeta('last_sync_at');
+    if (raw == null) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  String generateId() => _uuid.v4();
 }

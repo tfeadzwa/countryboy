@@ -96,6 +96,15 @@ export const getOne = async (req: AuthenticatedRequest, res: Response) => {
 };
 
 /**
+ * Agent logout (mobile app)
+ * JWT is stateless — actual token clearing happens on the device.
+ * This endpoint exists so the mobile app gets a clean 200 instead of 404.
+ */
+export const logout = async (req: AuthenticatedRequest, res: Response) => {
+  res.json({ message: 'Logged out successfully' });
+};
+
+/**
  * Agent login for mobile app
  * Requires: merchant_code + (username OR agent_code) + PIN
  */
@@ -173,7 +182,7 @@ export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
     }
 
     // Extract trip details from request body
-    const { fleet_id, route_id, device_id, started_offline } = req.body;
+    const { id, fleet_id, route_id, device_id, started_offline } = req.body;
 
     // Validate required fields
     if (!fleet_id) {
@@ -185,6 +194,7 @@ export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
 
     // Start the trip using agent service
     const trip = await agentService.startAgentTrip({
+      id,
       agentId,
       fleetId: fleet_id,
       routeId: route_id,

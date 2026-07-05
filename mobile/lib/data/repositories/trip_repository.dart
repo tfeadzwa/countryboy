@@ -1,542 +1,423 @@
-import '../api/trip_api_service.dart';
-import '../dto/trip_dto.dart';
+import 'dart:convert';
+
+import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../core/connectivity/connectivity_service.dart';
+import '../../core/network/api_client.dart';
+import '../../core/network/api_error.dart';
+import '../../core/storage/secure_storage_service.dart';
+import '../../domain/models/models.dart';
+import '../../services/sync_service.dart';
+import '../api/api_services.dart';
 import '../local/database.dart';
-import '../../core/storage/storage_service.dart';
-import 'package:flutter/foundation.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:uuid/uuid.dart';
 
-/// Trip Repository
-/// 
-/// Business logic layer for trip operations
-/// Handles error handling, validation, and state management
+final tripRepositoryProvider = Provider<TripRepository>((ref) {
+  return TripRepository(
+    api: ref.watch(tripApiProvider),
+    db: ref.watch(appDatabaseProvider),
+    storage: ref.watch(secureStorageServiceProvider),
+    connectivity: ref.watch(connectivityServiceProvider),
+    syncService: ref.watch(syncServiceProvider),
+  );
+});
+
 class TripRepository {
-  final TripApiService _apiService;
-  final AppDatabase _database;
-  final StorageService _storageService;
-  final Connectivity _connectivity;
-  final Uuid _uuid;
-
   TripRepository({
-    required TripApiService apiService,
-    required AppDatabase database,
-    required StorageService storageService,
-    Connectivity? connectivity,
-    Uuid? uuid,
-  })  : _apiService = apiService,
-        _database = database,
-        _storageService = storageService,
-        _connectivity = connectivity ?? Connectivity(),
-        _uuid = uuid ?? const Uuid();
+    required TripApi api,
+    required AppDatabase db,
+    required SecureStorageService storage,
+    required ConnectivityService connectivity,
+    required SyncService syncService,
+  })  : _api = api,
+        _db = db,
+        _storage = storage,
+        _connectivity = connectivity,
+        _sync = syncService;
 
-  /// Start a new trip
-  /// 
-  /// Validates:
-  /// - Fleet ID is provided and valid
-  /// - Route ID is provided and valid
-  /// - Agent doesn't already have an active trip
-  /// 
-  /// Strategy:
-  /// 1. Check connectivity
-  /// 2. If online, try API first
-  /// 3. If offline or API fails, create locally and queue for sync
-  /// 
-  /// Returns: Started trip details
-  /// Throws: Exception with user-friendly error message
-  Future<TripDto> startTrip({
+  final TripApi _api;
+  final AppDatabase _db;
+  final SecureStorageService _storage;
+  final ConnectivityService _connectivity;
+  final SyncService _sync;
+
+  Future<TripModel?> getActiveTrip() async {
+    final agent = await _storage.getAgentProfile();
+    if (agent == null) return null;
+
+    final local = await _db.getActiveTrip(agent['id'] as String);
+    if (local != null) {
+      final stats = await _loadTripStats(local.id);
+      return _mapLocalTrip(local).copyWith(
+        ticketsCount: stats.count,
+        totalRevenue: stats.revenue,
+      );
+    }
+
+    if (await _connectivity.checkReachability()) {
+      try {
+        final remote = await _api.getActiveTrip();
+        if (remote == null) return null;
+        await _saveRemoteTripToLocal(remote);
+        return _mapRemoteTrip(remote);
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  /// Pulls the server's active trip into local storage after sign-in.
+  Future<void> syncActiveTripFromServer() async {
+    if (!await _connectivity.checkReachability()) return;
+    try {
+      final remote = await _api.getActiveTrip();
+      if (remote != null) {
+        await _saveRemoteTripToLocal(remote);
+      }
+    } catch (_) {}
+  }
+
+  Future<TripModel?> getTripById(String id) async {
+    final local = await _db.getTripById(id);
+    if (local != null) {
+      final stats = await _loadTripStats(local.id);
+      return _mapLocalTrip(local).copyWith(
+        ticketsCount: stats.count,
+        totalRevenue: stats.revenue,
+      );
+    }
+    return null;
+  }
+
+  Future<({int count, double revenue})> _loadTripStats(String tripId) async {
+    final tickets = await _db.getAllTickets(tripId: tripId);
+    final revenue = tickets.fold<double>(0, (sum, t) => sum + t.amount);
+    return (count: tickets.length, revenue: revenue);
+  }
+
+  Future<TripModel> startTrip({
     required String fleetId,
     required String routeId,
-    String? deviceId,
+    required String fleetNumber,
+    required String routeOrigin,
+    required String routeDestination,
   }) async {
-    // Check connectivity
-    final connectivityResult = await _connectivity.checkConnectivity();
-    final isOnline = connectivityResult.any((result) => 
-      result != ConnectivityResult.none
-    );
-    
-    debugPrint('📡 Device is ${isOnline ? "online" : "offline"}');
-    
-    if (isOnline) {
-      // Try API first when online
-      try {
-        debugPrint('🌐 Attempting online trip creation...');
-        final request = StartTripRequest(
-          fleetId: fleetId,
-          routeId: routeId,
-          deviceId: deviceId,
-          startedOffline: false,
-        );
+    final agentJson = await _storage.getAgentProfile();
+    final depotId = await _storage.getDepotId();
+    final deviceId = await _storage.getDeviceId();
+    if (agentJson == null || depotId == null) {
+      throw ApiError(message: 'Session expired. Please sign in again.');
+    }
+    final agentId = agentJson['id'] as String;
 
-        final response = await _apiService.startTrip(request);
-        debugPrint('✅ Trip created online: ${response.trip.id}');
-        return response.trip;
-      } catch (e) {
-        debugPrint('⚠️ Online creation failed: $e');
-        debugPrint('🔄 Falling back to offline mode...');
-        // Fall through to offline creation
+    final existing = await _db.getActiveTrip(agentId);
+    if (existing != null) {
+      throw ApiError(message: 'You already have an active trip. End it first.');
+    }
+
+    final offline = !(await _connectivity.checkReachability());
+
+    if (!offline) {
+      final serverActive = await _fetchServerActiveTrip();
+      if (serverActive != null) {
+        await _saveRemoteTripToLocal(serverActive);
+        throw ApiError(
+          message:
+              'You already have an active trip on the server. End it before starting a new one.',
+        );
       }
     }
-    
-    // Create offline (either because offline or API failed)
-    return _createTripOffline(
-      fleetId: fleetId,
-      routeId: routeId,
-      deviceId: deviceId,
-    );
-  }
-  
-  /// Create a trip locally for offline operation
-  Future<TripDto> _createTripOffline({
-    required String fleetId,
-    required String routeId,
-    String? deviceId,
-  }) async {
-    try {
-      debugPrint('💾 Creating trip offline...');
-      
-      // Get current agent info (CRITICAL for agent isolation)
-      final agentData = await _storageService.getAgentData();
-      if (agentData == null) {
-        throw Exception('Not authenticated - please log in again');
-      }
-      
-      final agentId = agentData['id']?.toString() ?? '';
-      final agentCode = agentData['agent_code']?.toString() ?? '';
-      
-      if (agentId.isEmpty || agentCode.isEmpty) {
-        throw Exception('Agent information missing - please log in again');
-      }
-      
-      final localId = _uuid.v4();
-      final tripCode = 'TRIP-${DateTime.now().millisecondsSinceEpoch}';
-      
-      // Get fleet number for display
-      final fleets = await _database.getCachedFleets();
-      final fleet = fleets.firstWhere((f) => f.id == fleetId, 
-        orElse: () => FleetDto(id: fleetId, number: 'Unknown', depotId: ''));
-      
-      // Create in local database with minimal required fields
-      final trip = await _database.createTripLocally(
-        localId: localId,
-        tripCode: tripCode,
-        routeId: routeId,
-        fleetId: fleetId,
-        busNumber: fleet.number,
-        driverName: 'TBD', // Will be updated when synced
-        departureTime: DateTime.now(),
-        totalSeats: 50, // Default, will be updated when synced
-        status: 'scheduled', // Use 'scheduled' status for offline trips
+
+    final tripId = _sync.generateId();
+    final startedAt = DateTime.now();
+
+    await _db.upsertTrip(
+      LocalTripsCompanion.insert(
+        id: tripId,
         agentId: agentId,
-        agentCode: agentCode,
+        fleetId: fleetId,
+        routeId: routeId,
+        deviceId: Value(deviceId),
+        depotId: depotId,
+        status: const Value('ACTIVE'),
+        startedOffline: Value(offline),
+        startedAt: startedAt,
+        fleetNumber: Value(fleetNumber),
+        routeOrigin: Value(routeOrigin),
+        routeDestination: Value(routeDestination),
+        syncStatus: Value(offline ? 'pending' : 'syncing'),
+      ),
+    );
+
+    if (offline) {
+      await _db.enqueueSync(
+        SyncQueueItemsCompanion.insert(
+          entityType: 'trip',
+          entityId: tripId,
+          operation: 'CREATE_TRIP',
+          payloadJson: jsonEncode({
+            'id': tripId,
+            'fleet_id': fleetId,
+            'route_id': routeId,
+            'device_id': deviceId,
+            'started_offline': true,
+          }),
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
       );
-      
-      // Queue for sync
-      await _database.queueTripCreation(trip);
-      
-      debugPrint('✅ Trip created offline: $localId');
-      debugPrint('📤 Queued for sync');
-      
-      // Get route for display
-      final routes = await _database.getCachedRoutes();
-      final route = routes.firstWhere((r) => r.id == routeId,
-        orElse: () => RouteDto(id: routeId, origin: 'Unknown', destination: 'Unknown', depotId: ''));
-      
-      // Convert to DTO matching backend structure
-      return TripDto(
-        id: localId, // Use local ID until synced
-        depotId: fleet.depotId,
-        agentId: '', // Backend will fill this
+      return TripModel(
+        id: tripId,
+        agentId: agentId,
         fleetId: fleetId,
         routeId: routeId,
         deviceId: deviceId,
-        startedAt: trip.departureTime,
-        status: 'scheduled', // Offline trips start as 'scheduled'
-        startedOffline: true,
-        fleet: TripFleetDto(id: fleetId, number: fleet.number),
-        route: TripRouteDto(id: routeId, origin: route.origin, destination: route.destination),
+        status: 'ACTIVE',
+        startedAt: startedAt,
+        fleetNumber: fleetNumber,
+        routeOrigin: routeOrigin,
+        routeDestination: routeDestination,
+        syncStatus: 'pending',
       );
+    }
+
+    try {
+      final response = await _api.startTrip(
+        tripId: tripId,
+        fleetId: fleetId,
+        routeId: routeId,
+        deviceId: deviceId,
+        startedOffline: false,
+      );
+      final trip = response['trip'] as Map<String, dynamic>;
+      final serverId = trip['id'] as String;
+
+      await _db.upsertTrip(
+        LocalTripsCompanion.insert(
+          id: serverId,
+          agentId: agentId,
+          fleetId: fleetId,
+          routeId: routeId,
+          deviceId: Value(deviceId),
+          depotId: depotId,
+          status: const Value('ACTIVE'),
+          startedAt: startedAt,
+          fleetNumber: Value(fleetNumber),
+          routeOrigin: Value(routeOrigin),
+          routeDestination: Value(routeDestination),
+          syncStatus: const Value('synced'),
+        ),
+      );
+
+      if (serverId != tripId) {
+        await (_db.delete(_db.localTrips)..where((t) => t.id.equals(tripId))).go();
+      }
+
+      return _mapRemoteTrip(trip);
     } catch (e) {
-      debugPrint('❌ Offline creation failed: $e');
-      throw Exception('Failed to create trip offline: ${e.toString()}');
+      final apiError = asApiError(e);
+      if (apiError?.statusCode == 409) {
+        final serverActive = await _fetchServerActiveTrip();
+        if (serverActive != null) {
+          final serverId = serverActive['id'] as String;
+          if (serverId == tripId) {
+            await _saveRemoteTripToLocal(serverActive);
+            return _mapRemoteTrip(serverActive);
+          }
+          await (_db.delete(_db.localTrips)..where((t) => t.id.equals(tripId)))
+              .go();
+          await _saveRemoteTripToLocal(serverActive);
+          throw ApiError(
+            message:
+                'You already have an active trip on the server. End it before starting a new one.',
+          );
+        }
+        await (_db.delete(_db.localTrips)..where((t) => t.id.equals(tripId)))
+            .go();
+        throw apiError!;
+      }
+
+      if (apiError != null) {
+        await (_db.delete(_db.localTrips)..where((t) => t.id.equals(tripId)))
+            .go();
+        throw apiError;
+      }
+
+      await _db.updateTripSyncStatus(tripId, 'pending');
+      await _db.enqueueSync(
+        SyncQueueItemsCompanion.insert(
+          entityType: 'trip',
+          entityId: tripId,
+          operation: 'CREATE_TRIP',
+          payloadJson: jsonEncode({
+            'id': tripId,
+            'fleet_id': fleetId,
+            'route_id': routeId,
+            'device_id': deviceId,
+            'started_offline': true,
+          }),
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+      return TripModel(
+        id: tripId,
+        agentId: agentId,
+        fleetId: fleetId,
+        routeId: routeId,
+        deviceId: deviceId,
+        status: 'ACTIVE',
+        startedAt: startedAt,
+        fleetNumber: fleetNumber,
+        routeOrigin: routeOrigin,
+        routeDestination: routeDestination,
+        syncStatus: 'pending',
+      );
     }
   }
 
-  /// End an active trip
-  /// 
-  /// Strategy:
-  /// 1. Check connectivity
-  /// 2. If online, try API first
-  /// 3. If offline or API fails, end locally and queue for sync
-  /// 
-  /// Validates:
-  /// - Trip exists locally
-  /// - Trip is still active (not already completed)
-  /// 
-  /// Returns: Completed trip with status='completed'
-  /// Throws: Exception with user-friendly error message
-  Future<TripDto> endTrip(String tripId) async {
-    // Check if this is a local ID (UUID format)
-    final isLocalId = _isUuidFormat(tripId);
-    
-    // Check connectivity
-    final connectivityResult = await _connectivity.checkConnectivity();
-    final isOnline = connectivityResult.any((result) => 
-      result != ConnectivityResult.none
+  Future<void> syncTripToServer(Map<String, dynamic> payload) async {
+    await _api.startTrip(
+      tripId: payload['id'] as String,
+      fleetId: payload['fleet_id'] as String,
+      routeId: payload['route_id'] as String,
+      deviceId: payload['device_id'] as String?,
+      startedOffline: payload['started_offline'] as bool? ?? true,
     );
-    
-    debugPrint('📡 Device is ${isOnline ? "online" : "offline"}');
-    
-    if (isOnline) {
-      // Try API first when online
+    await _db.updateTripSyncStatus(payload['id'] as String, 'synced');
+  }
+
+  Future<TripEndSummary> endTrip(String tripId) async {
+    final trip = await _db.getTripById(tripId);
+    if (trip == null) throw ApiError(message: 'Trip not found.');
+
+    final tickets = await _db.getAllTickets(tripId: tripId);
+    final localTicketCount = tickets.length;
+    final localRevenue = tickets.fold<double>(0, (sum, t) => sum + t.amount);
+    final currency = tickets.isNotEmpty ? tickets.first.currency : 'USD';
+
+    await _db.completeTrip(tripId);
+    final endedAt = DateTime.now();
+
+    var syncStatus = 'synced';
+    var totalTickets = localTicketCount;
+    var totalRevenue = localRevenue;
+
+    if (await _connectivity.checkReachability()) {
       try {
-        debugPrint('🌐 Attempting online trip ending...');
-        
-        // Get the server ID if this is a local trip
-        String apiTripId = tripId;
-        if (isLocalId) {
-          final trip = await _database.getTripByLocalId(tripId);
-          if (trip?.serverId != null) {
-            apiTripId = trip!.serverId!;
-            debugPrint('🔄 Using server ID: $apiTripId');
-          }
-        }
-        
-        final response = await _apiService.endTrip(apiTripId);
-        debugPrint('✅ Trip ended online: ${response.trip.id}');
-        
-        // Update local database only if trip exists locally
-        if (isLocalId) {
-          final localTrip = await _database.getTripByLocalId(tripId);
-          if (localTrip != null) {
-            await _database.endTripLocally(tripId, true);
-            debugPrint('✅ Local database updated');
-          }
-        } else {
-          final localTrip = await _database.getTripByServerId(tripId);
-          if (localTrip != null) {
-            await _database.endTripLocally(tripId, false);
-            debugPrint('✅ Local database updated');
-          }
-        }
-        
-        return response.trip;
-      } catch (e) {
-        debugPrint('⚠️ Online ending failed: $e');
-        debugPrint('🔄 Falling back to offline mode...');
-        // Fall through to offline ending
+        final response = await _api.endTrip(tripId);
+        final result = response['trip'] as Map<String, dynamic>;
+        totalTickets = result['total_tickets'] as int? ?? localTicketCount;
+        totalRevenue =
+            (result['total_revenue'] as num?)?.toDouble() ?? localRevenue;
+        await _db.updateTripSyncStatus(tripId, 'synced');
+      } catch (_) {
+        syncStatus = 'pending';
+        await _enqueueEndTrip(tripId);
       }
+    } else {
+      syncStatus = 'pending';
+      await _enqueueEndTrip(tripId);
     }
-    
-    // End offline (either because offline or API failed)
-    return _endTripOffline(tripId, isLocalId);
-  }
-  
-  /// End a trip locally for offline operation
-  Future<TripDto> _endTripOffline(String tripId, bool isLocalId) async {
-    try {
-      debugPrint('💾 Ending trip offline...');
-      
-      // Try to get the trip from local database
-      // First try as local ID, then as server ID
-      Trip? trip;
-      bool foundAsLocalId = false;
-      
-      if (isLocalId) {
-        trip = await _database.getTripByLocalId(tripId);
-        foundAsLocalId = true;
-      }
-      
-      // If not found and format looks like UUID, try server ID
-      if (trip == null) {
-        trip = await _database.getTripByServerId(tripId);
-        foundAsLocalId = false;
-      }
-      
-      // If still not found, try the opposite
-      if (trip == null && !isLocalId) {
-        trip = await _database.getTripByLocalId(tripId);
-        foundAsLocalId = true;
-      }
-      
-      if (trip == null) {
-        throw Exception('Trip not found in local database');
-      }
-      
-      if (trip.status == 'completed') {
-        throw Exception('Trip is already completed');
-      }
-      
-      // Update trip status locally using the correct ID and type
-      final actualId = foundAsLocalId ? trip.localId : (trip.serverId ?? trip.localId);
-      final updatedTrip = await _database.endTripLocally(actualId, foundAsLocalId);
-      
-      // Queue for sync
-      await _database.queueTripEnd(updatedTrip);
-      
-      debugPrint('✅ Trip ended offline: $actualId');
-      debugPrint('📤 Queued for sync');
-      
-      // Get fleet and route for display
-      final fleets = await _database.getCachedFleets();
-      final routes = await _database.getCachedRoutes();
-      
-      final fleet = fleets.where((f) => f.id == updatedTrip.fleetId).firstOrNull;
-      final route = routes.where((r) => r.id == updatedTrip.routeId).firstOrNull;
-      
-      // Convert to DTO
-      return TripDto(
-        id: updatedTrip.serverId ?? updatedTrip.localId,
-        depotId: '', // Will be filled by backend
-        agentId: '', // Will be filled by backend
-        fleetId: updatedTrip.fleetId,
-        routeId: updatedTrip.routeId,
-        startedAt: updatedTrip.departureTime,
-        endedAt: updatedTrip.arrivalTime,
-        status: updatedTrip.status,
-        startedOffline: updatedTrip.startedOffline,
-        fleet: fleet != null 
-            ? TripFleetDto(id: fleet.id, number: fleet.number)
-            : null,
-        route: route != null
-            ? TripRouteDto(id: route.id, origin: route.origin, destination: route.destination)
-            : null,
-      );
-    } catch (e) {
-      debugPrint('❌ Offline ending failed: $e');
-      throw Exception('Failed to end trip offline: ${e.toString()}');
-    }
-  }
-  
-  /// Check if a string is in UUID format
-  bool _isUuidFormat(String id) {
-    final uuidRegex = RegExp(
-      r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
-      caseSensitive: false,
+
+    final routeLabel = trip.routeOrigin != null && trip.routeDestination != null
+        ? '${trip.routeOrigin} → ${trip.routeDestination}'
+        : 'Route';
+
+    return TripEndSummary(
+      tripId: tripId,
+      routeLabel: routeLabel,
+      fleetNumber: trip.fleetNumber ?? '—',
+      startedAt: trip.startedAt,
+      endedAt: endedAt,
+      totalTickets: totalTickets,
+      totalRevenue: totalRevenue,
+      currency: currency,
+      syncStatus: syncStatus,
     );
-    return uuidRegex.hasMatch(id);
   }
 
-  /// Get agent's current active trip
-  /// 
-  /// Strategy:
-  /// 1. Try API first (check server for synced trips)
-  /// 2. If API returns null or fails, check local database
-  /// 3. Return offline-created trip if found
-  /// 
-  /// Returns: Active trip or null if no active trip
-  /// Used to:
-  /// - Check if agent can start new trip
-  /// - Display current trip status on home screen
-  /// - Validate before issuing tickets
-  Future<TripDto?> getActiveTrip() async {
+  Future<void> endTripOnServer(String tripId) async {
+    await _api.endTrip(tripId);
+  }
+
+  Future<void> _enqueueEndTrip(String tripId) async {
+    await _db.updateTripSyncStatus(tripId, 'pending');
+    await _db.enqueueSync(
+      SyncQueueItemsCompanion.insert(
+        entityType: 'trip',
+        entityId: tripId,
+        operation: 'END_TRIP',
+        payloadJson: jsonEncode({'id': tripId}),
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>?> _fetchServerActiveTrip() async {
     try {
-      // Try API first
-      final response = await _apiService.getActiveTrip();
-      
-      // If API has an active trip, return it
-      if (response.trip != null) {
-        debugPrint('✅ Found active trip from API: ${response.trip!.id}');
-        return response.trip;
-      }
-      
-      // If API returns null (no active trip on server), check local database
-      // This handles offline trips that haven't synced yet
-      debugPrint('⚠️ No active trip from API, checking local database...');
-    } catch (e) {
-      debugPrint('⚠️ API getActiveTrip failed: $e');
-      debugPrint('📦 Checking local database for offline trips...');
-    }
-    
-    // Fallback to local database (either API returned null or failed)
-    try {
-      // Get current agent ID for filtering (CRITICAL for agent isolation)
-      final agentData = await _storageService.getAgentData();
-      if (agentData == null) {
-        debugPrint('⚠️ Not authenticated');
-        return null;
-      }
-      
-      final agentId = agentData['id']?.toString() ?? '';
-      if (agentId.isEmpty) {
-        debugPrint('⚠️ Agent ID missing');
-        return null;
-      }
-      
-      final activeTrips = await _database.getActiveTrips(agentId);
-      
-      if (activeTrips.isEmpty) {
-        debugPrint('✅ No active trips found locally for agent $agentId');
-        return null;
-      }
-      
-      // Get the first active trip
-      final trip = activeTrips.first;
-      debugPrint('✅ Found active trip: ${trip.localId}');
-      
-      // Fetch fleet and route data from cache
-      final fleets = await _database.getCachedFleets();
-      final routes = await _database.getCachedRoutes();
-      
-      final fleet = fleets.where((f) => f.id == trip.fleetId).firstOrNull;
-      final route = routes.where((r) => r.id == trip.routeId).firstOrNull;
-      
-      // Construct TripDto from local data
-      return TripDto(
-        id: trip.serverId ?? trip.localId, // Use serverId if synced, otherwise localId
-        depotId: '', // Not stored locally yet
-        agentId: trip.agentId, // Include agent info from local data
-        fleetId: trip.fleetId,
-        routeId: trip.routeId,
-        startedAt: trip.departureTime,
-        status: trip.status,
-        startedOffline: trip.startedOffline,
-        fleet: fleet != null 
-            ? TripFleetDto(id: fleet.id, number: fleet.number)
-            : null,
-        route: route != null
-            ? TripRouteDto(id: route.id, origin: route.origin, destination: route.destination)
-            : null,
-      );
-    } catch (dbError) {
-      debugPrint('❌ Local database error: $dbError');
+      return await _api.getActiveTrip();
+    } catch (_) {
       return null;
     }
   }
 
-  /// Get all available fleets for agent's depot
-  /// 
-  /// Strategy:
-  /// 1. Try to fetch from API (online)
-  /// 2. If successful, cache locally and return
-  /// 3. If failed (offline), check local cache
-  /// 4. Return cached data if available
-  /// 5. Throw error if no cache and offline
-  /// 
-  /// Used for: Fleet selection when starting trip
-  /// Returns: List of fleet vehicles (buses)
-  Future<List<FleetDto>> getFleets() async {
-    try {
-      debugPrint('🚌 Fetching fleets from API...');
-      final fleets = await _apiService.getFleets();
-      
-      // Cache successful response
-      debugPrint('✅ Got ${fleets.length} fleets, caching...');
-      await _database.cacheFleets(fleets);
-      
-      return fleets;
-    } catch (e) {
-      debugPrint('⚠️ API failed: $e');
-      debugPrint('📦 Checking local cache...');
-      
-      // Fallback to cache
-      final cached = await _database.getCachedFleets();
-      
-      if (cached.isNotEmpty) {
-        final cacheTime = await _database.getLastCacheTime('fleets');
-        final age = cacheTime != null 
-            ? DateTime.now().difference(cacheTime)
-            : null;
-        
-        debugPrint('✅ Loaded ${cached.length} fleets from cache');
-        if (age != null) {
-          debugPrint('📅 Cache age: ${_formatDuration(age)}');
-        }
-        
-        return cached;
-      }
-      
-      // No cache available
-      debugPrint('❌ No cached fleets available');
-      throw Exception(
-        'Cannot load fleets. Please connect to internet to download data.'
+  Future<void> _saveRemoteTripToLocal(Map<String, dynamic> json) async {
+    final depotId = await _storage.getDepotId();
+    if (depotId == null) return;
+
+    final fleet = json['fleet'] as Map<String, dynamic>?;
+    final route = json['route'] as Map<String, dynamic>?;
+
+    await _db.upsertTrip(
+      LocalTripsCompanion.insert(
+        id: json['id'] as String,
+        agentId: json['agent_id'] as String,
+        fleetId: json['fleet_id'] as String,
+        routeId: json['route_id'] as String? ?? '',
+        deviceId: Value(json['device_id'] as String?),
+        depotId: depotId,
+        status: Value(json['status'] as String? ?? 'ACTIVE'),
+        startedAt: DateTime.parse(json['started_at'] as String),
+        fleetNumber: Value(fleet?['number'] as String?),
+        routeOrigin: Value(route?['origin'] as String?),
+        routeDestination: Value(route?['destination'] as String?),
+        syncStatus: const Value('synced'),
+      ),
+    );
+  }
+
+  TripModel _mapLocalTrip(LocalTrip t) => TripModel(
+        id: t.id,
+        agentId: t.agentId,
+        fleetId: t.fleetId,
+        routeId: t.routeId,
+        deviceId: t.deviceId,
+        status: t.status,
+        startedAt: t.startedAt,
+        fleetNumber: t.fleetNumber,
+        routeOrigin: t.routeOrigin,
+        routeDestination: t.routeDestination,
+        syncStatus: t.syncStatus,
       );
-    }
-  }
 
-  /// Get all available routes for agent's depot
-  /// 
-  /// Strategy: Same cache-first pattern as getFleets()
-  /// 
-  /// Used for: Route selection when starting trip
-  /// Returns: List of routes (origin → destination)
-  Future<List<RouteDto>> getRoutes() async {
-    try {
-      debugPrint('🛣️ Fetching routes from API...');
-      final routes = await _apiService.getRoutes();
-      
-      debugPrint('✅ Got ${routes.length} routes, caching...');
-      await _database.cacheRoutes(routes);
-      
-      return routes;
-    } catch (e) {
-      debugPrint('⚠️ API failed: $e');
-      debugPrint('📦 Checking local cache...');
-      
-      final cached = await _database.getCachedRoutes();
-      
-      if (cached.isNotEmpty) {
-        final cacheTime = await _database.getLastCacheTime('routes');
-        final age = cacheTime != null 
-            ? DateTime.now().difference(cacheTime)
-            : null;
-        
-        debugPrint('✅ Loaded ${cached.length} routes from cache');
-        if (age != null) {
-          debugPrint('📅 Cache age: ${_formatDuration(age)}');
-        }
-        
-        return cached;
-      }
-      
-      debugPrint('❌ No cached routes available');
-      throw Exception(
-        'Cannot load routes. Please connect to internet to download data.'
-      );
-    }
-  }
-
-  /// Format duration for debug logging
-  String _formatDuration(Duration duration) {
-    if (duration.inDays > 0) return '${duration.inDays}d ago';
-    if (duration.inHours > 0) return '${duration.inHours}h ago';
-    if (duration.inMinutes > 0) return '${duration.inMinutes}m ago';
-    return 'just now';
-  }
-
-  /// Check if agent can start a new trip
-  /// 
-  /// Business rule: One active trip per agent at a time
-  /// Returns: true if no active trip, false if already has active trip
-  Future<bool> canStartTrip() async {
-    final activeTrip = await getActiveTrip();
-    return activeTrip == null;
-  }
-
-  /// Create a new fleet vehicle
-  /// 
-  /// Allows agents to add new fleet vehicles when not in system
-  /// Returns: Newly created fleet
-  Future<FleetDto> createFleet(String fleetNumber) async {
-    try {
-      return await _apiService.createFleet(fleetNumber);
-    } catch (e) {
-      // Extract user-friendly message
-      final message = e.toString().replaceAll('Exception: ', '');
-      throw Exception(message);
-    }
-  }
-
-  /// Create a new route
-  /// 
-  /// Allows agents to add new routes when not in system
-  /// Returns: Newly created route
-  Future<RouteDto> createRoute(String origin, String destination) async {
-    try {
-      return await _apiService.createRoute(origin, destination);
-    } catch (e) {
-      // Extract user-friendly message
-      final message = e.toString().replaceAll('Exception: ', '');
-      throw Exception(message);
-    }
+  TripModel _mapRemoteTrip(Map<String, dynamic> json) {
+    final fleet = json['fleet'] as Map<String, dynamic>?;
+    final route = json['route'] as Map<String, dynamic>?;
+    return TripModel(
+      id: json['id'] as String,
+      agentId: json['agent_id'] as String,
+      fleetId: json['fleet_id'] as String,
+      routeId: json['route_id'] as String? ?? '',
+      deviceId: json['device_id'] as String?,
+      status: json['status'] as String? ?? 'ACTIVE',
+      startedAt: DateTime.parse(json['started_at'] as String),
+      fleetNumber: fleet?['number'] as String?,
+      routeOrigin: route?['origin'] as String?,
+      routeDestination: route?['destination'] as String?,
+      ticketsCount: json['tickets_count'] as int? ?? 0,
+      totalRevenue: (json['total_revenue'] as num?)?.toDouble() ?? 0,
+      syncStatus: 'synced',
+    );
   }
 }

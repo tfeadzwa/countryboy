@@ -11,6 +11,8 @@ interface IssueArgs {
   amount: number;
   departure?: string;
   destination?: string;
+  passenger_name?: string;
+  passenger_phone?: string;
   issued_at?: Date;
   linked_passenger_ticket_id?: string;
 }
