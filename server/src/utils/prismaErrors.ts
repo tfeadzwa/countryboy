@@ -2,9 +2,15 @@ import { Prisma } from '@prisma/client';
 
 export function formatPrismaError(err: any, payload?: Record<string, any>) {
   if (err instanceof Prisma.PrismaClientValidationError) {
+    // Surface a short hint from Prisma (helps catch stale clients / unknown fields).
+    const raw = String(err.message || '');
+    const unknownArg = raw.match(/Unknown argument `([^`]+)`/);
+    const hint = unknownArg
+      ? ` Unknown field: ${unknownArg[1]}. Rebuild the API with \`npx prisma generate\` and restart.`
+      : '';
     return {
       status: 400,
-      message: 'Invalid request data. Please check required fields and value formats.'
+      message: `Invalid request data. Please check required fields and value formats.${hint}`,
     };
   }
 
