@@ -1,10 +1,19 @@
 import prisma from '../utils/prisma';
 import logger from '../utils/logger';
-import { Prisma } from '@prisma/client';
+import { touchDeviceActivity } from './agentSessionService';
+import { listFleets } from './fleetService';
+import { listRoutes } from './routeService';
+import { listFares } from './fareService';
+import { allocateTripSerial } from '../utils/ticketSerial';
 
 interface PushPayload {
   trips?: any[];
   tickets?: any[];
+}
+
+interface SyncContext {
+  agentId?: string;
+  deviceId?: string;
 }
 
 /** Mobile sends Dart `toIso8601String()` without a timezone suffix — Prisma rejects those. */
@@ -48,14 +57,18 @@ const normalizeTicketRecord = (raw: Record<string, unknown>, depotId: string) =>
   amount: raw.amount as number | string,
   departure: (raw.departure as string | undefined) ?? null,
   destination: (raw.destination as string | undefined) ?? null,
-  passenger_name: (raw.passenger_name as string | undefined) ?? null,
-  passenger_phone: (raw.passenger_phone as string | undefined) ?? null,
+  passenger_name: null,
+  passenger_phone: (raw.passenger_phone as string | undefined)?.trim() || null,
   linked_passenger_ticket_id:
     (raw.linked_passenger_ticket_id as string | undefined) ?? null,
   issued_at: parseSyncDateTime(raw.issued_at, 'issued_at'),
 });
 
-export const pushData = async (depotId: string, payload: PushPayload) => {
+export const pushData = async (
+  depotId: string,
+  payload: PushPayload,
+  context: SyncContext = {},
+) => {
   const results: any = { trips: [], tickets: [] };
   const start = Date.now();
   let tripCount = 0;
@@ -106,13 +119,8 @@ export const pushData = async (depotId: string, payload: PushPayload) => {
           update: { ...data, updated_at: new Date() },
           create: data,
         });
-        if (!upserted.serial_number && data.currency) {
-          const serial = await allocateSerial(
-            prismaTx,
-            depotId,
-            data.currency,
-            data.device_id ?? undefined,
-          );
+        if (!upserted.serial_number) {
+          const serial = await allocateTripSerial(prismaTx, data.trip_id);
           await prismaTx.tblTickets.update({
             where: { id: upserted.id },
             data: { serial_number: serial },
@@ -128,101 +136,88 @@ export const pushData = async (depotId: string, payload: PushPayload) => {
   const duration = Date.now() - start;
   // log with details including counts and duration
   await prisma.tblSyncLogs.create({
-    data: { depot_id: depotId, type: 'push', success: true, error: null,
+    data: {
+      depot_id: depotId,
+      device_id: context.deviceId ?? null,
+      agent_id: context.agentId ?? null,
+      type: 'push',
+      success: true,
+      error: null,
       records_pushed: tripCount + ticketCount,
-      duration_ms: duration
-    }
+      duration_ms: duration,
+    },
   });
+  if (context.deviceId) {
+    await touchDeviceActivity(context.deviceId, context.agentId);
+  }
   logger.info('sync push', { depotId, tripCount, ticketCount, duration });
   return results;
 };
 
-export const pullData = async (depotId: string, since?: string) => {
+const buildReferenceSnapshot = async (depotId: string) => {
+  const [fleets, routes, fares] = await Promise.all([
+    listFleets(depotId),
+    listRoutes(depotId),
+    listFares(depotId),
+  ]);
+
+  return {
+    fleets: fleets.map((f) => ({
+      id: f.id,
+      number: f.number,
+      status: f.status,
+    })),
+    routes,
+    fares: fares.map((f) => ({
+      id: f.id,
+      route_id: f.route_id,
+      currency: f.currency,
+      amount: f.amount,
+      route_label: `${f.route.origin} → ${f.route.destination}`,
+    })),
+  };
+};
+
+export const pullData = async (
+  depotId: string,
+  since?: string,
+  context: SyncContext = {},
+) => {
   const start = Date.now();
   const sinceDate = since ? new Date(since) : new Date(0);
-  const trips = await prisma.tblTrips.findMany({
-    where: { depot_id: depotId, updated_at: { gte: sinceDate } }
-  });
-  const tickets = await prisma.tblTickets.findMany({
-    where: { depot_id: depotId, updated_at: { gte: sinceDate } }
-  });
+  const [trips, tickets, reference] = await Promise.all([
+    prisma.tblTrips.findMany({
+      where: { depot_id: depotId, updated_at: { gte: sinceDate } },
+    }),
+    prisma.tblTickets.findMany({
+      where: { depot_id: depotId, updated_at: { gte: sinceDate } },
+    }),
+    buildReferenceSnapshot(depotId),
+  ]);
   const duration = Date.now() - start;
   await prisma.tblSyncLogs.create({
     data: {
       depot_id: depotId,
+      device_id: context.deviceId ?? null,
+      agent_id: context.agentId ?? null,
       type: 'pull',
       success: true,
       error: null,
       records_pulled: trips.length + tickets.length,
-      duration_ms: duration
-    }
-  });
-  logger.info('sync pull', { depotId, tripCount: trips.length, ticketCount: tickets.length, duration });
-  return { trips, tickets };
-};
-
-const allocateSerial = async (
-  prismaTx: Prisma.TransactionClient,
-  depotId: string,
-  currency: string,
-  deviceId?: string
-) => {
-  // If no device ID, use a fallback approach (depot-wide allocation)
-  // This is for backward compatibility during transition
-  if (!deviceId) {
-    // For now, generate a simple incremental number
-    // In production, you'd want to maintain a depot-level counter or use a different strategy
-    return Math.floor(Math.random() * 1000000); // Temporary fallback
-  }
-
-  // Find an active serial range for this device and currency
-  let range = await prismaTx.tblSerialRanges.findFirst({
-    where: {
-      depot_id: depotId,
-      device_id: deviceId,
-      currency,
-      exhausted_at: null,
+      duration_ms: duration,
     },
-    orderBy: { allocated_at: 'desc' },
   });
-
-  // If no range exists or current range is exhausted, create a new one
-  if (!range || range.next_number > range.end_number) {
-    if (range) {
-      // Mark the old range as exhausted
-      await prismaTx.tblSerialRanges.update({
-        where: { id: range.id },
-        data: { exhausted_at: new Date() },
-      });
-    }
-
-    // Calculate new range based on last allocated range
-    const lastRange = await prismaTx.tblSerialRanges.findFirst({
-      where: { depot_id: depotId, device_id: deviceId, currency },
-      orderBy: { end_number: 'desc' },
-    });
-
-    const startNumber = lastRange ? lastRange.end_number + 1 : 1;
-    const endNumber = startNumber + 999; // 1000 serials per range
-
-    range = await prismaTx.tblSerialRanges.create({
-      data: {
-        depot_id: depotId,
-        device_id: deviceId,
-        currency,
-        start_number: startNumber,
-        end_number: endNumber,
-        next_number: startNumber,
-      },
-    });
+  if (context.deviceId) {
+    await touchDeviceActivity(context.deviceId, context.agentId);
   }
-
-  // Allocate the next serial number
-  const serial = range.next_number;
-  await prismaTx.tblSerialRanges.update({
-    where: { id: range.id },
-    data: { next_number: serial + 1 },
+  logger.info('sync pull', {
+    depotId,
+    tripCount: trips.length,
+    ticketCount: tickets.length,
+    fleetCount: reference.fleets.length,
+    routeCount: reference.routes.length,
+    fareCount: reference.fares.length,
+    duration,
   });
-
-  return serial;
+  return { trips, tickets, ...reference };
 };

@@ -10,7 +10,9 @@ const router = Router();
 
 router.get('/', authMiddleware, depotScopeMiddleware, routeController.list);
 router.post('/', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), validate(routeSchema), routeController.create);
+router.get('/:id/children', authMiddleware, depotScopeMiddleware, routeController.listChildren);
 router.get('/:id', authMiddleware, depotScopeMiddleware, routeController.getOne);
 router.put('/:id', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), routeController.update);
+router.delete('/:id', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), routeController.remove);
 
 export default router;

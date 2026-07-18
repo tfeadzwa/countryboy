@@ -2,7 +2,11 @@ import { Router } from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { depotScopeMiddleware } from '../middleware/depotScope';
 import { deviceAuthMiddleware } from '../middleware/deviceAuth';
-import { logSyncPushRequest } from '../middleware/logSyncPush';
+import {
+  logSyncPushAttempt,
+  logSyncPushRequest,
+  logSyncPushResponse,
+} from '../middleware/logSyncPush';
 import { push, pull } from '../controllers/syncController';
 import { validate } from '../middleware/validate';
 import { syncPushSchema, syncPullSchema } from '../validators/schemas';
@@ -12,10 +16,12 @@ const router = Router();
 // push sync data (trips/tickets)
 router.post(
   '/push',
+  logSyncPushAttempt,
+  logSyncPushResponse,
   authMiddleware,
   depotScopeMiddleware,
-  deviceAuthMiddleware,
   logSyncPushRequest,
+  deviceAuthMiddleware,
   validate(syncPushSchema),
   push,
 );

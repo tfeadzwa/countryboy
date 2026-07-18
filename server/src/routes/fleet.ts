@@ -4,13 +4,34 @@ import { depotScopeMiddleware } from '../middleware/depotScope';
 import { requireAnyRole } from '../middleware/rbac';
 import * as fleetController from '../controllers/fleetController';
 import { validate } from '../middleware/validate';
-import { fleetSchema } from '../validators/schemas';
+import { fleetSchema, fleetUpdateSchema } from '../validators/schemas';
 
 const router = Router();
 
 router.get('/', authMiddleware, depotScopeMiddleware, fleetController.list);
-router.post('/', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), validate(fleetSchema), fleetController.create);
+router.post(
+  '/',
+  authMiddleware,
+  depotScopeMiddleware,
+  requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']),
+  validate(fleetSchema),
+  fleetController.create
+);
 router.get('/:id', authMiddleware, depotScopeMiddleware, fleetController.getOne);
-router.put('/:id', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), fleetController.update);
+router.put(
+  '/:id',
+  authMiddleware,
+  depotScopeMiddleware,
+  requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']),
+  validate(fleetUpdateSchema),
+  fleetController.update
+);
+router.delete(
+  '/:id',
+  authMiddleware,
+  depotScopeMiddleware,
+  requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']),
+  fleetController.remove
+);
 
 export default router;

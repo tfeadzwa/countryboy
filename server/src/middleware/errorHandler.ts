@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { formatPrismaError } from '../utils/prismaErrors';
-import { syncPushLogger } from '../utils/logger';
+import { authLoginLogger, syncPushLogger } from '../utils/logger';
 
 export const errorHandler = (err: any, req: Request & { requestId?: string }, res: Response, next: NextFunction) => {
   // check for Prisma known request error and translate
@@ -17,6 +17,29 @@ export const errorHandler = (err: any, req: Request & { requestId?: string }, re
     response.details = err.errors;
     code = 400;
     response.code = code;
+    const first = err.errors[0];
+    if (first) {
+      const field = first.path.filter((p) => p !== 'body').join('.') || 'field';
+      response.message = `${field}: ${first.message}`;
+      response.error = response.message;
+    } else {
+      response.message = 'Validation failed';
+      response.error = response.message;
+    }
+
+    if (req.path.includes('/auth/login')) {
+      authLoginLogger.warn('LOGIN_FAILED', {
+        reason: 'VALIDATION_ERROR',
+        message: 'Login request body failed validation (missing or invalid username/password fields).',
+        requestId: req.requestId,
+        path: req.path,
+        validationErrors: err.errors.map(e => ({
+          path: e.path.join('.'),
+          message: e.message,
+        })),
+        ip: req.ip || req.socket?.remoteAddress || 'unknown',
+      });
+    }
   } else if (err.details) {
     response.details = err.details;
   }

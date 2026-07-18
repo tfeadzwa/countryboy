@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma';
 import { Prisma } from '@prisma/client';
+import { allocateTripSerial } from '../utils/ticketSerial';
 
 interface IssueArgs {
   depot_id: string;
@@ -11,20 +12,34 @@ interface IssueArgs {
   amount: number;
   departure?: string;
   destination?: string;
-  passenger_name?: string;
-  passenger_phone?: string;
+  passenger_phone?: string | null;
   issued_at?: Date;
   linked_passenger_ticket_id?: string;
 }
 
 export const issueTicket = async (args: IssueArgs) => {
-  const ticket = await prisma.tblTickets.create({
-    data: {
-      ...args,
-      issued_at: args.issued_at || new Date(),
-    },
+  return prisma.$transaction(async (tx) => {
+    const serial = await allocateTripSerial(tx, args.trip_id);
+
+    return tx.tblTickets.create({
+      data: {
+        depot_id: args.depot_id,
+        trip_id: args.trip_id,
+        agent_id: args.agent_id,
+        device_id: args.device_id,
+        ticket_category: args.ticket_category,
+        currency: args.currency,
+        amount: args.amount,
+        departure: args.departure,
+        destination: args.destination,
+        passenger_name: null,
+        passenger_phone: args.passenger_phone?.trim() || null,
+        issued_at: args.issued_at || new Date(),
+        linked_passenger_ticket_id: args.linked_passenger_ticket_id,
+        serial_number: serial,
+      },
+    });
   });
-  return ticket;
 };
 
 export const voidTicket = async (

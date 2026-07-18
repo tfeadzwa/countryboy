@@ -14,7 +14,7 @@ const mainLinks = [
   { to: "/admin-users", label: "Admin Users", icon: UserCog, superOnly: true },
   { to: "/agents", label: "Agents", icon: Users },
   { to: "/fleets", label: "Fleets", icon: Bus },
-  { to: "/routes", label: "Routes & Fares", icon: MapPin },
+  { to: "/routes", label: "Routes", icon: MapPin },
 ];
 
 const operationLinks = [

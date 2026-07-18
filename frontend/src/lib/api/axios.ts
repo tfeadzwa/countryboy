@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { getApiBaseUrl } from './base-url';
 
 // Create axios instance with base configuration
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api',
+  baseURL: getApiBaseUrl(),
   timeout: 30000, // 30 seconds
   headers: {
     'Content-Type': 'application/json',
@@ -36,9 +37,12 @@ apiClient.interceptors.response.use(
           error.config?.url?.includes('/auth/login') ||
           error.config?.url?.includes('/auth/forgot-password') ||
           error.config?.url?.includes('/auth/reset-password') ||
-          error.config?.url?.includes('/auth/refresh');
+          error.config?.url?.includes('/auth/refresh') ||
+          error.config?.url?.includes('/public/');
         
-        if (!isLoginPage && !isPublicAuthRequest) {
+        const isPublicPage = window.location.pathname.startsWith('/verify/');
+
+        if (!isLoginPage && !isPublicAuthRequest && !isPublicPage) {
           // Clear session storage
           sessionStorage.removeItem('auth_token');
           sessionStorage.removeItem('user_data');

@@ -15,7 +15,10 @@ export const push = async (req: AuthenticatedRequest, res: Response) => {
       payload,
     });
 
-    const result = await pushData(depotId, payload);
+    const result = await pushData(depotId, payload, {
+      agentId: req.agentId,
+      deviceId: req.deviceId,
+    });
 
     syncPushLogger.info('sync push succeeded', {
       requestId: req.requestId,
@@ -46,7 +49,10 @@ export const pull = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const depotId = req.depotId as string;
     const since = req.query.since as string | undefined;
-    const data = await pullData(depotId, since);
+    const data = await pullData(depotId, since, {
+      agentId: req.agentId,
+      deviceId: req.deviceId,
+    });
     res.json(data);
   } catch (err) {
     const friendly = formatPrismaError(err);

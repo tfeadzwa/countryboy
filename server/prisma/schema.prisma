@@ -42,12 +42,14 @@ model tblDepots {
   devices          tblDevices[]
   fleets           tblFleets[]
   routes           tblRoutes[]
+  routeLinks       tblRouteLinks[]
   fares            tblFares[]
   trips            tblTrips[]
   tickets          tblTickets[]
   serialRanges     tblSerialRanges[]
   syncLogs         tblSyncLogs[]
   dailyAggregates  tblDailyAggregates[]
+  agentDeviceSessions tblAgentDeviceSessions[]
 }
 
 model tblAdminUsers {
@@ -85,6 +87,8 @@ model tblAgents {
   trips        tblTrips[]
   tickets      tblTickets[]
   voids        tblTicketVoids[] @relation("VoidAgent")
+  deviceSessions tblAgentDeviceSessions[]
+  devicesLastUsed tblDevices[] @relation("DeviceLastAgent")
 
   @@unique([depot_id, username])
   @@unique([depot_id, agent_code])
@@ -97,6 +101,8 @@ model tblDevices {
   pairing_code  String?  @unique           // Short 6-char code for one-time device pairing
   paired        Boolean  @default(false)   // Whether device has been paired with app
   paired_at     DateTime?                  // When device was paired
+  last_agent_id String?                    // Last conductor who signed in on this device
+  last_agent_login_at DateTime?
   depot_id      String
   device_name   String?                    // Device brand and model (e.g., "Samsung SM A556E")
   device_model  String?                    // Device model (e.g., "SM A556E")
@@ -109,22 +115,49 @@ model tblDevices {
   updated_by    String?
 
   depot         tblDepots @relation(fields: [depot_id], references: [id])
+  lastAgent     tblAgents? @relation("DeviceLastAgent", fields: [last_agent_id], references: [id])
   trips         tblTrips[]
   tickets       tblTickets[]
   serialRanges  tblSerialRanges[]
   voids         tblTicketVoids[] @relation("VoidDevice")
+  agentDeviceSessions tblAgentDeviceSessions[]
+}
+
+model tblAgentDeviceSessions {
+  id          String    @id @default(uuid())
+  depot_id    String
+  device_id   String
+  agent_id    String
+  started_at  DateTime  @default(now())
+  ended_at    DateTime?
+  end_reason  String?
+  app_version String?
+  login_type  String    @default("online")
+
+  depot       tblDepots  @relation(fields: [depot_id], references: [id])
+  device      tblDevices @relation(fields: [device_id], references: [id])
+  agent       tblAgents  @relation(fields: [agent_id], references: [id])
+
+  @@index([device_id, ended_at])
+  @@index([agent_id, started_at])
+  @@index([depot_id, started_at])
 }
 
 model tblFleets {
-  id          String      @id @default(uuid())
-  number      String
-  depot_id    String
-  status      FleetStatus @default(ACTIVE)
-  capacity    Int         @default(0)
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
-  created_by  String?
-  updated_by  String?
+  id                           String      @id @default(uuid())
+  number                       String
+  depot_id                     String
+  status                       FleetStatus @default(ACTIVE)
+  capacity                     Int         @default(0)
+  licence_disc_expiry          DateTime?   // Vehicle Licence Disc
+  cof_expiry                   DateTime?   // Certificate of Fitness
+  passenger_liability_expiry   DateTime?   // Passenger Liability Insurance
+  route_authority_expiry       DateTime?   // Route Authority
+  ppa_expiry                   DateTime?   // Public Passenger Permit (PPA)
+  created_at                   DateTime    @default(now())
+  updated_at                   DateTime    @updatedAt
+  created_by                   String?
+  updated_by                   String?
 
   depot       tblDepots @relation(fields: [depot_id], references: [id])
   trips       tblTrips[]
@@ -154,8 +187,29 @@ model tblRoutes {
   depot       tblDepots @relation(fields: [depot_id], references: [id])
   fares       tblFares[]
   trips       tblTrips[]
+  parentLinks tblRouteLinks[] @relation("RouteLinkParent")
+  childLinks  tblRouteLinks[] @relation("RouteLinkChild")
 
   @@unique([depot_id, origin, destination])
+}
+
+/// Many-to-many corridor links: a segment route can belong under multiple parents,
+/// and a parent can itself be linked under another corridor.
+model tblRouteLinks {
+  id              String   @id @default(uuid())
+  depot_id        String
+  parent_route_id String
+  child_route_id  String
+  created_at      DateTime @default(now())
+  created_by      String?
+
+  depot        tblDepots @relation(fields: [depot_id], references: [id])
+  parentRoute  tblRoutes @relation("RouteLinkParent", fields: [parent_route_id], references: [id], onDelete: Cascade)
+  childRoute   tblRoutes @relation("RouteLinkChild", fields: [child_route_id], references: [id], onDelete: Cascade)
+
+  @@unique([parent_route_id, child_route_id])
+  @@index([depot_id])
+  @@index([child_route_id])
 }
 
 model tblFares {

@@ -1,16 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Copy, Smartphone, MapPin, Calendar, Activity, AlertTriangle, CheckCircle2, Key, Loader2, AlertCircle } from "lucide-react";
+import {
+  Copy,
+  Smartphone,
+  MapPin,
+  Calendar,
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  Key,
+  Loader2,
+  AlertCircle,
+  User,
+  History,
+  Clock,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { deviceService } from "@/lib/api/device.service";
 import { canManageDevices, isSuperAdmin } from "@/lib/permissions";
 import { useAuth } from "@/contexts/AuthContext";
-import type { Device } from "@/types";
+import type { Device, DeviceSession } from "@/types";
 
 interface DeviceInfoDialogProps {
   open: boolean;
@@ -19,14 +34,54 @@ interface DeviceInfoDialogProps {
   onUpdated?: () => void;
 }
 
+type InfoRow = {
+  label: string;
+  value: string;
+  icon: typeof Smartphone;
+  mono?: boolean;
+  copyable?: boolean;
+  badge?: boolean;
+  fullWidth?: boolean;
+};
+
+const formatSessionReason = (reason: string | null | undefined) => {
+  if (!reason) return null;
+  return reason.replace(/_/g, " ");
+};
+
 const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoDialogProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("overview");
   const [showUnpairConfirm, setShowUnpairConfirm] = useState(false);
   const [unpairLoading, setUnpairLoading] = useState(false);
   const [newPairingCode, setNewPairingCode] = useState<string | null>(null);
-  
+  const [sessions, setSessions] = useState<DeviceSession[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+
   const canManage = user ? canManageDevices(user.roles || []) : false;
+
+  useEffect(() => {
+    if (!open || !device?.id || newPairingCode || showUnpairConfirm) {
+      return;
+    }
+    let cancelled = false;
+    setSessionsLoading(true);
+    deviceService
+      .getSessions(device.id, 20)
+      .then((result) => {
+        if (!cancelled) setSessions(result.sessions);
+      })
+      .catch(() => {
+        if (!cancelled) setSessions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSessionsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, device?.id, newPairingCode, showUnpairConfirm]);
 
   if (!device) return null;
 
@@ -37,26 +92,25 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
 
   const handleUnpair = async () => {
     if (!device) return;
-    
+
     setUnpairLoading(true);
     try {
-      // For SUPER_ADMIN, pass depot ID for depot context
       const isSuperAdminUser = user ? isSuperAdmin(user.roles || []) : false;
       const result = await deviceService.unpair(
         device.id,
-        isSuperAdminUser ? device.depot_id : undefined
+        isSuperAdminUser ? device.depot_id : undefined,
       );
       setNewPairingCode(result.pairing_code);
       setShowUnpairConfirm(false);
-      
+
       toast({
         title: "Device Unpaired",
         description: "New pairing code generated successfully.",
       });
-      
+
       onUpdated?.();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to unpair device';
+      const errorMessage = error instanceof Error ? error.message : "Failed to unpair device";
       toast({
         title: "Error",
         description: errorMessage,
@@ -70,10 +124,11 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
   const handleClose = () => {
     setShowUnpairConfirm(false);
     setNewPairingCode(null);
+    setSessions([]);
+    setActiveTab("overview");
     onOpenChange(false);
   };
 
-  // If showing new pairing code after unpair
   if (newPairingCode) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
@@ -127,7 +182,6 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
     );
   }
 
-  // If showing unpair confirmation
   if (showUnpairConfirm) {
     return (
       <Dialog open={open} onOpenChange={() => !unpairLoading && setShowUnpairConfirm(false)}>
@@ -191,43 +245,121 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
     );
   }
 
-  // Main device info display
-  const infoRows = [
+  const infoRows: InfoRow[] = [
     { label: "Serial Number", value: device.serial_number, icon: Smartphone, mono: true, copyable: true },
     { label: "Depot", value: device.depot_name || "N/A", icon: MapPin },
     { label: "Status", value: device.paired ? "Paired" : "Unpaired", icon: Activity, badge: true },
-    ...(device.paired && device.device_name ? [{ label: "Device Name", value: device.device_name, icon: Smartphone }] : []),
-    ...(device.paired && device.device_model ? [{ label: "Model", value: device.device_model, icon: Smartphone }] : []),
-    ...(device.paired && device.app_version ? [{ label: "App Version", value: device.app_version, icon: Activity }] : []),
-    ...(device.paired_at ? [{ label: "Paired At", value: new Date(device.paired_at).toLocaleString(), icon: Calendar }] : []),
-    ...(device.last_seen ? [{ label: "Last Seen", value: new Date(device.last_seen).toLocaleString(), icon: Activity }] : []),
+    ...(device.paired && device.device_name
+      ? [{ label: "Device Name", value: device.device_name, icon: Smartphone }]
+      : []),
+    ...(device.paired && device.device_model
+      ? [{ label: "Model", value: device.device_model, icon: Smartphone }]
+      : []),
+    ...(device.paired && device.app_version
+      ? [{ label: "App Version", value: device.app_version, icon: Activity }]
+      : []),
+    ...(device.paired_at
+      ? [{ label: "Paired At", value: new Date(device.paired_at).toLocaleString(), icon: Calendar }]
+      : []),
+    ...(device.last_seen
+      ? [{ label: "Last Seen", value: new Date(device.last_seen).toLocaleString(), icon: Clock }]
+      : []),
+    ...(device.last_agent
+      ? [
+          {
+            label: "Last Conductor",
+            value: `${device.last_agent.full_name} (${device.last_agent.agent_code})`,
+            icon: User,
+          },
+        ]
+      : []),
+    ...(device.last_agent_login_at
+      ? [{ label: "Last Sign In", value: new Date(device.last_agent_login_at).toLocaleString(), icon: Calendar }]
+      : []),
   ];
+
+  const activeSessionCount = sessions.filter((s) => !s.ended_at).length;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <div className="mx-auto mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-            <Smartphone className="h-5 w-5 text-primary" />
+      <DialogContent className="sm:max-w-[560px] gap-0 p-0 overflow-hidden max-h-[90vh] flex flex-col">
+        <DialogHeader className="px-6 pt-6 pb-4 space-y-3 border-b border-border/60">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+              <Smartphone className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1 pt-0.5">
+              <DialogTitle className="text-left text-lg leading-tight">Device Details</DialogTitle>
+              <DialogDescription className="text-left font-mono text-sm mt-1">
+                {device.serial_number}
+              </DialogDescription>
+            </div>
+            <Badge
+              className={`shrink-0 text-xs ${
+                device.paired
+                  ? "bg-success/10 text-success border border-success/20"
+                  : "bg-muted text-muted-foreground border border-border"
+              }`}
+            >
+              {device.paired ? "Paired" : "Unpaired"}
+            </Badge>
           </div>
-          <DialogTitle className="text-center text-lg">Device Details</DialogTitle>
-          <DialogDescription className="text-center text-sm">
-            {device.serial_number}
-          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-2.5">
-          <div className="rounded-lg border border-border bg-muted/30 p-3">
-            <div className="grid grid-cols-2 gap-2">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="px-6 pt-4">
+            <TabsList className="grid w-full grid-cols-2 bg-muted/50 h-10">
+              <TabsTrigger value="overview" className="text-sm">
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="sessions" className="text-sm gap-1.5" disabled={!device.paired}>
+                <History className="h-3.5 w-3.5" />
+                Conductor Sessions
+                {!sessionsLoading && sessions.length > 0 && (
+                  <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px] font-semibold">
+                    {sessions.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="overview" className="mt-0 px-6 py-4 space-y-4 max-h-[min(60vh,420px)] overflow-y-auto">
+            {device.active_session?.agent && (
+              <div className="rounded-lg border border-success/25 bg-success/5 p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Activity className="h-3.5 w-3.5 text-success" />
+                  <p className="text-xs font-medium text-success uppercase tracking-wide">Active session</p>
+                </div>
+                <p className="text-sm font-semibold">
+                  {device.active_session.agent.full_name}{" "}
+                  <span className="font-normal text-muted-foreground">
+                    ({device.active_session.agent.agent_code})
+                  </span>
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Since {new Date(device.active_session.started_at).toLocaleString()}
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2.5">
               {infoRows.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.label} className="rounded-md border border-border bg-background p-2 relative">
-                    <div className="flex items-center gap-1 mb-0.5">
-                      <Icon className="h-3 w-3 text-muted-foreground" />
-                      <p className="text-xs text-muted-foreground">{item.label}</p>
+                  <div
+                    key={item.label}
+                    className={`rounded-lg border border-border/80 bg-muted/20 p-3 relative ${
+                      item.fullWidth ? "col-span-2" : ""
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                        {item.label}
+                      </p>
                     </div>
-                    <div className={`text-sm font-semibold ${item.mono ? "font-mono" : ""}`}>
+                    <div className={`text-sm font-semibold leading-snug pr-6 ${item.mono ? "font-mono" : ""}`}>
                       {item.badge ? (
                         <Badge
                           className={`text-xs ${
@@ -247,34 +379,115 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-5 w-5 absolute top-1 right-1"
+                        className="h-6 w-6 absolute top-2 right-2 text-muted-foreground"
                         onClick={() => copyToClipboard(item.value, item.label)}
                       >
-                        <Copy className="h-2.5 w-2.5" />
+                        <Copy className="h-3 w-3" />
                       </Button>
                     )}
                   </div>
                 );
               })}
             </div>
-          </div>
 
-          {!device.paired && (
-            <Alert className="py-2">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-sm">
-                This device has not been paired yet. The agent needs to use the pairing code to activate the device.
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
+            {!device.paired && (
+              <Alert className="py-2.5">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  This device has not been paired yet. The agent needs to use the pairing code to activate the device.
+                </AlertDescription>
+              </Alert>
+            )}
+          </TabsContent>
 
-        <DialogFooter className="gap-2 pt-1">
+          <TabsContent
+            value="sessions"
+            className="mt-0 flex flex-col flex-1 min-h-0 overflow-hidden px-6 py-4 data-[state=inactive]:hidden"
+          >
+            {sessionsLoading ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                Loading sessions...
+              </div>
+            ) : sessions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                  <History className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <p className="text-sm font-medium">No sessions yet</p>
+                <p className="text-xs text-muted-foreground max-w-[240px]">
+                  Conductor sign-ins on this device will appear here.
+                </p>
+              </div>
+            ) : (
+              <>
+                {activeSessionCount > 0 && (
+                  <p className="text-xs text-muted-foreground mb-3 shrink-0">
+                    {activeSessionCount} active · {sessions.length} total recorded
+                  </p>
+                )}
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 -mr-1 max-h-[min(50vh,360px)] space-y-2">
+                  {sessions.map((session) => {
+                  const isActive = !session.ended_at;
+                  return (
+                    <div
+                      key={session.id}
+                      className={`rounded-lg border p-3 transition-colors ${
+                        isActive
+                          ? "border-success/30 bg-success/5"
+                          : "border-border/80 bg-muted/15"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold truncate">
+                            {session.agent?.full_name ?? "Unknown conductor"}
+                          </p>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {session.agent?.agent_code ?? "—"}
+                          </p>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={`shrink-0 text-[10px] uppercase tracking-wide ${
+                            isActive
+                              ? "border-success/40 text-success bg-success/10"
+                              : ""
+                          }`}
+                        >
+                          {isActive ? "Active" : "Ended"}
+                        </Badge>
+                      </div>
+                      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {new Date(session.started_at).toLocaleString()}
+                          {session.ended_at
+                            ? ` → ${new Date(session.ended_at).toLocaleString()}`
+                            : " → now"}
+                        </span>
+                        {session.end_reason && (
+                          <span className="capitalize">· {formatSessionReason(session.end_reason)}</span>
+                        )}
+                        {session.login_type && (
+                          <span className="capitalize">· {session.login_type}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                </div>
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        <DialogFooter className="gap-2 px-6 py-4 border-t border-border/60 bg-muted/20 shrink-0">
           {canManage && device.paired && (
             <Button
               variant="destructive"
               onClick={() => setShowUnpairConfirm(true)}
-              className="gap-2"
+              className="gap-2 mr-auto"
             >
               <AlertTriangle className="h-4 w-4" />
               Unpair Device

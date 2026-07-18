@@ -64,11 +64,36 @@ export const deviceSchema = z.object({
   }),
 });
 
+const expiryDateField = z
+  .string({ required_error: 'Expiry date is required' })
+  .min(1, 'Expiry date is required')
+  .refine((val) => !Number.isNaN(new Date(val).getTime()), {
+    message: 'Invalid expiry date',
+  });
+
 export const fleetSchema = z.object({
   body: z.object({
-    number: z.string(),
+    number: z.string().min(1, 'Fleet number is required'),
     status: z.enum(['ACTIVE', 'MAINTENANCE', 'OUT_OF_SERVICE', 'RETIRED']).optional(),
-    capacity: z.number().int().min(0).optional(),
+    capacity: z.coerce.number().int().min(0).optional(),
+    licence_disc_expiry: expiryDateField,
+    cof_expiry: expiryDateField,
+    passenger_liability_expiry: expiryDateField,
+    route_authority_expiry: expiryDateField,
+    ppa_expiry: expiryDateField,
+  }),
+});
+
+export const fleetUpdateSchema = z.object({
+  body: z.object({
+    number: z.string().min(1).optional(),
+    status: z.enum(['ACTIVE', 'MAINTENANCE', 'OUT_OF_SERVICE', 'RETIRED']).optional(),
+    capacity: z.coerce.number().int().min(0).optional(),
+    licence_disc_expiry: expiryDateField,
+    cof_expiry: expiryDateField,
+    passenger_liability_expiry: expiryDateField,
+    route_authority_expiry: expiryDateField,
+    ppa_expiry: expiryDateField,
   }),
 });
 
@@ -76,6 +101,9 @@ export const routeSchema = z.object({
   body: z.object({
     origin: z.string(),
     destination: z.string(),
+    parent_route_id: z.string().optional().nullable(),
+    parent_route_ids: z.array(z.string()).optional(),
+    child_route_ids: z.array(z.string()).optional(),
     is_active: z.boolean().optional(),
     distance_km: z.number().positive().optional(),
   }),
@@ -113,36 +141,18 @@ export const ticketIssueSchema = z.object({
     destination: z.string().optional(),
     issued_at: z.string().optional(),
     linked_passenger_ticket_id: z.string().optional(),
-    passenger_name: z.string().trim().min(2, 'Passenger name must be at least 2 characters').max(100).optional(),
-    passenger_phone: z
-      .string()
-      .trim()
-      .min(7, 'Passenger phone must be at least 7 digits')
-      .max(20, 'Passenger phone is too long')
-      .regex(/^[+]?[\d\s()-]+$/, 'Passenger phone contains invalid characters')
-      .optional(),
-  }).superRefine((data, ctx) => {
-    const requiresPassengerDetails =
-      data.ticket_category === 'PASSENGER' ||
-      data.ticket_category === 'PASSENGER_WITH_LUGGAGE' ||
-      data.ticket_category === 'LUGGAGE';
-
-    if (requiresPassengerDetails) {
-      if (!data.passenger_name) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['passenger_name'],
-          message: 'Passenger name is required for this ticket type',
-        });
-      }
-      if (!data.passenger_phone) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['passenger_phone'],
-          message: 'Passenger phone is required for this ticket type',
-        });
-      }
-    }
+    // Passenger name is no longer collected; accept legacy payloads and ignore.
+    passenger_name: z.string().trim().max(100).optional(),
+    passenger_phone: z.preprocess(
+      (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+      z
+        .string()
+        .trim()
+        .min(7, 'Passenger phone must be at least 7 digits')
+        .max(20, 'Passenger phone is too long')
+        .regex(/^[+]?[\d\s()-]+$/, 'Passenger phone contains invalid characters')
+        .optional(),
+    ),
   }),
 });
 

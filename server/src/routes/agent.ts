@@ -20,7 +20,9 @@ router.post('/logout', authMiddleware, agentController.logout);
 router.get('/', authMiddleware, depotScopeMiddleware, agentController.list);
 router.post('/', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), validate(agentSchema), agentController.create);
 router.get('/:id', authMiddleware, depotScopeMiddleware, agentController.getOne);
+router.get('/:id/sessions', authMiddleware, depotScopeMiddleware, agentController.getSessions);
 router.put('/:id', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), agentController.update);
+router.delete('/:id', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), agentController.remove);
 router.post('/:id/reset-pin', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), agentController.resetPin);
 
 // Agent trip management endpoints (mobile app - agents manage their own trips)

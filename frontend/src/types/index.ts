@@ -40,17 +40,90 @@ export interface Agent {
   pin: string;
 }
 
+export type ComplianceSeverity = 'ok' | 'info' | 'warning' | 'urgent' | 'expired';
+export type AlertFrequency = 'monthly' | 'weekly' | 'daily';
+
+export type FleetComplianceKey =
+  | 'licence_disc_expiry'
+  | 'cof_expiry'
+  | 'passenger_liability_expiry'
+  | 'route_authority_expiry'
+  | 'ppa_expiry';
+
+export interface FleetComplianceItem {
+  key: FleetComplianceKey;
+  label: string;
+  shortLabel: string;
+  expiry_date: string | null;
+  days_remaining: number | null;
+  frequency: AlertFrequency | null;
+  severity: ComplianceSeverity;
+  status_label: string;
+}
+
 export interface Fleet {
   id: string;
   number: string;
   depot_id: string;
-  depot_name?: string;
+  depot_name?: string | null;
   status: 'ACTIVE' | 'MAINTENANCE' | 'OUT_OF_SERVICE' | 'RETIRED';
   capacity: number;
+  licence_disc_expiry?: string | null;
+  cof_expiry?: string | null;
+  passenger_liability_expiry?: string | null;
+  route_authority_expiry?: string | null;
+  ppa_expiry?: string | null;
+  compliance?: FleetComplianceItem[];
+  compliance_summary?: {
+    worst_severity: ComplianceSeverity;
+    items_needing_attention: number;
+  };
   created_at: string;
   updated_at: string;
   created_by?: string;
   updated_by?: string;
+}
+
+export interface FleetComplianceNotification {
+  id: string;
+  category: 'fleet_compliance';
+  title: string;
+  message: string;
+  type: 'info' | 'warning' | 'error' | 'success';
+  severity: ComplianceSeverity;
+  frequency: AlertFrequency;
+  frequency_label: string;
+  fleet_id: string;
+  fleet_number: string;
+  depot_id: string;
+  depot_name: string | null;
+  compliance_key: string;
+  compliance_label: string;
+  expiry_date: string;
+  days_remaining: number;
+  time: string;
+  created_at: string;
+}
+
+export interface NotificationsResponse {
+  notifications: FleetComplianceNotification[];
+  summary: {
+    total: number;
+    urgent: number;
+    warning: number;
+    monthly: number;
+    weekly: number;
+    daily: number;
+    attention_count: number;
+  };
+}
+
+export interface RouteLinkSummary {
+  id: string;
+  origin: string;
+  destination: string;
+  label: string;
+  is_active?: boolean;
 }
 
 export interface RouteInfo {
@@ -59,6 +132,16 @@ export interface RouteInfo {
   destination: string;
   depot_id: string;
   depot_name?: string;
+  parent_route_ids?: string[];
+  parent_routes?: RouteLinkSummary[];
+  parent_route_labels?: string[];
+  child_route_ids?: string[];
+  child_routes?: RouteLinkSummary[];
+  child_route_labels?: string[];
+  /** @deprecated Prefer parent_route_ids — kept for compatibility */
+  parent_route_id?: string | null;
+  /** @deprecated Prefer parent_route_labels */
+  parent_route_label?: string | null;
   is_active: boolean;
   distance_km?: number | string;
   created_at: string;
@@ -133,6 +216,33 @@ export interface Ticket {
   }>;
 }
 
+export interface DeviceAgentSummary {
+  id: string;
+  full_name: string;
+  agent_code: string;
+}
+
+export interface DeviceActiveSession {
+  id: string;
+  started_at: string;
+  login_type: string;
+  agent?: DeviceAgentSummary | null;
+}
+
+export interface DeviceSession {
+  id: string;
+  depot_id: string;
+  device_id: string;
+  agent_id: string;
+  started_at: string;
+  ended_at?: string | null;
+  end_reason?: string | null;
+  app_version?: string | null;
+  login_type: string;
+  agent?: DeviceAgentSummary;
+  device?: { id: string; serial_number: string };
+}
+
 export interface Device {
   id: string;
   serial_number: string;
@@ -145,6 +255,10 @@ export interface Device {
   device_name?: string;
   device_model?: string;
   last_seen?: string;
+  last_agent_id?: string | null;
+  last_agent_login_at?: string | null;
+  last_agent?: DeviceAgentSummary | null;
+  active_session?: DeviceActiveSession | null;
   app_version?: string;
   sync_errors: number;
   created_at: string;

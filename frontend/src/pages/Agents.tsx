@@ -1,19 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import PageHeader from "@/components/PageHeader";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye, UserCircle, Loader2, KeyRound, AlertTriangle } from "lucide-react";
+import { Plus, Eye, UserCircle, Loader2, KeyRound, AlertTriangle, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveTable } from "@/components/ResponsiveTable";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import AddAgentDialog from "@/components/AddAgentDialog";
 import AgentCredentialsDialog from "@/components/AgentCredentialsDialog";
+import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
+import TablePagination from "@/components/TablePagination";
 import ErrorAlert from "@/components/ErrorAlert";
 import { agentService } from "@/lib/api/agent.service";
 import { useAuth } from "@/contexts/AuthContext";
-import { canManageAgents } from "@/lib/permissions";
+import { canManageAgents, isSuperAdmin } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
+import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
 import type { Agent } from "@/types";
 
 //status configs
@@ -48,31 +51,39 @@ const Agents = () => {
   const [resettingPin, setResettingPin] = useState(false);
   const [resetPinResult, setResetPinResult] = useState<{ full_name: string; username: string; merchant_code: string; agent_code: string; pin: string; depot_name?: string } | null>(null);
   const [showResetPinResult, setShowResetPinResult] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<Agent | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const userRoles = user?.roles || [];
   const canManage = canManageAgents(userRoles);
+  const isSuperAdminUser = isSuperAdmin(userRoles);
 
-  const fetchAgents = async () => {
+  const fetchAgents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await agentService.getAll();
-      setAgents(data);
+      const data = await agentService.listPaginated(page, DEFAULT_PAGE_SIZE);
+      setAgents(data.items);
+      setTotal(data.total);
+      setTotalPages(data.totalPages);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load agents';
+      const errorMessage = err instanceof Error ? err.message : "Failed to load agents";
       setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [page]);
 
   useEffect(() => {
     fetchAgents();
-  }, []);
+  }, [fetchAgents]);
 
   const handleAgentCreated = (credentials?: { full_name: string; username: string; merchant_code: string; agent_code: string; pin: string; depot_name?: string }) => {
-    fetchAgents();
-    // If credentials are provided (new agent), show credentials dialog
+    if (page !== 1) setPage(1);
+    else fetchAgents();
     if (credentials) {
       setNewAgentCredentials(credentials);
       setShowNewAgentCredentials(true);
@@ -129,6 +140,35 @@ const Agents = () => {
       });
     } finally {
       setResettingPin(false);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await agentService.delete(
+        deleteTarget.id,
+        isSuperAdminUser ? deleteTarget.depot_id : undefined
+      );
+      toast({
+        title: "Agent deleted",
+        description: `${deleteTarget.full_name} was removed successfully.`,
+      });
+      setDeleteTarget(null);
+      if (agents.length === 1 && page > 1) {
+        setPage(page - 1);
+      } else {
+        fetchAgents();
+      }
+    } catch (err) {
+      toast({
+        title: "Delete failed",
+        description: err instanceof Error ? err.message : "Could not delete agent",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -241,6 +281,31 @@ const Agents = () => {
         isNewAgent
       />
 
+      <ConfirmDeleteDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete agent?"
+        description={
+          deleteTarget
+            ? `This will permanently remove ${deleteTarget.full_name}. Agents with trip or ticket history cannot be deleted — set status to Terminated instead.`
+            : ""
+        }
+        loading={deleting}
+        onConfirm={handleDeleteConfirm}
+      />
+
+      {total === 0 ? (
+        <div className="text-center py-12">
+          <UserCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground">No agents registered yet.</p>
+          {canManage && (
+            <Button size="sm" className="gap-2 mt-4" onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4" /> Add First Agent
+            </Button>
+          )}
+        </div>
+      ) : (
+      <div className="space-y-4">
       <ResponsiveTable
         columns={columns}
         data={agents}
@@ -277,6 +342,14 @@ const Agents = () => {
                     </Button>
                     <Button variant="ghost" size="sm" className="gap-1 text-orange-600 hover:text-orange-700 hover:bg-orange-50" onClick={(e) => handleResetPinClick(a, e)}>
                       <KeyRound className="h-3.5 w-3.5" /> Reset PIN
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget(a); }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </>
                 ) : (
@@ -327,6 +400,14 @@ const Agents = () => {
                     <Button variant="ghost" size="sm" className="gap-1 text-orange-600" onClick={(e) => handleResetPinClick(a, e)}>
                       <KeyRound className="h-3.5 w-3.5" /> Reset PIN
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget(a); }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 )}
               </div>
@@ -334,6 +415,15 @@ const Agents = () => {
           );
         }}
       />
+      <TablePagination
+        page={page}
+        pageSize={DEFAULT_PAGE_SIZE}
+        total={total}
+        totalPages={totalPages}
+        onPageChange={setPage}
+      />
+      </div>
+      )}
     </motion.div>
   );
 };

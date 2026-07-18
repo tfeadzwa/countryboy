@@ -21,11 +21,7 @@ interface AddFareDialogProps {
   fare?: Fare | null;
 }
 
-const CURRENCY_OPTIONS = [
-  { value: 'USD', label: 'USD ($)' },
-  { value: 'ZWL', label: 'ZWL (Z$)' },
-  { value: 'ZAR', label: 'ZAR (R)' },
-];
+import { CURRENCY_OPTIONS } from "@/lib/constants/currencies";
 
 const AddFareDialog = ({ open, onOpenChange, onSuccess, fare }: AddFareDialogProps) => {
   const { user } = useAuth();

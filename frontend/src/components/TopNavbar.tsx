@@ -11,8 +11,9 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
 import { isSuperAdmin } from "@/lib/permissions";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { depotService } from "@/lib/api/depot.service";
+import { notificationService } from "@/lib/api/notification.service";
 import { Depot } from "@/types";
 
 const TopNavbar = ({ onMenuClick }: { onMenuClick?: () => void }) => {
@@ -20,59 +21,82 @@ const TopNavbar = ({ onMenuClick }: { onMenuClick?: () => void }) => {
   const { user, logout } = useAuth();
   const [depots, setDepots] = useState<Depot[]>([]);
   const [selectedDepot, setSelectedDepot] = useState<string>("");
+  const [attentionCount, setAttentionCount] = useState(0);
   const userIsSuperAdmin = user ? isSuperAdmin(user.roles) : false;
 
-  // Load depots for SUPER_ADMIN users
+  const loadAttentionCount = useCallback(async () => {
+    try {
+      const data = await notificationService.getAll();
+      setAttentionCount(data.summary.attention_count);
+    } catch {
+      // Keep badge quiet on failures — page will surface errors
+    }
+  }, []);
+
   useEffect(() => {
     const loadDepots = async () => {
       if (userIsSuperAdmin) {
         try {
           const depotList = await depotService.getAll();
           setDepots(depotList);
-          
-          // Load saved depot selection
-          const saved = sessionStorage.getItem('selected_depot_id');
+
+          const saved = sessionStorage.getItem("selected_depot_id");
           if (saved) {
             setSelectedDepot(saved);
           } else if (depotList.length > 0) {
-            // Default to first depot
             setSelectedDepot(depotList[0].id);
-            sessionStorage.setItem('selected_depot_id', depotList[0].id);
+            sessionStorage.setItem("selected_depot_id", depotList[0].id);
           }
         } catch (err) {
-          console.error('Failed to load depots:', err);
+          console.error("Failed to load depots:", err);
         }
       }
     };
     loadDepots();
   }, [userIsSuperAdmin]);
 
+  useEffect(() => {
+    if (!user) return;
+    loadAttentionCount();
+    const interval = window.setInterval(loadAttentionCount, 60_000);
+    return () => window.clearInterval(interval);
+  }, [user, loadAttentionCount]);
+
   const handleDepotChange = (depotId: string) => {
     setSelectedDepot(depotId);
-    sessionStorage.setItem('selected_depot_id', depotId);
-    // Reload page to refresh data with new depot context
+    sessionStorage.setItem("selected_depot_id", depotId);
     window.location.reload();
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('selected_depot_id');
+    sessionStorage.removeItem("selected_depot_id");
     logout();
   };
 
-  // Get user initials for avatar
   const getUserInitials = () => {
     if (!user) return "AD";
     if (user.full_name) {
-      return user.full_name.split(" ").map(n => n[0]).join("").toUpperCase();
+      return user.full_name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase();
     }
     return user.username.substring(0, 2).toUpperCase();
   };
+
+  const badgeLabel = attentionCount > 99 ? "99+" : String(attentionCount);
 
   return (
     <header className="sticky top-0 z-30 h-14 border-b border-border/60 bg-card/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6">
       <div className="flex items-center gap-2 flex-1 max-w-md">
         {onMenuClick && (
-          <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-foreground" onClick={onMenuClick}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={onMenuClick}
+          >
             <Menu className="h-5 w-5" />
           </Button>
         )}
@@ -87,7 +111,6 @@ const TopNavbar = ({ onMenuClick }: { onMenuClick?: () => void }) => {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Depot Selector for SUPER_ADMIN */}
         {userIsSuperAdmin && depots.length > 0 && (
           <Select value={selectedDepot} onValueChange={handleDepotChange}>
             <SelectTrigger className="h-9 w-[180px] sm:w-[220px] border-border/60 bg-muted/30 text-sm">
@@ -109,12 +132,26 @@ const TopNavbar = ({ onMenuClick }: { onMenuClick?: () => void }) => {
           </Select>
         )}
 
-        <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-foreground" onClick={() => navigate("/notifications")}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative text-muted-foreground hover:text-foreground"
+          onClick={() => navigate("/notifications")}
+        >
           <Bell className="h-4 w-4" />
-          <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground flex items-center justify-center shadow-sm">3</span>
+          {attentionCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground flex items-center justify-center shadow-sm">
+              {badgeLabel}
+            </span>
+          )}
         </Button>
 
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hidden sm:inline-flex" onClick={() => navigate("/settings")}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground hover:text-foreground hidden sm:inline-flex"
+          onClick={() => navigate("/settings")}
+        >
           <Settings className="h-4 w-4" />
         </Button>
 
@@ -128,19 +165,27 @@ const TopNavbar = ({ onMenuClick }: { onMenuClick?: () => void }) => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
             <div className="px-3 py-2.5">
-              <p className="text-sm font-medium text-foreground">{user?.full_name || user?.username || "Admin"}</p>
+              <p className="text-sm font-medium text-foreground">
+                {user?.full_name || user?.username || "Admin"}
+              </p>
               <p className="text-xs text-muted-foreground">@{user?.username || "admin"}</p>
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/settings")}>
-              <Settings className="mr-2 h-4 w-4" />Settings
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/notifications")}>
-              <Bell className="mr-2 h-4 w-4" />Notifications
+              <Bell className="mr-2 h-4 w-4" />
+              Notifications
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
-              <LogOut className="mr-2 h-4 w-4" />Logout
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-destructive focus:text-destructive"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

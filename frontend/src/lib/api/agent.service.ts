@@ -1,5 +1,7 @@
 import apiClient from './axios';
 import { Agent } from '@/types';
+import type { PaginatedResult } from '@/types/pagination';
+import { DEFAULT_PAGE_SIZE } from '@/types/pagination';
 
 export interface CreateAgentRequest {
   full_name: string;
@@ -20,6 +22,13 @@ class AgentService {
    */
   async getAll(): Promise<Agent[]> {
     const response = await apiClient.get<Agent[]>('/agents');
+    return response.data;
+  }
+
+  async listPaginated(page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<PaginatedResult<Agent>> {
+    const response = await apiClient.get<PaginatedResult<Agent>>('/agents', {
+      params: { page, limit: pageSize },
+    });
     return response.data;
   }
 
@@ -72,6 +81,11 @@ class AgentService {
     } : {};
     const response = await apiClient.post<Agent>(`/agents/${id}/reset-pin`, {}, config);
     return response.data;
+  }
+
+  async delete(id: string, depotId?: string): Promise<void> {
+    const config = depotId ? { headers: { 'x-depot-id': depotId } } : {};
+    await apiClient.delete(`/agents/${id}`, config);
   }
 }
 

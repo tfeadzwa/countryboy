@@ -2,11 +2,30 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { Request, Response } from 'express';
 import * as agentService from '../services/agentService';
 import { formatPrismaError } from '../utils/prismaErrors';
+import { resolveDeviceForLogin, resolveDeviceFromToken } from '../utils/resolveDevice';
+import { agentLoginLogger } from '../utils/logger';
+import {
+  endAgentDeviceSession,
+  startAgentDeviceSession,
+  listAgentSessions,
+} from '../services/agentSessionService';
+import { buildPaginatedResult, parsePagination, wantsPagination } from '../utils/pagination';
 
 
 export const list = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const depotId = req.depotId;
+    const query = req.query as { page?: string; limit?: string };
+
+    if (wantsPagination(query)) {
+      const { page, limit, skip } = parsePagination(query);
+      const [agents, total] = await Promise.all([
+        agentService.listAgents(depotId, { skip, limit }),
+        agentService.countAgents(depotId),
+      ]);
+      return res.json(buildPaginatedResult(agents, total, page, limit));
+    }
+
     const agents = await agentService.listAgents(depotId);
     res.json(agents);
   } catch (err) {
@@ -59,6 +78,36 @@ export const update = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
+export const remove = async (req: AuthenticatedRequest, res: Response) => {
+  const depotId = req.depotId as string;
+  const agentId = req.params.id;
+
+  if (!depotId) {
+    return res.status(400).json({
+      error: 'Depot context required. Please specify depot via x-depot-id header or select a depot.',
+    });
+  }
+
+  try {
+    await agentService.deleteAgent(agentId, depotId);
+    res.json({ message: 'Agent deleted successfully' });
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.message === 'Agent not found in this depot') {
+        return res.status(404).json({ error: err.message });
+      }
+      if (err.message.includes('Cannot delete')) {
+        return res.status(409).json({ error: err.message });
+      }
+    }
+    const friendly = formatPrismaError(err);
+    if (friendly) {
+      return res.status(friendly.status).json({ error: friendly.message });
+    }
+    res.status(400).json({ error: 'Could not delete agent', details: err });
+  }
+};
+
 /**
  * Reset agent PIN - generates and returns new PIN (one-time view)
  * Requires DEPOT_ADMIN or SUPER_ADMIN role
@@ -101,7 +150,22 @@ export const getOne = async (req: AuthenticatedRequest, res: Response) => {
  * This endpoint exists so the mobile app gets a clean 200 instead of 404.
  */
 export const logout = async (req: AuthenticatedRequest, res: Response) => {
-  res.json({ message: 'Logged out successfully' });
+  try {
+    const deviceToken = req.headers['x-device-token'] as string | undefined;
+    if (req.agentId && deviceToken) {
+      const device = await resolveDeviceFromToken(deviceToken);
+      if (device && device.depot_id === req.depotId) {
+        await endAgentDeviceSession({
+          deviceId: device.id,
+          agentId: req.agentId,
+          endReason: 'logout',
+        });
+      }
+    }
+    res.json({ message: 'Logged out successfully' });
+  } catch (err) {
+    res.status(500).json({ error: 'Logout failed', details: err });
+  }
 };
 
 /**
@@ -110,7 +174,8 @@ export const logout = async (req: AuthenticatedRequest, res: Response) => {
  */
 export const login = async (req: Request, res: Response) => {
   try {
-    const { merchant_code, username, agent_code, pin } = req.body;
+    const { merchant_code, username, agent_code, pin, app_version, device_id } =
+      req.body;
 
     if (!merchant_code || !pin) {
       return res.status(400).json({ 
@@ -124,6 +189,8 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
+    const deviceToken = req.headers['x-device-token'] as string | undefined;
+
     const result = await agentService.loginAgent({
       merchant_code,
       username,
@@ -131,7 +198,53 @@ export const login = async (req: Request, res: Response) => {
       pin
     });
 
-    res.json(result);
+    const device = await resolveDeviceForLogin({
+      token: deviceToken,
+      deviceId: device_id,
+    });
+    const agentDepotId = result.agent.depot_id as string | undefined;
+
+    if (!device) {
+      agentLoginLogger.warn('agent login session skipped', {
+        reason: 'device_not_resolved',
+        agentId: result.agent.id,
+        agentCode: result.agent.agent_code,
+        merchantCode: merchant_code,
+        hasDeviceToken: Boolean(deviceToken?.trim()),
+        hasDeviceId: Boolean(device_id?.trim()),
+      });
+      return res.json(result);
+    }
+
+    if (!agentDepotId || device.depot_id !== agentDepotId) {
+      agentLoginLogger.warn('agent login session skipped', {
+        reason: 'depot_mismatch',
+        agentId: result.agent.id,
+        agentCode: result.agent.agent_code,
+        agentDepotId,
+        deviceDepotId: device.depot_id,
+        deviceId: device.id,
+      });
+      return res.json(result);
+    }
+
+    const session = await startAgentDeviceSession({
+      deviceId: device.id,
+      agentId: result.agent.id,
+      depotId: agentDepotId,
+      loginType: 'online',
+      appVersion: app_version,
+    });
+
+    agentLoginLogger.info('agent login session started', {
+      agentId: result.agent.id,
+      agentCode: result.agent.agent_code,
+      deviceId: device.id,
+      sessionId: session.id,
+      resolvedVia: deviceToken?.trim() ? 'token' : 'device_id',
+    });
+
+    return res.json({ ...result, session });
   } catch (err: any) {
     if (err.message === 'Invalid merchant code') {
       return res.status(404).json({ error: 'Invalid merchant code' });
@@ -429,5 +542,23 @@ export const createRoute = async (req: AuthenticatedRequest, res: Response) => {
       error: 'Failed to create route', 
       details: err.message 
     });
+  }
+};
+
+export const getSessions = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const agentId = req.params.id;
+    const limit = Math.min(Number(req.query.limit) || 20, 100);
+    const agent = await agentService.getAgent(agentId);
+    if (!agent) {
+      return res.status(404).json({ error: 'Agent not found' });
+    }
+    if (req.depotId && agent.depot_id !== req.depotId) {
+      return res.status(403).json({ error: 'Agent not in your depot' });
+    }
+    const sessions = await listAgentSessions(agentId, limit);
+    res.json({ agent_id: agentId, sessions });
+  } catch (err) {
+    res.status(500).json({ error: 'Unable to list agent sessions', details: err });
   }
 };

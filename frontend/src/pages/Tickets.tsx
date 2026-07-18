@@ -167,7 +167,11 @@ const Tickets = () => {
               keyExtractor={(t) => t.id}
               renderRow={(t) => (
                 <TableRow key={t.id} className={`hover:bg-muted/30 transition-colors ${t.is_voided ? "opacity-50" : ""}`}>
-                  <TableCell className="font-mono text-xs">{t.serial_number ?? "—"}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {t.serial_number != null
+                      ? String(t.serial_number).padStart(3, "0")
+                      : "—"}
+                  </TableCell>
                   <TableCell><Badge variant="outline" className="text-[10px]">{t.ticket_category}</Badge></TableCell>
                   <TableCell className="text-sm">
                     {t.departure && t.destination ? (
@@ -197,7 +201,11 @@ const Tickets = () => {
                       ) : (
                         <p className="text-sm font-medium">{t.route_label || "Route not available"}</p>
                       )}
-                      <p className="text-xs text-muted-foreground font-mono">{t.serial_number ?? "—"}</p>
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {t.serial_number != null
+                          ? String(t.serial_number).padStart(3, "0")
+                          : "—"}
+                      </p>
                     </div>
                     {renderStatus(t)}
                   </div>

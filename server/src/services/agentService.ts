@@ -2,29 +2,70 @@ import prisma from '../utils/prisma';
 import { Prisma } from '@prisma/client';
 import bcrypt from '../lib/bcrypt';
 import jwt from 'jsonwebtoken';
+import { touchDeviceActivity } from './agentSessionService';
 
-export const listAgents = async (depotId?: string) => {
+export const listAgents = async (
+  depotId?: string,
+  pagination?: { skip: number; limit: number }
+) => {
   const where: Prisma.tblAgentsWhereInput = {};
   if (depotId) where.depot_id = depotId;
-  
-  const agents = await prisma.tblAgents.findMany({ 
+
+  const agents = await prisma.tblAgents.findMany({
     where,
     include: {
       depot: {
         select: {
           merchant_code: true,
           name: true,
-        }
-      }
-    }
+        },
+      },
+    },
+    orderBy: [{ full_name: 'asc' }],
+    ...(pagination ? { skip: pagination.skip, take: pagination.limit } : {}),
   });
 
-  // Map to include merchant_code and depot_name
-  return agents.map(agent => ({
+  return agents.map((agent) => ({
     ...agent,
     merchant_code: agent.depot.merchant_code,
     depot_name: agent.depot.name,
   }));
+};
+
+export const countAgents = async (depotId?: string): Promise<number> => {
+  const where: Prisma.tblAgentsWhereInput = {};
+  if (depotId) where.depot_id = depotId;
+  return prisma.tblAgents.count({ where });
+};
+
+export const deleteAgent = async (agentId: string, depotId: string): Promise<void> => {
+  const agent = await prisma.tblAgents.findFirst({
+    where: { id: agentId, depot_id: depotId },
+  });
+
+  if (!agent) {
+    throw new Error('Agent not found in this depot');
+  }
+
+  const [tripCount, ticketCount] = await Promise.all([
+    prisma.tblTrips.count({ where: { agent_id: agentId } }),
+    prisma.tblTickets.count({ where: { agent_id: agentId } }),
+  ]);
+
+  if (tripCount > 0 || ticketCount > 0) {
+    throw new Error(
+      'Cannot delete an agent with trip or ticket history. Set status to Terminated instead.'
+    );
+  }
+
+  await prisma.$transaction([
+    prisma.tblDevices.updateMany({
+      where: { last_agent_id: agentId },
+      data: { last_agent_id: null },
+    }),
+    prisma.tblAgentDeviceSessions.deleteMany({ where: { agent_id: agentId } }),
+    prisma.tblAgents.delete({ where: { id: agentId } }),
+  ]);
 };
 
 export const createAgent = async (depotId: string, data: { 
@@ -227,9 +268,10 @@ export const loginAgent = async (data: {
 }) => {
   const { merchant_code, username, agent_code, pin } = data;
 
-  // Validate merchant code (depot)
+  // Validate merchant code (depot) — mobile sends uppercase, normalize for lookup
+  const normalizedMerchantCode = merchant_code.trim().toUpperCase();
   const depot = await prisma.tblDepots.findUnique({
-    where: { merchant_code }
+    where: { merchant_code: normalizedMerchantCode },
   });
 
   if (!depot) {
@@ -298,6 +340,7 @@ export const loginAgent = async (data: {
       first_name: firstName,
       last_name: lastName,
       role: 'AGENT',
+      depot_id: depot.id,
       merchant_code: depot.merchant_code,
       merchant_name: depot.name,
       depot_code: depot.merchant_code,
@@ -439,6 +482,10 @@ export const startAgentTrip = async (data: {
       }
     }
   });
+
+  if (deviceId) {
+    await touchDeviceActivity(deviceId, agentId);
+  }
 
   return trip;
 };

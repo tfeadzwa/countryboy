@@ -23,6 +23,7 @@ const columns = [
   { header: "Serial Number" },
   { header: "Depot" },
   { header: "Status" },
+  { header: "Last Conductor" },
   { header: "Last Seen" },
   { header: "Paired At" },
   { header: "Actions", className: "text-right" },
@@ -124,6 +125,13 @@ const Devices = () => {
                     <StatusIcon className="h-3 w-3" />{config.label}
                   </Badge>
                 </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {d.last_agent
+                    ? `${d.last_agent.full_name} (${d.last_agent.agent_code})`
+                    : d.active_session?.agent
+                      ? `${d.active_session.agent.full_name} (active)`
+                      : "—"}
+                </TableCell>
                 <TableCell>
                   <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
@@ -161,6 +169,14 @@ const Devices = () => {
                   </Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <p className="text-muted-foreground text-xs">Last Conductor</p>
+                    <p className="font-medium">
+                      {d.last_agent
+                        ? d.last_agent.full_name
+                        : d.active_session?.agent?.full_name ?? "—"}
+                    </p>
+                  </div>
                   <div>
                     <p className="text-muted-foreground text-xs">Last Seen</p>
                     <p className="font-medium">{d.last_seen ? new Date(d.last_seen).toLocaleDateString() : "Never"}</p>

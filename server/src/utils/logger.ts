@@ -30,6 +30,25 @@ export const authLoginLogger = winston.createLogger({
       maxsize: 5 * 1024 * 1024,
       maxFiles: 5,
     }),
+    ...(process.env.NODE_ENV !== 'production'
+      ? [new winston.transports.Console()]
+      : []),
+  ],
+});
+
+// Agent mobile login + device session audit logger.
+export const agentLoginLogger = winston.createLogger({
+  level: 'info',
+  format: combine(timestamp(), logFormat),
+  transports: [
+    new winston.transports.File({
+      filename: path.join(logsDir, 'agent-login.log'),
+      maxsize: 5 * 1024 * 1024,
+      maxFiles: 5,
+    }),
+    ...(process.env.NODE_ENV !== 'production'
+      ? [new winston.transports.Console()]
+      : []),
   ],
 });
 

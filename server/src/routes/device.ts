@@ -14,6 +14,7 @@ router.post('/pair', deviceController.pair);
 router.get('/', authMiddleware, depotScopeMiddleware, deviceController.list);
 router.post('/', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), validate(deviceSchema), deviceController.create);
 router.get('/:id', authMiddleware, depotScopeMiddleware, deviceController.getOne);
+router.get('/:id/sessions', authMiddleware, depotScopeMiddleware, deviceController.sessions);
 router.put('/:id', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), deviceController.update);
 router.post('/:id/unpair', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), deviceController.unpair);
 

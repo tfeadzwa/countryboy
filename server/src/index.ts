@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import os from "os";
 import { json, urlencoded } from "express";
 import rateLimit from "express-rate-limit";
 
@@ -23,16 +24,51 @@ import routeRoutes from "./routes/route";
 import fareRoutes from "./routes/fare";
 import tripRoutes from "./routes/trip";
 import ticketRoutes from "./routes/ticket";
+import publicRoutes from "./routes/public";
+import notificationRoutes from "./routes/notification";
 
 dotenv.config();
 const app = express();
 const port = Number(process.env.PORT || 3000);
 
-// security headers
-app.use(helmet());
+function getLocalNetworkAddresses(): string[] {
+  const addresses = new Set<string>();
+  for (const iface of Object.values(os.networkInterfaces())) {
+    if (!iface) continue;
+    for (const details of iface) {
+      const isIPv4 = details.family === "IPv4" || String(details.family) === "4";
+      if (isIPv4 && !details.internal) {
+        addresses.add(details.address);
+      }
+    }
+  }
+  return [...addresses];
+}
 
-const allowedOrigins = (process.env.CORS_ORIGINS || "").split(",").map(o => o.trim()).filter(o => o);
-app.use(cors({ origin: allowedOrigins.length ? allowedOrigins : undefined }));
+// security headers (allow cross-origin reads for public API + SPA verify page)
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }),
+);
+
+const allowedOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim())
+  .filter((o) => o);
+
+const isProduction = process.env.NODE_ENV === "production";
+
+app.use(
+  cors({
+    origin: allowedOrigins.length
+      ? allowedOrigins
+      : isProduction
+        ? false
+        : true,
+    credentials: true,
+  }),
+);
 
 // request id
 app.use(requestIdMiddleware);
@@ -64,11 +100,13 @@ app.use("/api/depots", depotRoutes);
 app.use("/api/agents", agentRoutes);
 app.use("/api/devices", deviceRoutes);
 app.use("/api/fleets", fleetRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use("/api/routes", routeRoutes);
 app.use("/api/fares", fareRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/admin-users", adminUsersRoutes);
+app.use("/api/public", publicRoutes);
 
 // health check
 app.get("/", (req, res) => res.json({ status: "ok" }));
@@ -85,7 +123,16 @@ if (require.main === module) {
   const host = process.env.HOST || '0.0.0.0';
   app.listen(port, host, () => {
     logger.info(`Server listening on ${host}:${port}`);
-     logger.info(`Network access: http://192.168.1.240:${port}`);
-    logger.info(`Network access: http://192.168.1.240:${port}`);
+    logger.info(`Local access: http://localhost:${port}`);
+
+    const networkAddresses = getLocalNetworkAddresses();
+    if (networkAddresses.length === 0) {
+      logger.info("No external network interfaces detected");
+      return;
+    }
+
+    for (const address of networkAddresses) {
+      logger.info(`Network access: http://${address}:${port}`);
+    }
   });
 }

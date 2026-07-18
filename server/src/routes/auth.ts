@@ -35,19 +35,74 @@ interface PasswordResetPayload {
   pwdv: string;
 }
 
+type LoginFailureReason =
+  | 'USER_NOT_FOUND'
+  | 'USER_INACTIVE'
+  | 'PASSWORD_EMPTY'
+  | 'INVALID_STORED_PASSWORD_HASH'
+  | 'BAD_PASSWORD'
+  | 'INTERNAL_ERROR';
+
+const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$.{53}$/;
+
+function describeStoredPasswordHash(hash: string | null | undefined) {
+  if (!hash) {
+    return { present: false, formatValid: false, prefix: null as string | null, length: 0 };
+  }
+  return {
+    present: true,
+    formatValid: BCRYPT_HASH_PATTERN.test(hash),
+    prefix: hash.slice(0, 7),
+    length: hash.length,
+  };
+}
+
+function logLoginFailure(
+  reason: LoginFailureReason,
+  meta: Record<string, unknown>,
+) {
+  const reasonMessages: Record<LoginFailureReason, string> = {
+    USER_NOT_FOUND: 'No admin user matches the identifier (email or username).',
+    USER_INACTIVE: 'User exists but account status is not ACTIVE.',
+    PASSWORD_EMPTY: 'No password was submitted in the request body.',
+    INVALID_STORED_PASSWORD_HASH: 'Stored password_hash is missing or not a valid bcrypt hash — re-seed or reset the password.',
+    BAD_PASSWORD: 'Submitted password does not match the stored hash.',
+    INTERNAL_ERROR: 'Unexpected server error during login.',
+  };
+
+  authLoginLogger.warn('LOGIN_FAILED', {
+    reason,
+    message: reasonMessages[reason],
+    ...meta,
+  });
+}
+
 router.post('/login', validate(loginSchema), async (req: Request, res: Response) => {
+  const requestId = (req as Request & { requestId?: string }).requestId;
+  let identifier = '';
+  let isEmail = false;
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+
   try {
     const { username, password } = req.body;
-    const identifier = username.trim();
-    const isEmail = identifier.includes('@');
-    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    identifier = username.trim();
+    isEmail = identifier.includes('@');
 
     authLoginLogger.info('LOGIN_ATTEMPT', {
+      requestId,
       identifier,
-      isEmail,
+      lookupField: isEmail ? 'email' : 'username',
+      normalizedIdentifier: isEmail ? identifier.toLowerCase() : identifier,
+      passwordProvided: Boolean(password),
+      passwordLength: typeof password === 'string' ? password.length : 0,
       ip,
       userAgent: req.get('user-agent') || 'unknown',
     });
+
+    if (!password || typeof password !== 'string' || password.length === 0) {
+      logLoginFailure('PASSWORD_EMPTY', { requestId, identifier, isEmail, ip });
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
     const user = await prisma.tblAdminUsers.findFirst({
       where: isEmail
@@ -57,36 +112,80 @@ router.post('/login', validate(loginSchema), async (req: Request, res: Response)
     });
 
     if (!user) {
-      authLoginLogger.warn('LOGIN_FAILED_USER_NOT_FOUND', { identifier, isEmail, ip });
+      logLoginFailure('USER_NOT_FOUND', {
+        requestId,
+        identifier,
+        isEmail,
+        lookupField: isEmail ? 'email' : 'username',
+        normalizedIdentifier: isEmail ? identifier.toLowerCase() : identifier,
+        ip,
+      });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const roleNames = user.roles.map(r => r.role.name);
+    const storedHash = describeStoredPasswordHash(user.password_hash);
+
     authLoginLogger.info('LOGIN_USER_RESOLVED', {
+      requestId,
       userId: user.id,
       username: user.username,
       email: (user as { email?: string | null }).email ?? null,
       status: user.status,
       depot_id: user.depot_id,
       roles: roleNames,
+      roleCount: roleNames.length,
+      storedPasswordHash: storedHash,
     });
 
     if (user.status !== 'ACTIVE') {
-      authLoginLogger.warn('LOGIN_FAILED_USER_INACTIVE', {
+      logLoginFailure('USER_INACTIVE', {
+        requestId,
         userId: user.id,
         username: user.username,
         status: user.status,
         roles: roleNames,
+        ip,
       });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const match = await bcrypt.compare(password, user.password_hash);
-    if (!match) {
-      authLoginLogger.warn('LOGIN_FAILED_BAD_PASSWORD', {
+    if (!storedHash.present || !storedHash.formatValid) {
+      logLoginFailure('INVALID_STORED_PASSWORD_HASH', {
+        requestId,
         userId: user.id,
         username: user.username,
         roles: roleNames,
+        storedPasswordHash: storedHash,
+        ip,
+      });
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    authLoginLogger.info('LOGIN_PASSWORD_CHECK', {
+      requestId,
+      userId: user.id,
+      username: user.username,
+      submittedPasswordLength: password.length,
+      storedPasswordHashPrefix: storedHash.prefix,
+    });
+
+    const compareStartedAt = Date.now();
+    const match = await bcrypt.compare(password, user.password_hash);
+    const compareDurationMs = Date.now() - compareStartedAt;
+
+    if (!match) {
+      logLoginFailure('BAD_PASSWORD', {
+        requestId,
+        userId: user.id,
+        username: user.username,
+        email: (user as { email?: string | null }).email ?? null,
+        roles: roleNames,
+        depot_id: user.depot_id,
+        submittedPasswordLength: password.length,
+        storedPasswordHashPrefix: storedHash.prefix,
+        bcryptCompareDurationMs: compareDurationMs,
+        ip,
       });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -98,17 +197,27 @@ router.post('/login', validate(loginSchema), async (req: Request, res: Response)
     );
 
     authLoginLogger.info('LOGIN_SUCCESS', {
+      requestId,
       userId: user.id,
       username: user.username,
       email: (user as { email?: string | null }).email ?? null,
       depot_id: user.depot_id,
       roles: roleNames,
+      bcryptCompareDurationMs: compareDurationMs,
       ip,
     });
 
     res.json({ token, user: { id: user.id, username: user.username, email: (user as { email?: string | null }).email ?? null, full_name: user.full_name, depot_id: user.depot_id, roles: roleNames } });
   } catch (err: any) {
+    logLoginFailure('INTERNAL_ERROR', {
+      requestId,
+      identifier: identifier || null,
+      isEmail,
+      ip,
+      error: err?.message || String(err),
+    });
     authLoginLogger.error('LOGIN_ERROR', {
+      requestId,
       error: err?.message || String(err),
       stack: err?.stack,
     });

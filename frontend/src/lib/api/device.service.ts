@@ -1,5 +1,5 @@
 import apiClient from './axios';
-import { Device } from '@/types';
+import { Device, DeviceSession } from '@/types';
 
 export interface CreateDeviceRequest {
   serial_number: string;
@@ -75,6 +75,17 @@ class DeviceService {
       headers: { 'x-depot-id': depotId }
     } : {};
     const response = await apiClient.post<UnpairDeviceResponse>(`/devices/${id}/unpair`, {}, config);
+    return response.data;
+  }
+
+  /**
+   * Session history for a device (conductor login trail)
+   */
+  async getSessions(id: string, limit = 20): Promise<{ device_id: string; sessions: DeviceSession[] }> {
+    const response = await apiClient.get<{ device_id: string; sessions: DeviceSession[] }>(
+      `/devices/${id}/sessions`,
+      { params: { limit } },
+    );
     return response.data;
   }
 }
