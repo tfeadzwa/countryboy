@@ -4,55 +4,6 @@ import { Prisma } from '@prisma/client';
 const routeLabel = (route: { origin: string; destination: string }) =>
   `${route.origin} → ${route.destination}`;
 
-type LinkedRouteSummary = {
-  id: string;
-  origin: string;
-  destination: string;
-  is_active: boolean;
-};
-
-type RouteLinkRow = {
-  parentRoute: LinkedRouteSummary;
-  childRoute: LinkedRouteSummary;
-};
-
-type RouteWithLinks = {
-  id: string;
-  origin: string;
-  destination: string;
-  depot_id: string;
-  is_active: boolean;
-  distance_km: Prisma.Decimal | null;
-  created_at: Date;
-  updated_at: Date;
-  created_by: string | null;
-  updated_by: string | null;
-  depot: { name: string };
-  parentLinks: RouteLinkRow[];
-  childLinks: RouteLinkRow[];
-};
-
-type RouteLinkWithChild = {
-  childRoute: RouteWithLinks;
-};
-
-type RouteLinksClient = {
-  findMany: (
-    args: Record<string, unknown>,
-  ) => Promise<RouteLinkWithChild[] | Array<{ parent_route_id: string }> | Array<{ child_route_id: string }>>;
-  deleteMany: (args: {
-    where: { child_route_id?: string; parent_route_id?: string };
-  }) => Promise<{ count: number }>;
-  createMany: (args: {
-    data: Array<{
-      depot_id: string;
-      parent_route_id: string;
-      child_route_id: string;
-      created_by?: string;
-    }>;
-  }) => Promise<{ count: number }>;
-};
-
 const routeInclude = {
   depot: true,
   parentLinks: {
@@ -69,9 +20,34 @@ const routeInclude = {
       },
     },
   },
+} satisfies Prisma.tblRoutesInclude;
+
+type RouteWithLinks = Prisma.tblRoutesGetPayload<{ include: typeof routeInclude }>;
+
+type RouteLinkWithChild = {
+  childRoute: RouteWithLinks;
 };
 
-const routeLinks = (prisma as unknown as { tblRouteLinks: RouteLinksClient }).tblRouteLinks;
+type RouteLinksClient = {
+  findMany: (
+    args: Record<string, unknown>,
+  ) => Promise<RouteLinkWithChild[] | Array<{ parent_route_id: string }> | Array<{ child_route_id: string }>>;
+  deleteMany: (args: {
+    where:
+      | { child_route_id?: string; parent_route_id?: string }
+      | { OR: Array<{ child_route_id?: string; parent_route_id?: string }> };
+  }) => Promise<{ count: number }>;
+  createMany: (args: {
+    data: Array<{
+      depot_id: string;
+      parent_route_id: string;
+      child_route_id: string;
+      created_by?: string;
+    }>;
+  }) => Promise<{ count: number }>;
+};
+
+const routeLinks = prisma.tblRouteLinks as unknown as RouteLinksClient;
 
 const normalizeRouteIds = (ids: string[]) =>
   Array.from(new Set(ids.filter((id): id is string => Boolean(id && id.trim()))));
@@ -259,12 +235,12 @@ export const listRoutes = async (
   const where: Prisma.tblRoutesWhereInput = {};
   if (depotId) where.depot_id = depotId;
 
-  const routes = (await prisma.tblRoutes.findMany({
+  const routes = await prisma.tblRoutes.findMany({
     where,
     include: routeInclude,
     orderBy: [{ origin: 'asc' }, { destination: 'asc' }],
     ...(pagination ? { skip: pagination.skip, take: pagination.limit } : {}),
-  })) as RouteWithLinks[];
+  });
 
   return routes.map(formatRouteRecord);
 };
@@ -337,7 +313,7 @@ export const createRoute = async (
     return tx.tblRoutes.findUniqueOrThrow({
       where: { id: route.id },
       include: routeInclude,
-    }) as Promise<RouteWithLinks>;
+    });
   });
 
   return formatRouteRecord(created);
@@ -427,17 +403,17 @@ export const updateRoute = async (
     return tx.tblRoutes.findUniqueOrThrow({
       where: { id },
       include: routeInclude,
-    }) as Promise<RouteWithLinks>;
+    });
   });
 
   return formatRouteRecord(updated);
 };
 
 export const getRoute = async (id: string) => {
-  const route = (await prisma.tblRoutes.findUnique({
+  const route = await prisma.tblRoutes.findUnique({
     where: { id },
     include: routeInclude,
-  })) as RouteWithLinks | null;
+  });
 
   return route ? formatRouteRecord(route) : null;
 };
