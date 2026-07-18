@@ -196,8 +196,9 @@ const Notifications = () => {
         </div>
       </PageHeader>
 
+      <div className="mx-auto w-full max-w-3xl">
       {/* Summary chips */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-6 max-w-3xl">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-6">
         <Card className="shadow-none border-border/60 bg-destructive/5">
           <CardContent className="py-3 px-3.5 flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center">
@@ -308,7 +309,7 @@ const Notifications = () => {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="space-y-2.5 max-w-3xl"
+              className="space-y-2.5"
             >
               {filtered.map((n) => {
                 const isRead = read.has(n.id);
@@ -420,6 +421,7 @@ const Notifications = () => {
           )}
         </AnimatePresence>
       )}
+      </div>
     </motion.div>
   );
 };
