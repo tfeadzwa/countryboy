@@ -15,6 +15,10 @@ class CachedRoutes extends Table {
   TextColumn get id => text()();
   TextColumn get origin => text()();
   TextColumn get destination => text()();
+  /// JSON array of parent corridor route ids.
+  TextColumn get parentRouteIdsJson => text().withDefault(const Constant('[]'))();
+  /// JSON array of direct child segment route ids.
+  TextColumn get childRouteIdsJson => text().withDefault(const Constant('[]'))();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   DateTimeColumn get cachedAt => dateTime()();
 

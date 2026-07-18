@@ -392,6 +392,31 @@ class $CachedRoutesTable extends CachedRoutes
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _parentRouteIdsJsonMeta =
+      const VerificationMeta('parentRouteIdsJson');
+  @override
+  late final GeneratedColumn<String> parentRouteIdsJson =
+      GeneratedColumn<String>(
+        'parent_route_ids_json',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('[]'),
+      );
+  static const VerificationMeta _childRouteIdsJsonMeta = const VerificationMeta(
+    'childRouteIdsJson',
+  );
+  @override
+  late final GeneratedColumn<String> childRouteIdsJson =
+      GeneratedColumn<String>(
+        'child_route_ids_json',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+        defaultValue: const Constant('[]'),
+      );
   static const VerificationMeta _isActiveMeta = const VerificationMeta(
     'isActive',
   );
@@ -423,6 +448,8 @@ class $CachedRoutesTable extends CachedRoutes
     id,
     origin,
     destination,
+    parentRouteIdsJson,
+    childRouteIdsJson,
     isActive,
     cachedAt,
   ];
@@ -462,6 +489,24 @@ class $CachedRoutesTable extends CachedRoutes
     } else if (isInserting) {
       context.missing(_destinationMeta);
     }
+    if (data.containsKey('parent_route_ids_json')) {
+      context.handle(
+        _parentRouteIdsJsonMeta,
+        parentRouteIdsJson.isAcceptableOrUnknown(
+          data['parent_route_ids_json']!,
+          _parentRouteIdsJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('child_route_ids_json')) {
+      context.handle(
+        _childRouteIdsJsonMeta,
+        childRouteIdsJson.isAcceptableOrUnknown(
+          data['child_route_ids_json']!,
+          _childRouteIdsJsonMeta,
+        ),
+      );
+    }
     if (data.containsKey('is_active')) {
       context.handle(
         _isActiveMeta,
@@ -497,6 +542,14 @@ class $CachedRoutesTable extends CachedRoutes
         DriftSqlType.string,
         data['${effectivePrefix}destination'],
       )!,
+      parentRouteIdsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}parent_route_ids_json'],
+      )!,
+      childRouteIdsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}child_route_ids_json'],
+      )!,
       isActive: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_active'],
@@ -518,12 +571,20 @@ class CachedRoute extends DataClass implements Insertable<CachedRoute> {
   final String id;
   final String origin;
   final String destination;
+
+  /// JSON array of parent corridor route ids.
+  final String parentRouteIdsJson;
+
+  /// JSON array of direct child segment route ids.
+  final String childRouteIdsJson;
   final bool isActive;
   final DateTime cachedAt;
   const CachedRoute({
     required this.id,
     required this.origin,
     required this.destination,
+    required this.parentRouteIdsJson,
+    required this.childRouteIdsJson,
     required this.isActive,
     required this.cachedAt,
   });
@@ -533,6 +594,8 @@ class CachedRoute extends DataClass implements Insertable<CachedRoute> {
     map['id'] = Variable<String>(id);
     map['origin'] = Variable<String>(origin);
     map['destination'] = Variable<String>(destination);
+    map['parent_route_ids_json'] = Variable<String>(parentRouteIdsJson);
+    map['child_route_ids_json'] = Variable<String>(childRouteIdsJson);
     map['is_active'] = Variable<bool>(isActive);
     map['cached_at'] = Variable<DateTime>(cachedAt);
     return map;
@@ -543,6 +606,8 @@ class CachedRoute extends DataClass implements Insertable<CachedRoute> {
       id: Value(id),
       origin: Value(origin),
       destination: Value(destination),
+      parentRouteIdsJson: Value(parentRouteIdsJson),
+      childRouteIdsJson: Value(childRouteIdsJson),
       isActive: Value(isActive),
       cachedAt: Value(cachedAt),
     );
@@ -557,6 +622,10 @@ class CachedRoute extends DataClass implements Insertable<CachedRoute> {
       id: serializer.fromJson<String>(json['id']),
       origin: serializer.fromJson<String>(json['origin']),
       destination: serializer.fromJson<String>(json['destination']),
+      parentRouteIdsJson: serializer.fromJson<String>(
+        json['parentRouteIdsJson'],
+      ),
+      childRouteIdsJson: serializer.fromJson<String>(json['childRouteIdsJson']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
     );
@@ -568,6 +637,8 @@ class CachedRoute extends DataClass implements Insertable<CachedRoute> {
       'id': serializer.toJson<String>(id),
       'origin': serializer.toJson<String>(origin),
       'destination': serializer.toJson<String>(destination),
+      'parentRouteIdsJson': serializer.toJson<String>(parentRouteIdsJson),
+      'childRouteIdsJson': serializer.toJson<String>(childRouteIdsJson),
       'isActive': serializer.toJson<bool>(isActive),
       'cachedAt': serializer.toJson<DateTime>(cachedAt),
     };
@@ -577,12 +648,16 @@ class CachedRoute extends DataClass implements Insertable<CachedRoute> {
     String? id,
     String? origin,
     String? destination,
+    String? parentRouteIdsJson,
+    String? childRouteIdsJson,
     bool? isActive,
     DateTime? cachedAt,
   }) => CachedRoute(
     id: id ?? this.id,
     origin: origin ?? this.origin,
     destination: destination ?? this.destination,
+    parentRouteIdsJson: parentRouteIdsJson ?? this.parentRouteIdsJson,
+    childRouteIdsJson: childRouteIdsJson ?? this.childRouteIdsJson,
     isActive: isActive ?? this.isActive,
     cachedAt: cachedAt ?? this.cachedAt,
   );
@@ -593,6 +668,12 @@ class CachedRoute extends DataClass implements Insertable<CachedRoute> {
       destination: data.destination.present
           ? data.destination.value
           : this.destination,
+      parentRouteIdsJson: data.parentRouteIdsJson.present
+          ? data.parentRouteIdsJson.value
+          : this.parentRouteIdsJson,
+      childRouteIdsJson: data.childRouteIdsJson.present
+          ? data.childRouteIdsJson.value
+          : this.childRouteIdsJson,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
       cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
     );
@@ -604,6 +685,8 @@ class CachedRoute extends DataClass implements Insertable<CachedRoute> {
           ..write('id: $id, ')
           ..write('origin: $origin, ')
           ..write('destination: $destination, ')
+          ..write('parentRouteIdsJson: $parentRouteIdsJson, ')
+          ..write('childRouteIdsJson: $childRouteIdsJson, ')
           ..write('isActive: $isActive, ')
           ..write('cachedAt: $cachedAt')
           ..write(')'))
@@ -611,7 +694,15 @@ class CachedRoute extends DataClass implements Insertable<CachedRoute> {
   }
 
   @override
-  int get hashCode => Object.hash(id, origin, destination, isActive, cachedAt);
+  int get hashCode => Object.hash(
+    id,
+    origin,
+    destination,
+    parentRouteIdsJson,
+    childRouteIdsJson,
+    isActive,
+    cachedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -619,6 +710,8 @@ class CachedRoute extends DataClass implements Insertable<CachedRoute> {
           other.id == this.id &&
           other.origin == this.origin &&
           other.destination == this.destination &&
+          other.parentRouteIdsJson == this.parentRouteIdsJson &&
+          other.childRouteIdsJson == this.childRouteIdsJson &&
           other.isActive == this.isActive &&
           other.cachedAt == this.cachedAt);
 }
@@ -627,6 +720,8 @@ class CachedRoutesCompanion extends UpdateCompanion<CachedRoute> {
   final Value<String> id;
   final Value<String> origin;
   final Value<String> destination;
+  final Value<String> parentRouteIdsJson;
+  final Value<String> childRouteIdsJson;
   final Value<bool> isActive;
   final Value<DateTime> cachedAt;
   final Value<int> rowid;
@@ -634,6 +729,8 @@ class CachedRoutesCompanion extends UpdateCompanion<CachedRoute> {
     this.id = const Value.absent(),
     this.origin = const Value.absent(),
     this.destination = const Value.absent(),
+    this.parentRouteIdsJson = const Value.absent(),
+    this.childRouteIdsJson = const Value.absent(),
     this.isActive = const Value.absent(),
     this.cachedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -642,6 +739,8 @@ class CachedRoutesCompanion extends UpdateCompanion<CachedRoute> {
     required String id,
     required String origin,
     required String destination,
+    this.parentRouteIdsJson = const Value.absent(),
+    this.childRouteIdsJson = const Value.absent(),
     this.isActive = const Value.absent(),
     required DateTime cachedAt,
     this.rowid = const Value.absent(),
@@ -653,6 +752,8 @@ class CachedRoutesCompanion extends UpdateCompanion<CachedRoute> {
     Expression<String>? id,
     Expression<String>? origin,
     Expression<String>? destination,
+    Expression<String>? parentRouteIdsJson,
+    Expression<String>? childRouteIdsJson,
     Expression<bool>? isActive,
     Expression<DateTime>? cachedAt,
     Expression<int>? rowid,
@@ -661,6 +762,9 @@ class CachedRoutesCompanion extends UpdateCompanion<CachedRoute> {
       if (id != null) 'id': id,
       if (origin != null) 'origin': origin,
       if (destination != null) 'destination': destination,
+      if (parentRouteIdsJson != null)
+        'parent_route_ids_json': parentRouteIdsJson,
+      if (childRouteIdsJson != null) 'child_route_ids_json': childRouteIdsJson,
       if (isActive != null) 'is_active': isActive,
       if (cachedAt != null) 'cached_at': cachedAt,
       if (rowid != null) 'rowid': rowid,
@@ -671,6 +775,8 @@ class CachedRoutesCompanion extends UpdateCompanion<CachedRoute> {
     Value<String>? id,
     Value<String>? origin,
     Value<String>? destination,
+    Value<String>? parentRouteIdsJson,
+    Value<String>? childRouteIdsJson,
     Value<bool>? isActive,
     Value<DateTime>? cachedAt,
     Value<int>? rowid,
@@ -679,6 +785,8 @@ class CachedRoutesCompanion extends UpdateCompanion<CachedRoute> {
       id: id ?? this.id,
       origin: origin ?? this.origin,
       destination: destination ?? this.destination,
+      parentRouteIdsJson: parentRouteIdsJson ?? this.parentRouteIdsJson,
+      childRouteIdsJson: childRouteIdsJson ?? this.childRouteIdsJson,
       isActive: isActive ?? this.isActive,
       cachedAt: cachedAt ?? this.cachedAt,
       rowid: rowid ?? this.rowid,
@@ -696,6 +804,12 @@ class CachedRoutesCompanion extends UpdateCompanion<CachedRoute> {
     }
     if (destination.present) {
       map['destination'] = Variable<String>(destination.value);
+    }
+    if (parentRouteIdsJson.present) {
+      map['parent_route_ids_json'] = Variable<String>(parentRouteIdsJson.value);
+    }
+    if (childRouteIdsJson.present) {
+      map['child_route_ids_json'] = Variable<String>(childRouteIdsJson.value);
     }
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
@@ -715,6 +829,8 @@ class CachedRoutesCompanion extends UpdateCompanion<CachedRoute> {
           ..write('id: $id, ')
           ..write('origin: $origin, ')
           ..write('destination: $destination, ')
+          ..write('parentRouteIdsJson: $parentRouteIdsJson, ')
+          ..write('childRouteIdsJson: $childRouteIdsJson, ')
           ..write('isActive: $isActive, ')
           ..write('cachedAt: $cachedAt, ')
           ..write('rowid: $rowid')
@@ -4032,6 +4148,8 @@ typedef $$CachedRoutesTableCreateCompanionBuilder =
       required String id,
       required String origin,
       required String destination,
+      Value<String> parentRouteIdsJson,
+      Value<String> childRouteIdsJson,
       Value<bool> isActive,
       required DateTime cachedAt,
       Value<int> rowid,
@@ -4041,6 +4159,8 @@ typedef $$CachedRoutesTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> origin,
       Value<String> destination,
+      Value<String> parentRouteIdsJson,
+      Value<String> childRouteIdsJson,
       Value<bool> isActive,
       Value<DateTime> cachedAt,
       Value<int> rowid,
@@ -4067,6 +4187,16 @@ class $$CachedRoutesTableFilterComposer
 
   ColumnFilters<String> get destination => $composableBuilder(
     column: $table.destination,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get parentRouteIdsJson => $composableBuilder(
+    column: $table.parentRouteIdsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get childRouteIdsJson => $composableBuilder(
+    column: $table.childRouteIdsJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4105,6 +4235,16 @@ class $$CachedRoutesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get parentRouteIdsJson => $composableBuilder(
+    column: $table.parentRouteIdsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get childRouteIdsJson => $composableBuilder(
+    column: $table.childRouteIdsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isActive => $composableBuilder(
     column: $table.isActive,
     builder: (column) => ColumnOrderings(column),
@@ -4133,6 +4273,16 @@ class $$CachedRoutesTableAnnotationComposer
 
   GeneratedColumn<String> get destination => $composableBuilder(
     column: $table.destination,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get parentRouteIdsJson => $composableBuilder(
+    column: $table.parentRouteIdsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get childRouteIdsJson => $composableBuilder(
+    column: $table.childRouteIdsJson,
     builder: (column) => column,
   );
 
@@ -4177,6 +4327,8 @@ class $$CachedRoutesTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> origin = const Value.absent(),
                 Value<String> destination = const Value.absent(),
+                Value<String> parentRouteIdsJson = const Value.absent(),
+                Value<String> childRouteIdsJson = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<DateTime> cachedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -4184,6 +4336,8 @@ class $$CachedRoutesTableTableManager
                 id: id,
                 origin: origin,
                 destination: destination,
+                parentRouteIdsJson: parentRouteIdsJson,
+                childRouteIdsJson: childRouteIdsJson,
                 isActive: isActive,
                 cachedAt: cachedAt,
                 rowid: rowid,
@@ -4193,6 +4347,8 @@ class $$CachedRoutesTableTableManager
                 required String id,
                 required String origin,
                 required String destination,
+                Value<String> parentRouteIdsJson = const Value.absent(),
+                Value<String> childRouteIdsJson = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 required DateTime cachedAt,
                 Value<int> rowid = const Value.absent(),
@@ -4200,6 +4356,8 @@ class $$CachedRoutesTableTableManager
                 id: id,
                 origin: origin,
                 destination: destination,
+                parentRouteIdsJson: parentRouteIdsJson,
+                childRouteIdsJson: childRouteIdsJson,
                 isActive: isActive,
                 cachedAt: cachedAt,
                 rowid: rowid,

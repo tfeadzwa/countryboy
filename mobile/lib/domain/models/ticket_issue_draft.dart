@@ -9,7 +9,8 @@ class TicketIssueDraft {
     this.amount,
     this.passengerAmount,
     this.luggageAmount,
-    this.passengerName,
+    this.departure,
+    this.destination,
     this.passengerPhone,
   });
 
@@ -20,7 +21,8 @@ class TicketIssueDraft {
   final double? amount;
   final double? passengerAmount;
   final double? luggageAmount;
-  final String? passengerName;
+  final String? departure;
+  final String? destination;
   final String? passengerPhone;
 
   bool get isPair => mode == 'PAIR';
@@ -33,7 +35,12 @@ class TicketIssueDraft {
         _ => mode,
       };
 
-  String get routeLabel => trip.routeLabel;
+  String get routeLabel {
+    if (departure != null && destination != null) {
+      return '$departure -> $destination';
+    }
+    return trip.routeLabel;
+  }
 
   double? get totalAmount {
     if (isPair) {

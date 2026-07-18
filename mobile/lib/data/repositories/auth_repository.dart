@@ -6,6 +6,26 @@ import '../../core/storage/secure_storage_service.dart';
 import '../../domain/models/models.dart';
 import '../api/api_services.dart';
 
+/// Shown when the paired device belongs to a different depot than the signing-in agent.
+class DeviceDepotMismatch {
+  const DeviceDepotMismatch({
+    required this.deviceDepotName,
+    required this.agentDepotName,
+    required this.deviceMerchantCode,
+    required this.loginMerchantCode,
+  });
+
+  final String deviceDepotName;
+  final String agentDepotName;
+  final String deviceMerchantCode;
+  final String loginMerchantCode;
+
+  String get message =>
+      'This device is paired to $deviceDepotName ($deviceMerchantCode), '
+      'but you signed in as an agent for $agentDepotName ($loginMerchantCode). '
+      'Re-pair this device with a code from $agentDepotName to sync tickets.';
+}
+
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(
     api: ref.watch(authApiProvider),
@@ -34,7 +54,11 @@ class AuthRepository {
   Future<AgentProfile?> getCurrentAgent() async {
     final json = await _storage.getAgentProfile();
     if (json == null) return null;
-    return AgentProfile.fromJson(json);
+    try {
+      return AgentProfile.fromJson(json);
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<bool> isOfflineSession() => _storage.isOfflineSession();
@@ -53,6 +77,8 @@ class AuthRepository {
       merchantCode: merchantCode,
       agentCode: agentCode,
       pin: pin,
+      deviceToken: await _storage.getDeviceToken(),
+      deviceId: await _storage.getDeviceId(),
     );
 
     await _storage.saveTokens(
@@ -116,10 +142,43 @@ class AuthRepository {
 
   Future<bool> isOfflineLoginEnabled() => _storage.isOfflineLoginEnabled();
 
+  /// Returns mismatch details when the paired device depot differs from the agent's depot.
+  Future<DeviceDepotMismatch?> getDeviceDepotMismatch({
+    required String loginMerchantCode,
+    required AgentProfile agent,
+  }) async {
+    if (!await _storage.isDevicePaired()) return null;
+
+    final deviceDepotId = await _storage.getDepotId();
+    final deviceMerchant = await _storage.getMerchantCode();
+    final deviceDepotName =
+        await _storage.getDepotName() ?? deviceMerchant ?? 'another depot';
+
+    final loginMerchant = loginMerchantCode.toUpperCase();
+    final pairedMerchant = deviceMerchant?.toUpperCase();
+
+    final idMismatch = agent.depotId != null &&
+        deviceDepotId != null &&
+        agent.depotId != deviceDepotId;
+    final merchantMismatch =
+        pairedMerchant != null && pairedMerchant != loginMerchant;
+
+    if (!idMismatch && !merchantMismatch) return null;
+
+    return DeviceDepotMismatch(
+      deviceDepotName: deviceDepotName,
+      agentDepotName: agent.depotName.isNotEmpty
+          ? agent.depotName
+          : agent.merchantName,
+      deviceMerchantCode: pairedMerchant ?? '—',
+      loginMerchantCode: loginMerchant,
+    );
+  }
+
   Future<void> logout() async {
     try {
       if (!await _storage.isOfflineSession()) {
-        await _api.logout();
+        await _api.logout(deviceToken: await _storage.getDeviceToken());
       }
     } finally {
       await _storage.clearAllAuth();
@@ -160,6 +219,7 @@ class DeviceRepository {
       depotId: result.depotId,
       merchantCode: result.merchantCode,
       serialNumber: result.serialNumber,
+      depotName: result.depotName,
     );
     return result;
   }

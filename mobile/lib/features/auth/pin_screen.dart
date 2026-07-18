@@ -6,7 +6,6 @@ import '../../core/config/app_spacing.dart';
 import '../../core/connectivity/connectivity_service.dart';
 import '../../core/network/api_error.dart';
 import '../../data/repositories/auth_repository.dart';
-import '../../data/repositories/reference_repository.dart';
 import '../../data/repositories/trip_repository.dart';
 import '../../services/sync_service.dart';
 import '../../shared/widgets/widgets.dart';
@@ -51,48 +50,71 @@ class _PinScreenState extends ConsumerState<PinScreen> {
         );
       }
 
-      await auth.login(
+      final result = await auth.login(
         merchantCode: widget.merchantCode,
         agentCode: widget.agentCode,
         pin: _pin,
       );
 
-      if (online && mounted) {
-        final enable = await showDialog<bool>(
+      final mismatch = await auth.getDeviceDepotMismatch(
+        loginMerchantCode: widget.merchantCode,
+        agent: result.agent,
+      );
+      if (mismatch != null) {
+        await auth.logout();
+        if (!mounted) return;
+        final rePair = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Enable offline sign in?'),
-            content: const Text(
-              'Save credentials securely so you can sign in without internet on this device.',
-            ),
+            title: const Text('Device depot mismatch'),
+            content: Text(mismatch.message),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Not now'),
+                child: const Text('Cancel'),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Yes, enable'),
+                child: const Text('Re-pair device'),
+              ),
+            ],
+          ),
+        );
+        if (rePair == true && mounted) {
+          context.go('/pairing');
+        }
+        return;
+      }
+
+      if (online && mounted) {
+        await auth.enableOfflineAccess(
+          merchantCode: widget.merchantCode,
+          agentCode: widget.agentCode,
+          pin: _pin,
+        );
+
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Offline sign-in enabled'),
+            content: const Text(
+              'Offline sign-in has been enabled. Your credentials are securely stored for offline use.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
               ),
             ],
           ),
         );
 
-        if (enable == true) {
-          await auth.enableOfflineAccess(
-            merchantCode: widget.merchantCode,
-            agentCode: widget.agentCode,
-            pin: _pin,
-          );
-        }
-
         try {
-          await ref.read(referenceRepositoryProvider).getFleets();
-          await ref.read(referenceRepositoryProvider).getRoutes();
-          await ref.read(referenceRepositoryProvider).getFares();
+          await ref.read(syncServiceProvider).syncIfOnline(force: true);
         } catch (_) {}
         await ref.read(tripRepositoryProvider).syncActiveTripFromServer();
-        ref.read(syncServiceProvider).syncIfOnline();
       }
 
       if (mounted) context.go('/home');

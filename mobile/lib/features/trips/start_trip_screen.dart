@@ -8,6 +8,7 @@ import '../../data/repositories/reference_repository.dart';
 import '../../data/repositories/trip_repository.dart';
 import '../../features/home/home_screen.dart';
 import '../../domain/models/models.dart';
+import '../../shared/widgets/searchable_picker.dart';
 import '../../shared/widgets/widgets.dart';
 
 class StartTripScreen extends ConsumerStatefulWidget {
@@ -39,7 +40,8 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
     });
     try {
       final fleets = await ref.read(referenceRepositoryProvider).getFleets();
-      final routes = await ref.read(referenceRepositoryProvider).getRoutes();
+      await ref.read(referenceRepositoryProvider).refreshReferenceDataIfOnline();
+      final routes = await ref.read(referenceRepositoryProvider).getMainRoutes();
       setState(() {
         _fleets = fleets;
         _routes = routes;
@@ -107,36 +109,49 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
                     ),
                   ],
                   const SizedBox(height: AppSpacing.lg),
-                  Text('Bus / fleet', style: Theme.of(context).textTheme.labelLarge),
-                  const SizedBox(height: AppSpacing.sm),
-                  DropdownButtonFormField<FleetModel>(
-                    value: _selectedFleet,
-                    decoration: const InputDecoration(hintText: 'Choose bus'),
-                    items: (_fleets ?? [])
-                        .map(
-                          (f) => DropdownMenuItem(
-                            value: f,
-                            child: Text(f.number),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setState(() => _selectedFleet = v),
+                  SearchableSelectField(
+                    label: 'Bus / fleet',
+                    hint: 'Search and choose bus',
+                    valueText: _selectedFleet?.number,
+                    subtitle: _selectedFleet?.status,
+                    leadingIcon: Icons.directions_bus_rounded,
+                    onTap: () async {
+                      final fleets = _fleets ?? [];
+                      if (fleets.isEmpty) return;
+                      final picked = await showFleetPickerSheet(
+                        context: context,
+                        fleets: fleets,
+                        selected: _selectedFleet,
+                        title: 'Select bus',
+                        subtitle: 'Search by fleet number',
+                      );
+                      if (picked != null && mounted) {
+                        setState(() => _selectedFleet = picked);
+                      }
+                    },
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  Text('Route', style: Theme.of(context).textTheme.labelLarge),
-                  const SizedBox(height: AppSpacing.sm),
-                  DropdownButtonFormField<RouteModel>(
-                    value: _selectedRoute,
-                    decoration: const InputDecoration(hintText: 'Choose route'),
-                    items: (_routes ?? [])
-                        .map(
-                          (r) => DropdownMenuItem(
-                            value: r,
-                            child: Text(r.label),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (v) => setState(() => _selectedRoute = v),
+                  SearchableSelectField(
+                    label: 'Route',
+                    hint: 'Search and choose route',
+                    valueText: _selectedRoute == null
+                        ? null
+                        : '${_selectedRoute!.origin}  →  ${_selectedRoute!.destination}',
+                    leadingIcon: Icons.alt_route_rounded,
+                    onTap: () async {
+                      final routes = _routes ?? [];
+                      if (routes.isEmpty) return;
+                      final picked = await showRoutePickerSheet(
+                        context: context,
+                        routes: routes,
+                        selected: _selectedRoute,
+                        title: 'Select route',
+                        subtitle: 'Search by origin or destination',
+                      );
+                      if (picked != null && mounted) {
+                        setState(() => _selectedRoute = picked);
+                      }
+                    },
                   ),
                   const Spacer(),
                   if (_selectedFleet != null && _selectedRoute != null)
@@ -149,7 +164,9 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
                             Text('Trip summary', style: Theme.of(context).textTheme.titleMedium),
                             const SizedBox(height: AppSpacing.sm),
                             Text('Bus: ${_selectedFleet!.number}'),
-                            Text('Route: ${_selectedRoute!.label}'),
+                            Text(
+                              'Route: ${_selectedRoute!.origin}  →  ${_selectedRoute!.destination}',
+                            ),
                           ],
                         ),
                       ),

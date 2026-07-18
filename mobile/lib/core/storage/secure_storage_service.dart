@@ -19,6 +19,7 @@ class SecureStorageService {
   static const _deviceTokenKey = 'device_token';
   static const _deviceIdKey = 'device_id';
   static const _depotIdKey = 'depot_id';
+  static const _depotNameKey = 'depot_name';
   static const _merchantCodeKey = 'merchant_code';
   static const _serialNumberKey = 'serial_number';
   static const _pairedKey = 'device_paired';
@@ -29,6 +30,8 @@ class SecureStorageService {
   static const _offlineAgentKey = 'offline_agent_code';
   static const _offlineSessionKey = 'offline_session';
   static const _offlineSessionExpiryKey = 'offline_session_expiry';
+  static const _printerMacKey = 'printer_mac';
+  static const _printerNameKey = 'printer_name';
 
   Future<void> saveTokens({
     required String accessToken,
@@ -77,6 +80,7 @@ class SecureStorageService {
     required String depotId,
     required String merchantCode,
     required String serialNumber,
+    String? depotName,
   }) async {
     await _storage.write(key: _deviceIdKey, value: deviceId);
     await _storage.write(key: _deviceTokenKey, value: deviceToken);
@@ -84,6 +88,9 @@ class SecureStorageService {
     await _storage.write(key: _merchantCodeKey, value: merchantCode);
     await _storage.write(key: _serialNumberKey, value: serialNumber);
     await _storage.write(key: _pairedKey, value: 'true');
+    if (depotName != null && depotName.isNotEmpty) {
+      await _storage.write(key: _depotNameKey, value: depotName);
+    }
   }
 
   Future<bool> isDevicePaired() async =>
@@ -92,6 +99,7 @@ class SecureStorageService {
   Future<String?> getDeviceToken() => _storage.read(key: _deviceTokenKey);
   Future<String?> getDeviceId() => _storage.read(key: _deviceIdKey);
   Future<String?> getDepotId() => _storage.read(key: _depotIdKey);
+  Future<String?> getDepotName() => _storage.read(key: _depotNameKey);
   Future<String?> getMerchantCode() => _storage.read(key: _merchantCodeKey);
   Future<String?> getSerialNumber() => _storage.read(key: _serialNumberKey);
 
@@ -99,6 +107,7 @@ class SecureStorageService {
     await _storage.delete(key: _deviceIdKey);
     await _storage.delete(key: _deviceTokenKey);
     await _storage.delete(key: _depotIdKey);
+    await _storage.delete(key: _depotNameKey);
     await _storage.delete(key: _merchantCodeKey);
     await _storage.delete(key: _serialNumberKey);
     await _storage.delete(key: _pairedKey);
@@ -112,6 +121,12 @@ class SecureStorageService {
     final raw = await _storage.read(key: _agentJsonKey);
     if (raw == null) return null;
     return jsonDecode(raw) as Map<String, dynamic>;
+  }
+
+  Future<bool> hasOnlineAuth() async {
+    if (await isOfflineSession()) return false;
+    final access = await getAccessToken();
+    return access != null && access.isNotEmpty;
   }
 
   Future<bool> hasValidSession() async {
@@ -175,6 +190,22 @@ class SecureStorageService {
     final expiry = DateTime.tryParse(expiryRaw);
     if (expiry == null) return false;
     return DateTime.now().isBefore(expiry);
+  }
+
+  Future<void> savePrinter({
+    required String mac,
+    required String name,
+  }) async {
+    await _storage.write(key: _printerMacKey, value: mac);
+    await _storage.write(key: _printerNameKey, value: name);
+  }
+
+  Future<String?> getPrinterMac() => _storage.read(key: _printerMacKey);
+  Future<String?> getPrinterName() => _storage.read(key: _printerNameKey);
+
+  Future<void> clearPrinter() async {
+    await _storage.delete(key: _printerMacKey);
+    await _storage.delete(key: _printerNameKey);
   }
 
   String _hashPin(String pin, String merchantCode, String agentCode) {

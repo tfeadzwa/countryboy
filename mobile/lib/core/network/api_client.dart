@@ -58,10 +58,12 @@ class TokenRefreshInterceptor extends Interceptor {
     }
 
     final deviceToken = await _storage.getDeviceToken();
-    if (deviceToken != null &&
-        deviceToken.isNotEmpty &&
-        options.path.contains('/sync')) {
-      options.headers['x-device-token'] = deviceToken;
+    if (deviceToken != null && deviceToken.isNotEmpty) {
+      final path = options.uri.path;
+      final isPairRequest = path.contains('/devices/pair');
+      if (!isPairRequest) {
+        options.headers['x-device-token'] = deviceToken;
+      }
     }
 
     handler.next(options);
@@ -126,9 +128,13 @@ class TokenRefreshInterceptor extends Interceptor {
 
   Future<Response<dynamic>> _retry(RequestOptions options) async {
     final accessToken = await _storage.getAccessToken();
+    final deviceToken = await _storage.getDeviceToken();
     final headers = Map<String, dynamic>.from(options.headers);
     if (accessToken != null && accessToken.isNotEmpty) {
       headers['Authorization'] = 'Bearer $accessToken';
+    }
+    if (deviceToken != null && deviceToken.isNotEmpty) {
+      headers['x-device-token'] = deviceToken;
     }
     return _dio.request(
       options.path,

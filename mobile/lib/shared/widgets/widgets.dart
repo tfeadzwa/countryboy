@@ -94,6 +94,354 @@ class CodeInputField extends StatelessWidget {
   }
 }
 
+/// OTP-style row of character boxes for fixed-length codes (e.g. HRE001).
+class CharacterCodeField extends StatefulWidget {
+  const CharacterCodeField({
+    super.key,
+    required this.controller,
+    this.length = 6,
+    this.groupAfter = 3,
+    this.errorText,
+    this.autofocus = true,
+    this.onChanged,
+    this.onCompleted,
+  });
+
+  final TextEditingController controller;
+  final int length;
+  /// Insert a visual gap after this many characters (0 = no gap).
+  final int groupAfter;
+  final String? errorText;
+  final bool autofocus;
+  final ValueChanged<String>? onChanged;
+  final VoidCallback? onCompleted;
+
+  @override
+  State<CharacterCodeField> createState() => _CharacterCodeFieldState();
+}
+
+class _CharacterCodeFieldState extends State<CharacterCodeField> {
+  late final FocusNode _focusNode;
+
+  static const _boxSize = 48.0;
+  static const _boxGap = 6.0;
+  static const _groupGap = 12.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    widget.controller.addListener(_onControllerChanged);
+    _focusNode.addListener(_onFocusChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onControllerChanged);
+    _focusNode.removeListener(_onFocusChanged);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _onFocusChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _handleChanged(String raw) {
+    var cleaned =
+        raw.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    if (cleaned.length > widget.length) {
+      cleaned = cleaned.substring(0, widget.length);
+    }
+
+    if (cleaned != widget.controller.text) {
+      widget.controller.value = TextEditingValue(
+        text: cleaned,
+        selection: TextSelection.collapsed(offset: cleaned.length),
+      );
+    }
+
+    widget.onChanged?.call(cleaned);
+    if (cleaned.length == widget.length) {
+      widget.onCompleted?.call();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final code = widget.controller.text.toUpperCase();
+    final hasError = widget.errorText != null;
+    final focused = _focusNode.hasFocus;
+    final activeIndex = code.length.clamp(0, widget.length - 1);
+
+    final boxes = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < widget.length; i++) ...[
+          if (widget.groupAfter > 0 && i == widget.groupAfter) ...[
+            SizedBox(
+              width: _groupGap,
+              child: Center(
+                child: Container(
+                  width: 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: hasError
+                        ? AppColors.error.withValues(alpha: 0.55)
+                        : AppColors.brandGold.withValues(alpha: 0.85),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          _CharacterBox(
+            char: i < code.length ? code[i] : null,
+            isActive: focused && !hasError && i == activeIndex,
+            hasError: hasError,
+            isFilled: i < code.length,
+            size: _boxSize,
+          ),
+          if (i < widget.length - 1 &&
+              !(widget.groupAfter > 0 && i + 1 == widget.groupAfter))
+            const SizedBox(width: _boxGap),
+        ],
+      ],
+    );
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        GestureDetector(
+          onTap: () => _focusNode.requestFocus(),
+          behavior: HitTestBehavior.opaque,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Scales down on narrow screens so the row never overflows.
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: boxes,
+              ),
+              Positioned.fill(
+                child: Opacity(
+                  opacity: 0,
+                  child: TextField(
+                    controller: widget.controller,
+                    focusNode: _focusNode,
+                    autofocus: widget.autofocus,
+                    keyboardType: TextInputType.text,
+                    textCapitalization: TextCapitalization.characters,
+                    textInputAction: TextInputAction.done,
+                    maxLength: widget.length,
+                    enableInteractiveSelection: false,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'[A-Za-z0-9]'),
+                      ),
+                      LengthLimitingTextInputFormatter(widget.length),
+                      _UpperCaseTextFormatter(),
+                    ],
+                    decoration: const InputDecoration(
+                      counterText: '',
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onChanged: _handleChanged,
+                    onSubmitted: (_) {
+                      if (code.length == widget.length) {
+                        widget.onCompleted?.call();
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          child: hasError
+              ? Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.md),
+                  child: Text(
+                    widget.errorText!,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+}
+
+class _CharacterBox extends StatelessWidget {
+  const _CharacterBox({
+    required this.char,
+    required this.isActive,
+    required this.hasError,
+    required this.isFilled,
+    required this.size,
+  });
+
+  final String? char;
+  final bool isActive;
+  final bool hasError;
+  final bool isFilled;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color borderColor;
+    final Color fillColor;
+    final List<BoxShadow>? shadows;
+
+    if (hasError) {
+      borderColor = AppColors.error;
+      fillColor = AppColors.error.withValues(alpha: 0.06);
+      shadows = [
+        BoxShadow(
+          color: AppColors.error.withValues(alpha: 0.12),
+          blurRadius: 10,
+          offset: const Offset(0, 3),
+        ),
+      ];
+    } else if (isActive) {
+      borderColor = AppColors.brandRed;
+      fillColor = AppColors.brandRed.withValues(alpha: 0.07);
+      shadows = [
+        BoxShadow(
+          color: AppColors.brandRed.withValues(alpha: 0.22),
+          blurRadius: 14,
+          offset: const Offset(0, 4),
+        ),
+      ];
+    } else if (isFilled) {
+      borderColor = AppColors.charcoal.withValues(alpha: 0.22);
+      fillColor = AppColors.surfaceMuted;
+      shadows = [
+        BoxShadow(
+          color: AppColors.charcoal.withValues(alpha: 0.06),
+          blurRadius: 6,
+          offset: const Offset(0, 2),
+        ),
+      ];
+    } else {
+      borderColor = AppColors.border;
+      fillColor = AppColors.surface;
+      shadows = [
+        BoxShadow(
+          color: AppColors.charcoal.withValues(alpha: 0.04),
+          blurRadius: 4,
+          offset: const Offset(0, 1),
+        ),
+      ];
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      width: size,
+      height: size + 8,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: fillColor,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(
+          color: borderColor,
+          width: isActive || hasError ? 2.25 : 1.5,
+        ),
+        boxShadow: shadows,
+      ),
+      child: char == null
+          ? (isActive ? const _BlinkCaret() : const SizedBox.shrink())
+          : TweenAnimationBuilder<double>(
+              key: ValueKey(char),
+              tween: Tween(begin: 0.72, end: 1),
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOutBack,
+              builder: (context, scale, child) => Transform.scale(
+                scale: scale,
+                child: child,
+              ),
+              child: Text(
+                char!,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 22,
+                      letterSpacing: 0,
+                      color: AppColors.textPrimary,
+                      height: 1,
+                    ),
+              ),
+            ),
+    );
+  }
+}
+
+class _BlinkCaret extends StatefulWidget {
+  const _BlinkCaret();
+
+  @override
+  State<_BlinkCaret> createState() => _BlinkCaretState();
+}
+
+class _BlinkCaretState extends State<_BlinkCaret>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 530),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _controller,
+      child: Container(
+        width: 2,
+        height: 22,
+        decoration: BoxDecoration(
+          color: AppColors.brandRed,
+          borderRadius: BorderRadius.circular(1),
+        ),
+      ),
+    );
+  }
+}
+
+class _UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return newValue.copyWith(text: newValue.text.toUpperCase());
+  }
+}
+
 class PinKeypad extends StatelessWidget {
   const PinKeypad({
     super.key,

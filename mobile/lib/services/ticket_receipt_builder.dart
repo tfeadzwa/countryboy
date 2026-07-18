@@ -70,9 +70,9 @@ Future<_ReceiptContext> _loadReceiptContext(WidgetRef ref) async {
 
   return _ReceiptContext(
     merchantCode:
-        agent?.merchantCode ?? await storage.getMerchantCode() ?? '—',
-    depotName: agent?.depotName ?? '—',
-    agentCode: agent?.agentCode ?? '—',
+        agent?.merchantCode ?? await storage.getMerchantCode() ?? '-',
+    depotName: agent?.depotName ?? '-',
+    agentCode: agent?.agentCode ?? '-',
     agentName: agent != null
         ? '${agent.firstName} ${agent.lastName}'.trim()
         : 'Conductor',

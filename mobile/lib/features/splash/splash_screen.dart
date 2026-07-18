@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/config/app_colors.dart';
 import '../../core/config/app_spacing.dart';
-import '../../core/config/env.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../services/sync_service.dart';
 
@@ -51,28 +50,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: AppColors.brandRed,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+              child: Image.asset(
+                'assets/brand/cboy-logo.png',
+                width: 280,
+                fit: BoxFit.contain,
               ),
-              child: const Icon(Icons.directions_bus, color: Colors.white, size: 44),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              Env.appName,
-              style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                    color: Colors.white,
-                  ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Bus conductor operations',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white70,
-                  ),
             ),
             const SizedBox(height: AppSpacing.xxl),
             const SizedBox(

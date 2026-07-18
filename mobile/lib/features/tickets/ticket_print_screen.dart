@@ -7,10 +7,11 @@ import '../../core/config/app_spacing.dart';
 import '../../domain/models/ticket_issue_draft.dart';
 import '../../domain/models/ticket_receipt_data.dart';
 import '../../features/home/home_screen.dart';
-import '../../services/ticket_receipt_builder.dart';
 import '../../services/ticket_print_service.dart';
+import '../../services/ticket_receipt_builder.dart';
 import '../../shared/widgets/widgets.dart';
 import 'widgets/issue_flow_step_header.dart';
+import 'widgets/printer_picker_sheet.dart';
 import 'widgets/ticket_receipt_preview.dart';
 
 class TicketPrintScreen extends ConsumerStatefulWidget {
@@ -26,12 +27,16 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
   List<TicketReceiptData>? _receipts;
   bool _loading = true;
   bool _printing = false;
+  bool _connecting = false;
   String? _error;
+  String? _printerLabel;
+  bool _printerConnected = false;
 
   @override
   void initState() {
     super.initState();
     _loadReceipts();
+    _restorePrinter();
   }
 
   Future<void> _loadReceipts() async {
@@ -45,6 +50,99 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
     }
   }
 
+  Future<void> _restorePrinter() async {
+    final service = ref.read(ticketPrintServiceProvider);
+    final saved = await service.getSavedPrinter();
+    if (saved == null) {
+      if (mounted) {
+        setState(() {
+          _printerLabel = null;
+          _printerConnected = false;
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      _connecting = true;
+      _printerLabel = saved.name;
+    });
+
+    try {
+      final ok = await service.connectSaved();
+      if (!mounted) return;
+      setState(() {
+        _printerConnected = ok;
+        _printerLabel = saved.name;
+        if (!ok) {
+          _error =
+              'Could not reconnect to ${saved.name}. Tap to choose a printer.';
+        }
+      });
+    } on PrinterException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _printerConnected = false;
+        _error = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _printerConnected = false);
+    } finally {
+      if (mounted) setState(() => _connecting = false);
+    }
+  }
+
+  Future<bool> _ensurePrinter() async {
+    final service = ref.read(ticketPrintServiceProvider);
+    if (await service.isConnected()) {
+      setState(() => _printerConnected = true);
+      return true;
+    }
+
+    final connected = await service.connectSaved();
+    if (connected) {
+      final saved = await service.getSavedPrinter();
+      if (!mounted) return false;
+      setState(() {
+        _printerConnected = true;
+        _printerLabel = saved?.name;
+      });
+      return true;
+    }
+
+    if (!mounted) return false;
+    final selected = await showPrinterPickerSheet(context, ref);
+    if (selected == null) return false;
+
+    setState(() {
+      _printerConnected = true;
+      _printerLabel =
+          selected.name.isEmpty ? 'Printer' : selected.name;
+    });
+    return true;
+  }
+
+  Future<void> _changePrinter() async {
+    setState(() {
+      _error = null;
+      _connecting = true;
+    });
+    try {
+      final selected = await showPrinterPickerSheet(context, ref);
+      if (!mounted) return;
+      if (selected != null) {
+        setState(() {
+          _printerConnected = true;
+          _printerLabel =
+              selected.name.isEmpty ? 'Printer' : selected.name;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _connecting = false);
+    }
+  }
+
   Future<void> _printAll() async {
     final receipts = _receipts;
     if (receipts == null || receipts.isEmpty || _printing) return;
@@ -55,9 +153,12 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
     });
 
     try {
+      if (!await _ensurePrinter()) return;
       await ref.read(ticketPrintServiceProvider).printReceipts(receipts);
-    } catch (e) {
-      setState(() => _error = 'Print failed. Try again or use system share.');
+    } on PrinterException catch (e) {
+      setState(() => _error = e.message);
+    } catch (_) {
+      setState(() => _error = 'Print failed. Check the printer and try again.');
     } finally {
       if (mounted) setState(() => _printing = false);
     }
@@ -72,9 +173,12 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
     });
 
     try {
+      if (!await _ensurePrinter()) return;
       await ref.read(ticketPrintServiceProvider).printReceipt(receipt);
-    } catch (e) {
-      setState(() => _error = 'Print failed. Try again.');
+    } on PrinterException catch (e) {
+      setState(() => _error = e.message);
+    } catch (_) {
+      setState(() => _error = 'Print failed. Check the printer and try again.');
     } finally {
       if (mounted) setState(() => _printing = false);
     }
@@ -113,6 +217,13 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
                     isPair ? 'Tickets issued' : 'Ticket issued',
                     style: Theme.of(context).textTheme.displaySmall,
                     textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _PrinterStatusTile(
+                    label: _printerLabel,
+                    connected: _printerConnected,
+                    connecting: _connecting,
+                    onTap: _printing ? null : _changePrinter,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   if (_receipts != null)
@@ -170,6 +281,79 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
                 ],
               ),
             ),
+    );
+  }
+}
+
+class _PrinterStatusTile extends StatelessWidget {
+  const _PrinterStatusTile({
+    required this.label,
+    required this.connected,
+    required this.connecting,
+    required this.onTap,
+  });
+
+  final String? label;
+  final bool connected;
+  final bool connecting;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = connecting
+        ? 'Connecting…'
+        : connected
+            ? (label ?? 'Printer connected')
+            : (label == null ? 'No printer selected' : 'Not connected · $label');
+    final color = connected ? AppColors.success : AppColors.textSecondary;
+
+    return Material(
+      color: AppColors.surfaceMuted,
+      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm + 2,
+          ),
+          child: Row(
+            children: [
+              if (connecting)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                Icon(
+                  connected
+                      ? Icons.bluetooth_connected
+                      : Icons.bluetooth_searching,
+                  color: color,
+                  size: 22,
+                ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                ),
+              ),
+              Text(
+                connected ? 'Change' : 'Select',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppColors.brandRed,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

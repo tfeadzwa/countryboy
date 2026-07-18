@@ -9,19 +9,32 @@ class AgentProfile extends Equatable {
     required this.merchantCode,
     required this.merchantName,
     required this.depotName,
+    this.depotId,
   });
 
   factory AgentProfile.fromJson(Map<String, dynamic> json) {
+    String readString(String snake, [String? camel]) {
+      final value = json[snake] ?? (camel != null ? json[camel] : null);
+      if (value == null) return '';
+      return value.toString();
+    }
+
     return AgentProfile(
-      id: json['id'] as String,
-      agentCode: json['agent_code'] as String,
-      firstName: json['first_name'] as String? ?? '',
-      lastName: json['last_name'] as String? ?? '',
-      merchantCode: json['merchant_code'] as String? ??
-          json['depot_code'] as String? ??
-          '',
-      merchantName: json['merchant_name'] as String? ?? '',
-      depotName: json['depot_name'] as String? ?? '',
+      id: readString('id'),
+      agentCode: readString('agent_code', 'agentCode'),
+      firstName: readString('first_name', 'firstName'),
+      lastName: readString('last_name', 'lastName'),
+      merchantCode: readString('merchant_code', 'merchantCode').isNotEmpty
+          ? readString('merchant_code', 'merchantCode')
+          : readString('depot_code', 'depotCode'),
+      merchantName: readString('merchant_name', 'merchantName'),
+      depotName: readString('depot_name', 'depotName'),
+      depotId: () {
+        final value = json['depot_id'] ?? json['depotId'];
+        if (value == null) return null;
+        final text = value.toString();
+        return text.isEmpty ? null : text;
+      }(),
     );
   }
 
@@ -32,6 +45,7 @@ class AgentProfile extends Equatable {
   final String merchantCode;
   final String merchantName;
   final String depotName;
+  final String? depotId;
 
   String get fullName {
     if (lastName.isEmpty) return firstName;
@@ -46,11 +60,20 @@ class AgentProfile extends Equatable {
         'merchant_code': merchantCode,
         'merchant_name': merchantName,
         'depot_name': depotName,
+        if (depotId != null) 'depot_id': depotId,
       };
 
   @override
-  List<Object?> get props =>
-      [id, agentCode, firstName, lastName, merchantCode, merchantName, depotName];
+  List<Object?> get props => [
+        id,
+        agentCode,
+        firstName,
+        lastName,
+        merchantCode,
+        merchantName,
+        depotName,
+        depotId,
+      ];
 }
 
 class LoginResult extends Equatable {
@@ -75,6 +98,7 @@ class PairDeviceResult extends Equatable {
     required this.depotId,
     required this.serialNumber,
     required this.merchantCode,
+    this.depotName,
   });
 
   factory PairDeviceResult.fromJson(Map<String, dynamic> json) {
@@ -84,6 +108,7 @@ class PairDeviceResult extends Equatable {
       depotId: json['depot_id'] as String,
       serialNumber: json['serial_number'] as String,
       merchantCode: json['merchant_code'] as String,
+      depotName: json['depot_name'] as String?,
     );
   }
 
@@ -92,10 +117,11 @@ class PairDeviceResult extends Equatable {
   final String depotId;
   final String serialNumber;
   final String merchantCode;
+  final String? depotName;
 
   @override
   List<Object?> get props =>
-      [deviceId, deviceToken, depotId, serialNumber, merchantCode];
+      [deviceId, deviceToken, depotId, serialNumber, merchantCode, depotName];
 }
 
 class FleetModel extends Equatable {
@@ -120,10 +146,51 @@ class RouteModel extends Equatable {
     required this.id,
     required this.origin,
     required this.destination,
+    this.parentRouteIds = const [],
+    this.parentRouteLabels = const [],
+    this.childRouteIds = const [],
+    this.embeddedChildren = const [],
     this.isActive = true,
   });
 
-  factory RouteModel.fromJson(Map<String, dynamic> json) => RouteModel(
+  factory RouteModel.fromJson(Map<String, dynamic> json) {
+    final parentIds = (json['parent_route_ids'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        (json['parent_route_id'] != null
+            ? [json['parent_route_id'] as String]
+            : <String>[]);
+    final parentLabels = (json['parent_route_labels'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        (json['parent_route_label'] != null
+            ? [json['parent_route_label'] as String]
+            : <String>[]);
+    final childIds = (json['child_route_ids'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        <String>[];
+    final embeddedChildren = (json['child_routes'] as List?)
+            ?.map((e) => RouteModel.fromSummary(e as Map<String, dynamic>))
+            .toList() ??
+        const <RouteModel>[];
+    final resolvedChildIds = childIds.isNotEmpty
+        ? childIds
+        : embeddedChildren.map((r) => r.id).toList();
+
+    return RouteModel(
+      id: json['id'] as String,
+      origin: json['origin'] as String,
+      destination: json['destination'] as String,
+      parentRouteIds: parentIds,
+      parentRouteLabels: parentLabels,
+      childRouteIds: resolvedChildIds,
+      embeddedChildren: embeddedChildren,
+      isActive: json['is_active'] as bool? ?? true,
+    );
+  }
+
+  factory RouteModel.fromSummary(Map<String, dynamic> json) => RouteModel(
         id: json['id'] as String,
         origin: json['origin'] as String,
         destination: json['destination'] as String,
@@ -133,12 +200,27 @@ class RouteModel extends Equatable {
   final String id;
   final String origin;
   final String destination;
+  final List<String> parentRouteIds;
+  final List<String> parentRouteLabels;
+  final List<String> childRouteIds;
+  final List<RouteModel> embeddedChildren;
   final bool isActive;
 
-  String get label => '$origin → $destination';
+  String get label => '$origin -> $destination';
+  bool get hasParents => parentRouteIds.isNotEmpty;
+  bool get hasChildren => childRouteIds.isNotEmpty;
 
   @override
-  List<Object?> get props => [id, origin, destination, isActive];
+  List<Object?> get props => [
+        id,
+        origin,
+        destination,
+        parentRouteIds,
+        parentRouteLabels,
+        childRouteIds,
+        embeddedChildren,
+        isActive,
+      ];
 }
 
 class FareModel extends Equatable {
@@ -201,7 +283,7 @@ class TripModel extends Equatable {
 
   String get routeLabel {
     if (routeOrigin != null && routeDestination != null) {
-      return '$routeOrigin → $routeDestination';
+      return '$routeOrigin -> $routeDestination';
     }
     return 'Route';
   }
@@ -267,23 +349,22 @@ class TicketModel extends Equatable {
   final int retryCount;
 
   String get displayNumber =>
-      serialNumber != null ? '#$serialNumber' : 'Local ${id.substring(0, 8)}';
+      serialNumber != null
+          ? serialNumber!.toString().padLeft(3, '0')
+          : 'Pending';
 
   String get routeLabel {
     if (departure != null && destination != null) {
-      return '$departure → $destination';
+      return '$departure -> $destination';
     }
-    return '—';
+    return '-';
   }
 
   String get passengerLabel {
-    if (passengerName != null && passengerName!.isNotEmpty) {
-      if (passengerPhone != null && passengerPhone!.isNotEmpty) {
-        return '$passengerName · $passengerPhone';
-      }
-      return passengerName!;
+    if (passengerPhone != null && passengerPhone!.isNotEmpty) {
+      return passengerPhone!;
     }
-    return '—';
+    return '-';
   }
 
   @override

@@ -40,6 +40,18 @@ class TicketRepository {
   final ConnectivityService _connectivity;
   final SyncService _sync;
 
+  Future<int> _nextTripSerial(String tripId) async {
+    final tickets = await _db.getAllTickets(tripId: tripId);
+    var max = 0;
+    for (final ticket in tickets) {
+      final serial = ticket.serialNumber;
+      if (serial != null && serial > max) {
+        max = serial;
+      }
+    }
+    return max + 1;
+  }
+
   Future<TicketModel> issueTicket({
     required String tripId,
     required String ticketCategory,
@@ -49,7 +61,6 @@ class TicketRepository {
     String? destination,
     required String idempotencyKey,
     String? linkedPassengerTicketId,
-    String? passengerName,
     String? passengerPhone,
   }) async {
     if (await _db.ticketExistsByIdempotencyKey(idempotencyKey)) {
@@ -66,9 +77,14 @@ class TicketRepository {
       throw ApiError(message: 'Session expired. Please sign in again.');
     }
 
+    final phone = passengerPhone?.trim().isEmpty == true
+        ? null
+        : passengerPhone?.trim();
+
     var ticketId = _sync.generateId();
     final issuedAt = DateTime.now();
     final offline = !(await _connectivity.checkReachability());
+    final tripSerial = offline ? await _nextTripSerial(tripId) : null;
 
     await _db.insertTicket(
       LocalTicketsCompanion.insert(
@@ -82,11 +98,11 @@ class TicketRepository {
         amount: amount,
         departure: Value(departure),
         destination: Value(destination),
-        passengerName: Value(passengerName),
-        passengerPhone: Value(passengerPhone),
+        passengerPhone: Value(phone),
         issuedAt: issuedAt,
         syncStatus: const Value('pending'),
         idempotencyKey: idempotencyKey,
+        serialNumber: tripSerial != null ? Value(tripSerial) : const Value.absent(),
       ),
     );
 
@@ -104,8 +120,8 @@ class TicketRepository {
         depotId,
         agentJson['id'] as String,
         linkedPassengerTicketId,
-        passengerName,
-        passengerPhone,
+        phone,
+        tripSerial!,
       );
       _sync.syncIfOnline();
       return _mapLocal(
@@ -125,8 +141,7 @@ class TicketRepository {
         destination: destination,
         issuedAt: issuedAt,
         linkedPassengerTicketId: linkedPassengerTicketId,
-        passengerName: passengerName,
-        passengerPhone: passengerPhone,
+        passengerPhone: phone,
       );
       final serverId = result['id'] as String;
       if (serverId != ticketId) {
@@ -143,8 +158,7 @@ class TicketRepository {
             amount: amount,
             departure: Value(departure),
             destination: Value(destination),
-            passengerName: Value(passengerName),
-            passengerPhone: Value(passengerPhone),
+            passengerPhone: Value(phone),
             issuedAt: issuedAt,
             syncStatus: const Value('synced'),
             idempotencyKey: idempotencyKey,
@@ -167,13 +181,16 @@ class TicketRepository {
         amount: amount,
         departure: departure,
         destination: destination,
-        passengerName: passengerName,
-        passengerPhone: passengerPhone,
+        passengerPhone: phone,
         serialNumber: result['serial_number'] as int?,
         issuedAt: issuedAt,
         syncStatus: 'synced',
       );
     } catch (_) {
+      final fallbackSerial = await _nextTripSerial(tripId);
+      await (_db.update(_db.localTickets)..where((t) => t.id.equals(ticketId))).write(
+        LocalTicketsCompanion(serialNumber: Value(fallbackSerial)),
+      );
       await _db.updateTicketSyncStatus(ticketId, 'pending');
       await _enqueueTicket(
         ticketId,
@@ -188,8 +205,8 @@ class TicketRepository {
         depotId,
         agentJson['id'] as String,
         linkedPassengerTicketId,
-        passengerName,
-        passengerPhone,
+        phone,
+        fallbackSerial,
       );
       _sync.syncIfOnline();
       return _mapLocal(
@@ -204,8 +221,7 @@ class TicketRepository {
     required String currency,
     required double passengerAmount,
     required double luggageAmount,
-    required String passengerName,
-    required String passengerPhone,
+    String? passengerPhone,
     String? departure,
     String? destination,
     required String idempotencyKey,
@@ -222,7 +238,6 @@ class TicketRepository {
       departure: departure,
       destination: destination,
       idempotencyKey: '$idempotencyKey-passenger',
-      passengerName: passengerName,
       passengerPhone: passengerPhone,
     );
 
@@ -235,7 +250,6 @@ class TicketRepository {
       destination: destination,
       idempotencyKey: '$idempotencyKey-luggage',
       linkedPassengerTicketId: passenger.id,
-      passengerName: passengerName,
       passengerPhone: passengerPhone,
     );
 
@@ -267,8 +281,8 @@ class TicketRepository {
     String depotId,
     String agentId,
     String? linkedPassengerTicketId,
-    String? passengerName,
     String? passengerPhone,
+    int? serialNumber,
   ) async {
     await _db.enqueueSync(
       SyncQueueItemsCompanion.insert(
@@ -287,9 +301,9 @@ class TicketRepository {
           'departure': departure,
           'destination': destination,
           'issued_at': issuedAt.toUtc().toIso8601String(),
+          if (serialNumber != null) 'serial_number': serialNumber,
           if (linkedPassengerTicketId != null)
             'linked_passenger_ticket_id': linkedPassengerTicketId,
-          if (passengerName != null) 'passenger_name': passengerName,
           if (passengerPhone != null) 'passenger_phone': passengerPhone,
         }),
         createdAt: DateTime.now(),

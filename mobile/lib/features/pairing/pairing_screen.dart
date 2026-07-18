@@ -39,15 +39,34 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
     });
 
     try {
-      final result = await ref.read(deviceRepositoryProvider).pairDevice(code);
-      if (result.merchantCode.isEmpty) {
-        // paired successfully
-      }
+      await ref.read(deviceRepositoryProvider).pairDevice(code);
       setState(() => _success = true);
       await Future<void>.delayed(const Duration(milliseconds: 800));
       if (mounted) context.go('/login/merchant');
     } on ApiError catch (e) {
-      setState(() => _error = e.message);
+      if (e.statusCode == 409 && mounted) {
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Pairing code already used'),
+            content: Text(
+              e.message.isNotEmpty
+                  ? e.message
+                  : 'This pairing code has already been used on another device. '
+                      'Ask your depot admin to unpair the device and generate a new code.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        setState(() => _error = null);
+      } else {
+        setState(() => _error = e.message);
+      }
     } catch (_) {
       setState(() => _error = 'Pairing failed. Check the code and try again.');
     } finally {

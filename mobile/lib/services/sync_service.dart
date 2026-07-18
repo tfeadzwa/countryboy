@@ -8,6 +8,7 @@ import '../../core/network/api_error.dart';
 import '../../core/storage/secure_storage_service.dart';
 import '../data/api/api_services.dart';
 import '../data/local/database.dart';
+import '../data/repositories/reference_repository.dart';
 const _uuid = Uuid();
 
 final syncServiceProvider = Provider<SyncService>((ref) {
@@ -17,6 +18,7 @@ final syncServiceProvider = Provider<SyncService>((ref) {
     tripApi: ref.watch(tripApiProvider),
     storage: ref.watch(secureStorageServiceProvider),
     connectivity: ref.watch(connectivityServiceProvider),
+    referenceRepository: ref.watch(referenceRepositoryProvider),
   );
 });
 
@@ -27,17 +29,20 @@ class SyncService {
     required TripApi tripApi,
     required SecureStorageService storage,
     required ConnectivityService connectivity,
+    required ReferenceRepository referenceRepository,
   })  : _db = db,
         _syncApi = syncApi,
         _tripApi = tripApi,
         _storage = storage,
-        _connectivity = connectivity;
+        _connectivity = connectivity,
+        _referenceRepository = referenceRepository;
 
   final AppDatabase _db;
   final SyncApi _syncApi;
   final TripApi _tripApi;
   final SecureStorageService _storage;
   final ConnectivityService _connectivity;
+  final ReferenceRepository _referenceRepository;
 
   bool _running = false;
 
@@ -45,10 +50,12 @@ class SyncService {
     if (_running && !force) return;
     final reachable = await _connectivity.checkReachability();
     if (!reachable) return;
+    if (!await _storage.hasOnlineAuth()) return;
 
     _running = true;
     _connectivity.setSyncing(true);
     try {
+      await _pullReferenceData();
       await _processTripQueue();
       await _pushPendingTrips();
       await _ensureTripsForPendingTickets();
@@ -57,6 +64,16 @@ class SyncService {
     } finally {
       _running = false;
       _connectivity.setSyncing(false);
+    }
+  }
+
+  Future<void> _pullReferenceData() async {
+    try {
+      final since = await _db.getSyncMeta('last_sync_at');
+      final data = await _syncApi.pull(since: since);
+      await _referenceRepository.cacheFromPullSnapshot(data);
+    } catch (_) {
+      // Reference pull is best-effort; direct fetches still work when authenticated.
     }
   }
 

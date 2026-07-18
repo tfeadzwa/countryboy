@@ -1,4 +1,5 @@
 import 'models.dart';
+import '../../core/config/env.dart';
 
 /// Printable receipt payload for a single ticket.
 class TicketReceiptData {
@@ -26,4 +27,7 @@ class TicketReceiptData {
         'LUGGAGE' => 'LUGGAGE',
         _ => ticket.ticketCategory,
       };
+
+  /// Public verification page encoded into the receipt QR code.
+  String get verifyUrl => Env.ticketVerifyUrl(ticket.id);
 }

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config/env.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_error.dart';
 import '../../domain/models/models.dart';
@@ -17,15 +18,25 @@ class AuthApi {
     required String merchantCode,
     required String agentCode,
     required String pin,
+    String? deviceToken,
+    String? deviceId,
   }) async {
     try {
+      final headers = <String, dynamic>{};
+      if (deviceToken != null && deviceToken.isNotEmpty) {
+        headers['x-device-token'] = deviceToken;
+      }
+
       final response = await _dio.post<Map<String, dynamic>>(
         '/agents/login',
         data: {
           'merchant_code': merchantCode.toUpperCase(),
           'agent_code': agentCode.toUpperCase(),
           'pin': pin,
+          'app_version': Env.appVersion,
+          if (deviceId != null && deviceId.isNotEmpty) 'device_id': deviceId,
         },
+        options: Options(headers: headers),
       );
       final data = response.data!;
       return LoginResult(
@@ -38,9 +49,13 @@ class AuthApi {
     }
   }
 
-  Future<void> logout() async {
+  Future<void> logout({String? deviceToken}) async {
     try {
-      await _dio.post('/agents/logout');
+      final headers = <String, dynamic>{};
+      if (deviceToken != null && deviceToken.isNotEmpty) {
+        headers['x-device-token'] = deviceToken;
+      }
+      await _dio.post('/agents/logout', options: Options(headers: headers));
     } on DioException {
       // Stateless JWT — ignore network errors on logout.
     }
@@ -144,8 +159,13 @@ class TripApi {
   }
 
   Future<Map<String, dynamic>?> getActiveTrip() async {
-    final response = await _dio.get<Map<String, dynamic>>('/agents/trips/active');
-    return response.data?['trip'] as Map<String, dynamic>?;
+    try {
+      final response =
+          await _dio.get<Map<String, dynamic>>('/agents/trips/active');
+      return response.data?['trip'] as Map<String, dynamic>?;
+    } on DioException {
+      return null;
+    }
   }
 }
 
@@ -167,7 +187,6 @@ class TicketApi {
     String? destination,
     DateTime? issuedAt,
     String? linkedPassengerTicketId,
-    String? passengerName,
     String? passengerPhone,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
@@ -183,8 +202,8 @@ class TicketApi {
         if (issuedAt != null) 'issued_at': issuedAt.toIso8601String(),
         if (linkedPassengerTicketId != null)
           'linked_passenger_ticket_id': linkedPassengerTicketId,
-        if (passengerName != null) 'passenger_name': passengerName,
-        if (passengerPhone != null) 'passenger_phone': passengerPhone,
+        if (passengerPhone != null && passengerPhone.isNotEmpty)
+          'passenger_phone': passengerPhone,
       },
     );
     return response.data!;

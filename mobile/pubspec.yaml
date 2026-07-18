@@ -1,5 +1,5 @@
 name: countryboy_conductor
-description: CountryBoy Conductor — mobile POS for bus conductors.
+description: countryboy — mobile POS for bus conductors.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -24,9 +24,11 @@ dependencies:
   google_fonts: ^6.2.1
   equatable: ^2.0.7
   crypto: ^3.0.6
-  printing: ^5.14.2
-  pdf: ^3.11.3
-
+  qr_flutter: ^4.1.0
+  print_bluetooth_thermal: ^1.2.2
+  esc_pos_utils_plus: ^2.0.4
+  image: ^4.9.1
+  permission_handler: ^12.0.3
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -34,6 +36,28 @@ dev_dependencies:
   drift_dev: ^2.25.1
   build_runner: ^2.4.15
   mocktail: ^1.0.4
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.6
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/brand/cboy-receipt-logo.png
+    - assets/brand/cboy-logo.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/brand/cboy-app-icon.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/brand/cboy-app-icon.png
+  remove_alpha_ios: true
+
+flutter_native_splash:
+  color: "#1A1F26"
+  image: assets/brand/cboy-logo.png
+  android_12:
+    color: "#1A1F26"
+    image: assets/brand/cboy-logo.png
+  ios: true
+  android: true

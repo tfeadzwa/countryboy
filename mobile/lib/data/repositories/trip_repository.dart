@@ -42,32 +42,40 @@ class TripRepository {
   final SyncService _sync;
 
   Future<TripModel?> getActiveTrip() async {
-    final agent = await _storage.getAgentProfile();
-    if (agent == null) return null;
+    try {
+      final agent = await _storage.getAgentProfile();
+      if (agent == null) return null;
 
-    final local = await _db.getActiveTrip(agent['id'] as String);
-    if (local != null) {
-      final stats = await _loadTripStats(local.id);
-      return _mapLocalTrip(local).copyWith(
-        ticketsCount: stats.count,
-        totalRevenue: stats.revenue,
-      );
-    }
+      final agentId = agent['id']?.toString();
+      if (agentId == null || agentId.isEmpty) return null;
 
-    if (await _connectivity.checkReachability()) {
-      try {
-        final remote = await _api.getActiveTrip();
-        if (remote == null) return null;
-        await _saveRemoteTripToLocal(remote);
-        return _mapRemoteTrip(remote);
-      } catch (_) {}
+      final local = await _db.getActiveTrip(agentId);
+      if (local != null) {
+        final stats = await _loadTripStats(local.id);
+        return _mapLocalTrip(local).copyWith(
+          ticketsCount: stats.count,
+          totalRevenue: stats.revenue,
+        );
+      }
+
+      if (await _connectivity.checkReachability() &&
+          await _storage.hasOnlineAuth()) {
+        try {
+          final remote = await _api.getActiveTrip();
+          if (remote == null) return null;
+          await _saveRemoteTripToLocal(remote);
+          return _mapRemoteTrip(remote);
+        } catch (_) {}
+      }
+      return null;
+    } catch (_) {
+      return null;
     }
-    return null;
   }
 
   /// Pulls the server's active trip into local storage after sign-in.
   Future<void> syncActiveTripFromServer() async {
-    if (!await _connectivity.checkReachability()) return;
+    if (!await _connectivity.checkReachability() || !await _storage.hasOnlineAuth()) return;
     try {
       final remote = await _api.getActiveTrip();
       if (remote != null) {
@@ -114,7 +122,8 @@ class TripRepository {
       throw ApiError(message: 'You already have an active trip. End it first.');
     }
 
-    final offline = !(await _connectivity.checkReachability());
+    final offline = !(await _connectivity.checkReachability()) ||
+        !(await _storage.hasOnlineAuth());
 
     if (!offline) {
       final serverActive = await _fetchServerActiveTrip();
@@ -302,7 +311,7 @@ class TripRepository {
     var totalTickets = localTicketCount;
     var totalRevenue = localRevenue;
 
-    if (await _connectivity.checkReachability()) {
+    if (await _connectivity.checkReachability() && await _storage.hasOnlineAuth()) {
       try {
         final response = await _api.endTrip(tripId);
         final result = response['trip'] as Map<String, dynamic>;
@@ -320,7 +329,7 @@ class TripRepository {
     }
 
     final routeLabel = trip.routeOrigin != null && trip.routeDestination != null
-        ? '${trip.routeOrigin} → ${trip.routeDestination}'
+        ? '${trip.routeOrigin} -> ${trip.routeDestination}'
         : 'Route';
 
     return TripEndSummary(
@@ -398,7 +407,7 @@ class TripRepository {
         fleetNumber: t.fleetNumber,
         routeOrigin: t.routeOrigin,
         routeDestination: t.routeDestination,
-        syncStatus: t.syncStatus,
+        syncStatus: t.syncStatus.isEmpty ? 'pending' : t.syncStatus,
       );
 
   TripModel _mapRemoteTrip(Map<String, dynamic> json) {
