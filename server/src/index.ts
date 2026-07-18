@@ -30,6 +30,12 @@ import notificationRoutes from "./routes/notification";
 dotenv.config();
 const app = express();
 const port = Number(process.env.PORT || 3000);
+const isProduction = process.env.NODE_ENV === "production";
+
+// Required when behind Nginx so express-rate-limit can use X-Forwarded-For
+if (isProduction || process.env.TRUST_PROXY === "1") {
+  app.set("trust proxy", 1);
+}
 
 function getLocalNetworkAddresses(): string[] {
   const addresses = new Set<string>();
@@ -56,8 +62,6 @@ const allowedOrigins = (process.env.CORS_ORIGINS || "")
   .split(",")
   .map((o) => o.trim())
   .filter((o) => o);
-
-const isProduction = process.env.NODE_ENV === "production";
 
 app.use(
   cors({
