@@ -6,8 +6,9 @@ class TicketService {
    * Get all tickets  (filtered by depot scope automatically on backend)
    */
   async getAll(): Promise<Ticket[]> {
-    const response = await apiClient.get<Ticket[]>('/tickets');
-    return response.data;
+    const response = await apiClient.get<Ticket[] | { items?: Ticket[] }>('/tickets');
+    const data = response.data;
+    return Array.isArray(data) ? data : (data?.items ?? []);
   }
 
   /**

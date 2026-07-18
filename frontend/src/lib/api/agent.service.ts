@@ -1,7 +1,7 @@
 import apiClient from './axios';
 import { Agent } from '@/types';
 import type { PaginatedResult } from '@/types/pagination';
-import { DEFAULT_PAGE_SIZE } from '@/types/pagination';
+import { DEFAULT_PAGE_SIZE, normalizePaginatedResult } from '@/types/pagination';
 
 export interface CreateAgentRequest {
   full_name: string;
@@ -26,10 +26,10 @@ class AgentService {
   }
 
   async listPaginated(page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<PaginatedResult<Agent>> {
-    const response = await apiClient.get<PaginatedResult<Agent>>('/agents', {
+    const response = await apiClient.get<PaginatedResult<Agent> | Agent[]>('/agents', {
       params: { page, limit: pageSize },
     });
-    return response.data;
+    return normalizePaginatedResult(response.data, page, pageSize);
   }
 
   /**

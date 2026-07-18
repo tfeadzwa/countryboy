@@ -27,7 +27,7 @@ const TopNavbar = ({ onMenuClick }: { onMenuClick?: () => void }) => {
   const loadAttentionCount = useCallback(async () => {
     try {
       const data = await notificationService.getAll();
-      setAttentionCount(data.summary.attention_count);
+      setAttentionCount(data?.summary?.attention_count ?? 0);
     } catch {
       // Keep badge quiet on failures — page will surface errors
     }

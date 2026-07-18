@@ -89,8 +89,16 @@ const Notifications = () => {
     setError(null);
     try {
       const data = await notificationService.getAll();
-      setNotifications(data.notifications);
-      setSummary(data.summary);
+      setNotifications(Array.isArray(data?.notifications) ? data.notifications : []);
+      setSummary({
+        total: data?.summary?.total ?? 0,
+        urgent: data?.summary?.urgent ?? 0,
+        warning: data?.summary?.warning ?? 0,
+        monthly: data?.summary?.monthly ?? 0,
+        weekly: data?.summary?.weekly ?? 0,
+        daily: data?.summary?.daily ?? 0,
+        attention_count: data?.summary?.attention_count ?? 0,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load notifications");
     } finally {

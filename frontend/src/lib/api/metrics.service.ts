@@ -76,7 +76,7 @@ class MetricsService {
     if (to) params.to = to;
     
     const { data } = await axios.get(`${this.baseUrl}/revenue-timeseries`, { params });
-    return data;
+    return Array.isArray(data) ? data : [];
   }
 
   async getRevenueByCurrency(from?: string, to?: string): Promise<CurrencyBreakdown> {
@@ -85,7 +85,7 @@ class MetricsService {
     if (to) params.to = to;
     
     const { data } = await axios.get(`${this.baseUrl}/revenue-by-currency`, { params });
-    return data;
+    return data ?? { usd: 0, zwl: 0, zar: 0 };
   }
 
   async getAgentPerformance(from?: string, to?: string, limit?: number): Promise<AgentMetric[]> {
@@ -95,7 +95,7 @@ class MetricsService {
     if (limit) params.limit = limit.toString();
     
     const { data } = await axios.get(`${this.baseUrl}/agent-performance`, { params });
-    return data;
+    return Array.isArray(data) ? data : [];
   }
 
   async getFleetUtilization(): Promise<FleetUtilization> {
@@ -110,7 +110,7 @@ class MetricsService {
     if (limit) params.limit = limit.toString();
     
     const { data } = await axios.get(`${this.baseUrl}/route-performance`, { params });
-    return data;
+    return Array.isArray(data) ? data : [];
   }
 
   async getVoidRate(from?: string, to?: string): Promise<VoidRateMetric> {

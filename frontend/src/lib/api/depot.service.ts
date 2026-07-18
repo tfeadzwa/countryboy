@@ -17,8 +17,9 @@ class DepotService {
    * Get all depots
    */
   async getAll(): Promise<Depot[]> {
-    const response = await apiClient.get<Depot[]>('/depots');
-    return response.data;
+    const response = await apiClient.get<Depot[] | DepotListResponse>('/depots');
+    const data = response.data;
+    return Array.isArray(data) ? data : (data?.depots ?? []);
   }
 
   /**

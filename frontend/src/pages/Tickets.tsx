@@ -86,7 +86,7 @@ const Tickets = () => {
 
       {error && (
         <div className="mb-6">
-          <ErrorAlert message={error} onRetry={loadTickets} />
+          <ErrorAlert error={error} />
         </div>
       )}
 

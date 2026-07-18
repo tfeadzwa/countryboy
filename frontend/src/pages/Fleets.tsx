@@ -114,9 +114,9 @@ const Fleets = () => {
     setError(null);
     try {
       const data = await fleetService.listPaginated(page, DEFAULT_PAGE_SIZE);
-      setFleets(data.items);
-      setTotal(data.total);
-      setTotalPages(data.totalPages);
+      setFleets(data.items ?? []);
+      setTotal(data.total ?? 0);
+      setTotalPages(data.totalPages ?? 1);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to load fleets";
       setError(errorMessage);

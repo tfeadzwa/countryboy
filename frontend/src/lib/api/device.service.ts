@@ -23,8 +23,9 @@ class DeviceService {
    * Get all devices (filtered by depot scope automatically on backend)
    */
   async getAll(): Promise<Device[]> {
-    const response = await apiClient.get<Device[]>('/devices');
-    return response.data;
+    const response = await apiClient.get<Device[] | { items?: Device[] }>('/devices');
+    const data = response.data;
+    return Array.isArray(data) ? data : (data?.items ?? []);
   }
 
   /**

@@ -105,13 +105,13 @@ const Dashboard = () => {
       ]);
 
       setOverview(overviewData);
-      setTimeseries(timeseriesData);
-      setCurrency(currencyData);
-      setRecentTickets(ticketsData.slice(0, 5));
-      setAgentPerformance(agentsData);
-      setFleetUtilization(fleetData);
-      setRoutePerformance(routesData);
-      setVoidRate(voidData);
+      setTimeseries(Array.isArray(timeseriesData) ? timeseriesData : []);
+      setCurrency(currencyData ?? null);
+      setRecentTickets(Array.isArray(ticketsData) ? ticketsData.slice(0, 5) : []);
+      setAgentPerformance(Array.isArray(agentsData) ? agentsData : []);
+      setFleetUtilization(fleetData ?? null);
+      setRoutePerformance(Array.isArray(routesData) ? routesData : []);
+      setVoidRate(voidData ?? null);
       setLastUpdated(new Date());
     } catch (err: any) {
       setError(err?.message || "Failed to load dashboard data");

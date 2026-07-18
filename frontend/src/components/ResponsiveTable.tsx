@@ -46,11 +46,12 @@ export function ResponsiveTable<T>({
   keyExtractor,
 }: ResponsiveTableProps<T>) {
   const isMobile = useIsMobile();
+  const rows = Array.isArray(data) ? data : [];
 
   if (isMobile) {
     return (
       <div className="space-y-3">
-        {data.map((item, i) => (
+        {rows.map((item, i) => (
           <motion.div
             key={keyExtractor(item)}
             custom={i}
@@ -65,7 +66,7 @@ export function ResponsiveTable<T>({
             </Card>
           </motion.div>
         ))}
-        {data.length === 0 && <EmptyState />}
+        {rows.length === 0 && <EmptyState />}
       </div>
     );
   }
@@ -78,7 +79,7 @@ export function ResponsiveTable<T>({
     >
       <Card className="shadow-sm border-border/60 overflow-hidden">
         <CardContent className="p-0">
-          {data.length === 0 ? (
+          {rows.length === 0 ? (
             <EmptyState />
           ) : (
             <Table>
@@ -92,7 +93,7 @@ export function ResponsiveTable<T>({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.map((item) => renderRow(item))}
+                {rows.map((item) => renderRow(item))}
               </TableBody>
             </Table>
           )}

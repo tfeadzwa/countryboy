@@ -66,9 +66,9 @@ const Agents = () => {
       setLoading(true);
       setError(null);
       const data = await agentService.listPaginated(page, DEFAULT_PAGE_SIZE);
-      setAgents(data.items);
-      setTotal(data.total);
-      setTotalPages(data.totalPages);
+      setAgents(data.items ?? []);
+      setTotal(data.total ?? 0);
+      setTotalPages(data.totalPages ?? 1);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to load agents";
       setError(errorMessage);

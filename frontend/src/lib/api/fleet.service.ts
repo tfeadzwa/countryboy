@@ -1,7 +1,7 @@
 import apiClient from './axios';
 import { Fleet } from '@/types';
 import type { PaginatedResult } from '@/types/pagination';
-import { DEFAULT_PAGE_SIZE } from '@/types/pagination';
+import { DEFAULT_PAGE_SIZE, normalizePaginatedResult } from '@/types/pagination';
 
 export interface FleetComplianceDates {
   licence_disc_expiry: string;
@@ -30,10 +30,10 @@ class FleetService {
   }
 
   async listPaginated(page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<PaginatedResult<Fleet>> {
-    const response = await apiClient.get<PaginatedResult<Fleet>>('/fleets', {
+    const response = await apiClient.get<PaginatedResult<Fleet> | Fleet[]>('/fleets', {
       params: { page, limit: pageSize },
     });
-    return response.data;
+    return normalizePaginatedResult(response.data, page, pageSize);
   }
 
   async getOne(id: string): Promise<Fleet> {

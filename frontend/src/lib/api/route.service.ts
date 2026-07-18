@@ -1,7 +1,7 @@
 import apiClient from './axios';
 import { RouteInfo } from '@/types';
 import type { PaginatedResult } from '@/types/pagination';
-import { DEFAULT_PAGE_SIZE } from '@/types/pagination';
+import { DEFAULT_PAGE_SIZE, normalizePaginatedResult } from '@/types/pagination';
 
 export interface CreateRouteRequest {
   origin: string;
@@ -27,15 +27,16 @@ export interface UpdateRouteRequest {
 
 class RouteService {
   async getAll(): Promise<RouteInfo[]> {
-    const response = await apiClient.get<RouteInfo[]>('/routes');
-    return response.data;
+    const response = await apiClient.get<RouteInfo[] | PaginatedResult<RouteInfo>>('/routes');
+    const data = response.data;
+    return Array.isArray(data) ? data : (data?.items ?? []);
   }
 
   async listPaginated(page = 1, pageSize = DEFAULT_PAGE_SIZE): Promise<PaginatedResult<RouteInfo>> {
-    const response = await apiClient.get<PaginatedResult<RouteInfo>>('/routes', {
+    const response = await apiClient.get<PaginatedResult<RouteInfo> | RouteInfo[]>('/routes', {
       params: { page, limit: pageSize },
     });
-    return response.data;
+    return normalizePaginatedResult(response.data, page, pageSize);
   }
 
   async getOne(id: string): Promise<RouteInfo> {
