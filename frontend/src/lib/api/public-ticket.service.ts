@@ -50,7 +50,18 @@ class PublicTicketService {
       const response = await publicClient.get<TicketVerificationResult>(
         `/public/tickets/${encodeURIComponent(ticketId)}`,
       );
-      return response.data;
+      const data = response.data;
+      if (
+        !data ||
+        typeof data !== 'object' ||
+        !('ticket' in data) ||
+        !(data as TicketVerificationResult).ticket?.display_number
+      ) {
+        throw new Error(
+          'Verification service returned an unexpected response. Check that /api is proxied to the backend.',
+        );
+      }
+      return data;
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const message =

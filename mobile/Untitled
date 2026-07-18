@@ -1,0 +1,3 @@
+flutter run \
+  --dart-define=API_BASE_URL=https://api.countryboy.co.zw/api \
+  --dart-define=PUBLIC_WEB_URL=https://countryboy.co.zw

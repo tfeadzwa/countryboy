@@ -65,9 +65,10 @@ class ConnectivityService {
     if (_syncing) return _current == ConnectivityStatus.online;
 
     try {
+      final origin = _apiOrigin(Env.apiBaseUrl);
       final healthDio = Dio(
         BaseOptions(
-          baseUrl: Env.apiBaseUrl.replaceAll('/api', ''),
+          baseUrl: origin,
           connectTimeout: const Duration(seconds: 5),
           receiveTimeout: const Duration(seconds: 5),
         ),
@@ -85,6 +86,20 @@ class ConnectivityService {
       );
       return false;
     }
+  }
+
+  /// Origin only (scheme + host + port). Avoid [String.replaceAll]('/api') —
+  /// that corrupts hosts like `https://api.countryboy.co.zw` (`://api` matches).
+  static String _apiOrigin(String apiBaseUrl) {
+    final uri = Uri.tryParse(apiBaseUrl.trim());
+    if (uri == null || uri.host.isEmpty) {
+      return apiBaseUrl.trim();
+    }
+    return Uri(
+      scheme: uri.scheme.isEmpty ? 'https' : uri.scheme,
+      host: uri.host,
+      port: uri.hasPort ? uri.port : null,
+    ).toString();
   }
 
   void setSyncing(bool syncing) {

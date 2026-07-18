@@ -142,7 +142,7 @@ const VerifyTicket = () => {
             </div>
           )}
 
-          {!loading && data && (
+          {!loading && data?.ticket && (
             <div className="overflow-hidden rounded-2xl border border-border/70 bg-white shadow-[0_20px_50px_-28px_rgba(24,28,34,0.45)]">
               <div
                 className={`px-6 py-5 text-white ${
@@ -170,7 +170,8 @@ const VerifyTicket = () => {
                         : "This ticket has been voided"}
                     </h1>
                     <p className="mt-1 text-sm text-white/85">
-                      {data.ticket.display_number} · {data.ticket.category_label}
+                      {data.ticket?.display_number ?? "—"} ·{" "}
+                      {data.ticket?.category_label ?? "Ticket"}
                     </p>
                   </div>
                 </div>
@@ -229,7 +230,7 @@ const VerifyTicket = () => {
                   <Detail
                     icon={Bus}
                     label="Bus"
-                    value={data.trip.fleet_number ?? "—"}
+                    value={data.trip?.fleet_number ?? "—"}
                   />
                   <Detail
                     icon={Calendar}
@@ -239,12 +240,12 @@ const VerifyTicket = () => {
                   <Detail
                     icon={MapPin}
                     label="Depot"
-                    value={data.depot.name}
+                    value={data.depot?.name ?? "—"}
                   />
                   <Detail
                     icon={User}
                     label="Conductor"
-                    value={data.conductor.name}
+                    value={data.conductor?.name ?? "—"}
                   />
                   {data.ticket.passenger_phone && (
                     <Detail
