@@ -45,6 +45,10 @@ const Devices = () => {
     try {
       const data = await deviceService.getAll();
       setDevices(data);
+      setSelectedDevice((current) => {
+        if (!current) return null;
+        return data.find((d) => d.id === current.id) ?? null;
+      });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load devices';
       setError(errorMessage);

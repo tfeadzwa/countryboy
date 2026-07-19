@@ -53,7 +53,7 @@ class _PairingScreenState extends ConsumerState<PairingScreen> {
               e.message.isNotEmpty
                   ? e.message
                   : 'This pairing code has already been used on another device. '
-                      'Ask your depot admin to unpair the device and generate a new code.',
+                      'Ask your depot admin to unpair the device or regenerate a new pairing code.',
             ),
             actions: [
               TextButton(

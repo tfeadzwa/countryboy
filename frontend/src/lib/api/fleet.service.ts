@@ -4,11 +4,11 @@ import type { PaginatedResult } from '@/types/pagination';
 import { DEFAULT_PAGE_SIZE, normalizePaginatedResult } from '@/types/pagination';
 
 export interface FleetComplianceDates {
-  licence_disc_expiry: string;
-  cof_expiry: string;
-  passenger_liability_expiry: string;
-  route_authority_expiry: string;
-  ppa_expiry: string;
+  licence_disc_expiry?: string | null;
+  cof_expiry?: string | null;
+  passenger_liability_expiry?: string | null;
+  route_authority_expiry?: string | null;
+  ppa_expiry?: string | null;
 }
 
 export interface CreateFleetRequest extends FleetComplianceDates {

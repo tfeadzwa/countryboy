@@ -171,6 +171,18 @@ export const listDeviceSessions = async (
   return sessions.map(mapSession);
 };
 
+/**
+ * Close any open sessions still hanging on an unpaired device (data heal).
+ * Unpair should already do this; this covers stale rows from older data / manual edits.
+ */
+export const ensureNoOpenSessionsIfUnpaired = async (
+  deviceId: string,
+  paired: boolean,
+) => {
+  if (paired) return;
+  await closeOpenSessionsForDevice(deviceId, 'unpair');
+};
+
 export const listAgentSessions = async (agentId: string, limit = 20) => {
   const sessions = await prisma.tblAgentDeviceSessions.findMany({
     where: { agent_id: agentId },

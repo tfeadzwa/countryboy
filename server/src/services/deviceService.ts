@@ -56,6 +56,7 @@ export const pairDevice = async (pairingCode: string, deviceInfo?: { device_name
       paired: true,
       paired_at: new Date(),
       last_seen: new Date(),
+      pairing_code: null,
       device_name: deviceInfo?.device_name,
       device_model: deviceInfo?.device_model,
       app_version: deviceInfo?.app_version,
@@ -122,5 +123,37 @@ export const unpairDevice = async (id: string) => {
     serial_number: updated.serial_number,
     pairing_code: newPairingCode,
     message: 'Device unpaired successfully. Use the new pairing code to re-pair.',
+  };
+};
+
+/**
+ * Regenerate pairing code for an unpaired device without a full unpair reset.
+ * Invalidates the previous code so a forgotten/leaked code can be replaced safely.
+ */
+export const regeneratePairingCode = async (id: string) => {
+  const device = await prisma.tblDevices.findUnique({ where: { id } });
+
+  if (!device) {
+    throw new Error('Device not found');
+  }
+
+  if (device.paired) {
+    throw new Error(
+      'Device is already paired. Unpair it first to generate a new pairing code.',
+    );
+  }
+
+  const newPairingCode = generatePairingCode();
+
+  const updated = await prisma.tblDevices.update({
+    where: { id },
+    data: { pairing_code: newPairingCode },
+  });
+
+  return {
+    id: updated.id,
+    serial_number: updated.serial_number,
+    pairing_code: newPairingCode,
+    message: 'New pairing code generated. The previous code no longer works.',
   };
 };

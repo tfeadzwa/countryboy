@@ -19,6 +19,7 @@ import {
   User,
   History,
   Clock,
+  RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -54,15 +55,29 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
   const [showUnpairConfirm, setShowUnpairConfirm] = useState(false);
+  const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
   const [unpairLoading, setUnpairLoading] = useState(false);
-  const [newPairingCode, setNewPairingCode] = useState<string | null>(null);
+  const [regenerateLoading, setRegenerateLoading] = useState(false);
+  const [successPairingCode, setSuccessPairingCode] = useState<string | null>(null);
+  const [successTitle, setSuccessTitle] = useState("Pairing code ready");
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [sessions, setSessions] = useState<DeviceSession[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
 
   const canManage = user ? canManageDevices(user.roles || []) : false;
+  const depotIdForMutations =
+    user && isSuperAdmin(user.roles || []) ? device?.depot_id : undefined;
 
   useEffect(() => {
-    if (!open || !device?.id || newPairingCode || showUnpairConfirm) {
+    if (!open || !device) {
+      setPairingCode(null);
+      return;
+    }
+    setPairingCode(!device.paired && device.pairing_code ? device.pairing_code : null);
+  }, [open, device?.id, device?.paired, device?.pairing_code]);
+
+  useEffect(() => {
+    if (!open || !device?.id || successPairingCode || showUnpairConfirm || showRegenerateConfirm) {
       return;
     }
     let cancelled = false;
@@ -81,7 +96,7 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
     return () => {
       cancelled = true;
     };
-  }, [open, device?.id, newPairingCode, showUnpairConfirm]);
+  }, [open, device?.id, successPairingCode, showUnpairConfirm, showRegenerateConfirm]);
 
   if (!device) return null;
 
@@ -95,17 +110,15 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
 
     setUnpairLoading(true);
     try {
-      const isSuperAdminUser = user ? isSuperAdmin(user.roles || []) : false;
-      const result = await deviceService.unpair(
-        device.id,
-        isSuperAdminUser ? device.depot_id : undefined,
-      );
-      setNewPairingCode(result.pairing_code);
+      const result = await deviceService.unpair(device.id, depotIdForMutations);
+      setSuccessPairingCode(result.pairing_code);
+      setSuccessTitle("Device Unpaired Successfully!");
+      setPairingCode(result.pairing_code);
       setShowUnpairConfirm(false);
 
       toast({
         title: "Device Unpaired",
-        description: "New pairing code generated successfully.",
+        description: "New pairing code generated. It stays visible while the device is unpaired.",
       });
 
       onUpdated?.();
@@ -121,15 +134,44 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
     }
   };
 
+  const handleRegenerate = async () => {
+    if (!device) return;
+
+    setRegenerateLoading(true);
+    try {
+      const result = await deviceService.regeneratePairingCode(device.id, depotIdForMutations);
+      setPairingCode(result.pairing_code);
+      setShowRegenerateConfirm(false);
+
+      toast({
+        title: "Pairing code regenerated",
+        description: "The previous code no longer works. Share the new code with the agent.",
+      });
+
+      onUpdated?.();
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to regenerate pairing code";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setRegenerateLoading(false);
+    }
+  };
+
   const handleClose = () => {
     setShowUnpairConfirm(false);
-    setNewPairingCode(null);
+    setShowRegenerateConfirm(false);
+    setSuccessPairingCode(null);
     setSessions([]);
     setActiveTab("overview");
     onOpenChange(false);
   };
 
-  if (newPairingCode) {
+  if (successPairingCode) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md">
@@ -137,25 +179,25 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
             <div className="mx-auto mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
               <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-500" />
             </div>
-            <DialogTitle className="text-center text-lg">Device Unpaired Successfully!</DialogTitle>
+            <DialogTitle className="text-center text-lg">{successTitle}</DialogTitle>
             <DialogDescription className="text-center text-sm">
-              New pairing code generated. Save it securely.
+              Share this code with the agent. You can also view it anytime from device details while unpaired.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-2">
-            <Alert className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-900/20 py-2">
-              <Key className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-              <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm">
-                <strong>Important:</strong> This pairing code cannot be retrieved later. The agent must use it to pair the device again.
+            <Alert className="border-primary/20 bg-primary/5 py-2">
+              <Key className="h-4 w-4 text-primary" />
+              <AlertDescription className="text-sm">
+                This code stays available on the device details page until the device is paired.
               </AlertDescription>
             </Alert>
 
             <div className="space-y-1.5">
-              <Label>New Pairing Code</Label>
+              <Label>Pairing Code</Label>
               <div className="flex gap-2">
                 <Input
-                  value={newPairingCode}
+                  value={successPairingCode}
                   readOnly
                   className="font-mono text-lg text-center tracking-wider"
                 />
@@ -163,7 +205,7 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
                   type="button"
                   size="icon"
                   variant="outline"
-                  onClick={() => copyToClipboard(newPairingCode, "Pairing code")}
+                  onClick={() => copyToClipboard(successPairingCode, "Pairing code")}
                   className="shrink-0"
                 >
                   <Copy className="h-4 w-4" />
@@ -175,6 +217,71 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
           <DialogFooter>
             <Button onClick={handleClose} className="w-full">
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (showRegenerateConfirm) {
+    return (
+      <Dialog open={open} onOpenChange={() => !regenerateLoading && setShowRegenerateConfirm(false)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="mx-auto mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/20">
+              <RefreshCw className="h-5 w-5 text-amber-600 dark:text-amber-500" />
+            </div>
+            <DialogTitle className="text-center text-lg">Regenerate pairing code?</DialogTitle>
+            <DialogDescription className="text-center text-sm">
+              The current code will stop working immediately.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 py-2">
+            <Alert className="py-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                Use this if the code was lost, forgotten, or shared with the wrong person. The device stays unpaired.
+              </AlertDescription>
+            </Alert>
+
+            <div className="rounded-lg border border-border bg-muted/30 p-3">
+              <p className="text-sm font-mono text-muted-foreground">Serial: {device.serial_number}</p>
+              {pairingCode && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Current code: <span className="font-mono font-medium">{pairingCode}</span>
+                </p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowRegenerateConfirm(false)}
+              disabled={regenerateLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleRegenerate}
+              disabled={regenerateLoading}
+              className="gap-2"
+            >
+              {regenerateLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Regenerating...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4" />
+                  Regenerate code
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -203,7 +310,8 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
                 <ul className="list-disc list-inside space-y-1 text-sm">
                   <li>The device will be reset to unpaired status</li>
                   <li>A new pairing code will be generated</li>
-                  <li>The agent must pair the device again using the new code</li>
+                  <li>Active conductor sessions on this device will end</li>
+                  <li>The agent must pair again with the new code</li>
                 </ul>
               </AlertDescription>
             </Alert>
@@ -248,7 +356,7 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
   const infoRows: InfoRow[] = [
     { label: "Serial Number", value: device.serial_number, icon: Smartphone, mono: true, copyable: true },
     { label: "Depot", value: device.depot_name || "N/A", icon: MapPin },
-    { label: "Status", value: device.paired ? "Paired" : "Unpaired", icon: Activity, badge: true },
+    { label: "Status", value: device.paired ? "Paired" : "Awaiting pairing", icon: Activity, badge: true },
     ...(device.paired && device.device_name
       ? [{ label: "Device Name", value: device.device_name, icon: Smartphone }]
       : []),
@@ -278,7 +386,10 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
       : []),
   ];
 
-  const activeSessionCount = sessions.filter((s) => !s.ended_at).length;
+  const activeSessionCount = device.paired
+    ? sessions.filter((s) => !s.ended_at).length
+    : 0;
+  const showPairingPanel = !device.paired;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -312,7 +423,7 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
               <TabsTrigger value="overview" className="text-sm">
                 Overview
               </TabsTrigger>
-              <TabsTrigger value="sessions" className="text-sm gap-1.5" disabled={!device.paired}>
+              <TabsTrigger value="sessions" className="text-sm gap-1.5">
                 <History className="h-3.5 w-3.5" />
                 Conductor Sessions
                 {!sessionsLoading && sessions.length > 0 && (
@@ -325,6 +436,61 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
           </div>
 
           <TabsContent value="overview" className="mt-0 px-6 py-4 space-y-4 max-h-[min(60vh,420px)] overflow-y-auto">
+            {showPairingPanel && (
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Key className="h-4 w-4 text-primary" />
+                      <p className="text-sm font-semibold">Pairing code</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Visible while this device is unpaired. Share it with the agent to activate the app.
+                    </p>
+                  </div>
+                </div>
+
+                {pairingCode ? (
+                  <div className="flex gap-2">
+                    <Input
+                      value={pairingCode}
+                      readOnly
+                      className="font-mono text-lg text-center tracking-wider bg-background"
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      onClick={() => copyToClipboard(pairingCode, "Pairing code")}
+                      className="shrink-0"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Alert className="py-2.5 bg-background">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="text-sm">
+                      No pairing code on file. Regenerate one to continue setup.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {canManage && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setShowRegenerateConfirm(true)}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Regenerate code
+                  </Button>
+                )}
+              </div>
+            )}
+
             {device.active_session?.agent && (
               <div className="rounded-lg border border-success/25 bg-success/5 p-3">
                 <div className="flex items-center gap-2 mb-1">
@@ -389,15 +555,6 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
                 );
               })}
             </div>
-
-            {!device.paired && (
-              <Alert className="py-2.5">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-sm">
-                  This device has not been paired yet. The agent needs to use the pairing code to activate the device.
-                </AlertDescription>
-              </Alert>
-            )}
           </TabsContent>
 
           <TabsContent
@@ -416,7 +573,9 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
                 </div>
                 <p className="text-sm font-medium">No sessions yet</p>
                 <p className="text-xs text-muted-foreground max-w-[240px]">
-                  Conductor sign-ins on this device will appear here.
+                  {device.paired
+                    ? 'Conductor sign-ins on this device will appear here.'
+                    : 'No conductor sessions recorded for this device yet. Past sessions remain visible after unpairing.'}
                 </p>
               </div>
             ) : (
@@ -428,7 +587,16 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
                 )}
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 -mr-1 max-h-[min(50vh,360px)] space-y-2">
                   {sessions.map((session) => {
-                  const isActive = !session.ended_at;
+                  // Unpaired devices cannot have a live conductor session.
+                  const isActive = Boolean(device.paired && !session.ended_at);
+                  const loginLabel =
+                    session.login_type === 'offline'
+                      ? 'Offline login'
+                      : session.login_type === 'online'
+                        ? 'Online login'
+                        : session.login_type
+                          ? `${session.login_type} login`
+                          : null;
                   return (
                     <div
                       key={session.id}
@@ -464,14 +632,14 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated }: DeviceInfoD
                           {new Date(session.started_at).toLocaleString()}
                           {session.ended_at
                             ? ` → ${new Date(session.ended_at).toLocaleString()}`
-                            : " → now"}
+                            : isActive
+                              ? " → now"
+                              : ""}
                         </span>
                         {session.end_reason && (
                           <span className="capitalize">· {formatSessionReason(session.end_reason)}</span>
                         )}
-                        {session.login_type && (
-                          <span className="capitalize">· {session.login_type}</span>
-                        )}
+                        {loginLabel && <span>· {loginLabel}</span>}
                       </div>
                     </div>
                   );

@@ -2,7 +2,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { Request, Response } from 'express';
 import * as deviceService from '../services/deviceService';
 import { formatPrismaError } from '../utils/prismaErrors';
-import { listDeviceSessions } from '../services/agentSessionService';
+import { listDeviceSessions, ensureNoOpenSessionsIfUnpaired } from '../services/agentSessionService';
 
 export const list = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -89,7 +89,7 @@ export const pair = async (req: Request, res: Response) => {
     if (err.message === 'Device already paired') {
       return res.status(409).json({
         error:
-          'This pairing code has already been used. Ask your depot admin to unpair the device and generate a new code.',
+          'This pairing code has already been used. Ask your depot admin to unpair the device or regenerate a new pairing code.',
       });
     }
     res.status(500).json({ error: 'Failed to pair device', details: err });
@@ -114,6 +114,26 @@ export const unpair = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
+/**
+ * Regenerate pairing code for an unpaired device (admin only).
+ * Does not wipe device metadata beyond rotating the code.
+ */
+export const regeneratePairingCode = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const id = req.params.id;
+    const result = await deviceService.regeneratePairingCode(id);
+    res.json(result);
+  } catch (err: any) {
+    if (err.message === 'Device not found') {
+      return res.status(404).json({ error: 'Device not found' });
+    }
+    if (err.message?.includes('already paired')) {
+      return res.status(409).json({ error: err.message });
+    }
+    res.status(500).json({ error: 'Failed to regenerate pairing code', details: err });
+  }
+};
+
 export const sessions = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const id = req.params.id;
@@ -125,6 +145,8 @@ export const sessions = async (req: AuthenticatedRequest, res: Response) => {
     if (req.depotId && device.depot_id !== req.depotId) {
       return res.status(403).json({ error: 'Device not in your depot' });
     }
+    // Unpaired devices must not keep "active" sessions; heal any stale open rows.
+    await ensureNoOpenSessionsIfUnpaired(id, device.paired);
     const sessions = await listDeviceSessions(id, limit);
     res.json({ device_id: id, sessions });
   } catch (err) {

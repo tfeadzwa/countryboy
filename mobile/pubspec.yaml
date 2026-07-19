@@ -44,6 +44,7 @@ flutter:
   assets:
     - assets/brand/cboy-receipt-logo.png
     - assets/brand/cboy-logo.png
+    - assets/brand/cboy-logo-light.png
 
 flutter_launcher_icons:
   android: true
@@ -54,10 +55,12 @@ flutter_launcher_icons:
   remove_alpha_ios: true
 
 flutter_native_splash:
-  color: "#1A1F26"
-  image: assets/brand/cboy-logo.png
+  color: "#F5F1EB"
+  image: assets/brand/cboy-logo-light.png
   android_12:
-    color: "#1A1F26"
-    image: assets/brand/cboy-logo.png
+    color: "#F5F1EB"
+    image: assets/brand/cboy-logo-light.png
+    icon_background_color: "#F5F1EB"
   ios: true
   android: true
+  web: false

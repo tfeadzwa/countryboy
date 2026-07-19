@@ -18,6 +18,8 @@ export interface UnpairDeviceResponse {
   message: string;
 }
 
+export type RegeneratePairingCodeResponse = UnpairDeviceResponse;
+
 class DeviceService {
   /**
    * Get all devices (filtered by depot scope automatically on backend)
@@ -76,6 +78,22 @@ class DeviceService {
       headers: { 'x-depot-id': depotId }
     } : {};
     const response = await apiClient.post<UnpairDeviceResponse>(`/devices/${id}/unpair`, {}, config);
+    return response.data;
+  }
+
+  /**
+   * Regenerate pairing code for an unpaired device (without full unpair).
+   * Requires DEPOT_ADMIN role
+   */
+  async regeneratePairingCode(id: string, depotId?: string): Promise<RegeneratePairingCodeResponse> {
+    const config = depotId ? {
+      headers: { 'x-depot-id': depotId }
+    } : {};
+    const response = await apiClient.post<RegeneratePairingCodeResponse>(
+      `/devices/${id}/regenerate-pairing-code`,
+      {},
+      config,
+    );
     return response.data;
   }
 

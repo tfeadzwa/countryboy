@@ -101,10 +101,8 @@ const EditFleetPage = () => {
 
   const validateCompliance = (): string | null => {
     for (const field of FLEET_COMPLIANCE_FIELDS) {
-      if (!compliance[field.key]?.trim()) {
-        return `${field.label} expiry date is required`;
-      }
-      if (Number.isNaN(new Date(compliance[field.key]).getTime())) {
+      const value = compliance[field.key]?.trim();
+      if (value && Number.isNaN(new Date(value).getTime())) {
         return `${field.label} has an invalid expiry date`;
       }
     }
@@ -139,11 +137,11 @@ const EditFleetPage = () => {
           number: fleetNumber.trim(),
           status,
           capacity: parseInt(capacity, 10) || 0,
-          licence_disc_expiry: compliance.licence_disc_expiry,
-          cof_expiry: compliance.cof_expiry,
-          passenger_liability_expiry: compliance.passenger_liability_expiry,
-          route_authority_expiry: compliance.route_authority_expiry,
-          ppa_expiry: compliance.ppa_expiry,
+          licence_disc_expiry: compliance.licence_disc_expiry || null,
+          cof_expiry: compliance.cof_expiry || null,
+          passenger_liability_expiry: compliance.passenger_liability_expiry || null,
+          route_authority_expiry: compliance.route_authority_expiry || null,
+          ppa_expiry: compliance.ppa_expiry || null,
         },
         isSuperAdminUser ? selectedDepotId : undefined
       );
@@ -322,8 +320,8 @@ const EditFleetPage = () => {
               <CardTitle className="text-base">Compliance documents</CardTitle>
             </div>
             <CardDescription>
-              All five expiry dates are required. Alerts escalate monthly → weekly → daily as expiry
-              approaches.
+              Update any document expiry date independently. Alerts escalate monthly → weekly →
+              daily as expiry approaches.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -336,7 +334,6 @@ const EditFleetPage = () => {
                   <div className="min-w-0">
                     <Label htmlFor={`edit-${field.key}`} className="text-sm font-medium">
                       {field.label}
-                      <span className="text-destructive ml-0.5">*</span>
                     </Label>
                     <p className="text-[11px] text-muted-foreground/80 mt-0.5">{field.hint}</p>
                   </div>
@@ -347,7 +344,6 @@ const EditFleetPage = () => {
                       type="date"
                       value={compliance[field.key]}
                       onChange={(e) => setComplianceField(field.key, e.target.value)}
-                      required
                       disabled={saving}
                       className="pl-8"
                     />

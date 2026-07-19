@@ -52,7 +52,9 @@ export const mapDeviceRecord = (
   },
   options?: { includeToken?: boolean },
 ) => {
-  const openSession = device.agentDeviceSessions?.find((s) => !s.ended_at);
+  const openSession = device.paired
+    ? device.agentDeviceSessions?.find((s) => !s.ended_at)
+    : undefined;
 
   return {
     id: device.id,

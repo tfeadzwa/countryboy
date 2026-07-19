@@ -65,9 +65,10 @@ export const deviceSchema = z.object({
 });
 
 const expiryDateField = z
-  .string({ required_error: 'Expiry date is required' })
-  .min(1, 'Expiry date is required')
-  .refine((val) => !Number.isNaN(new Date(val).getTime()), {
+  .string()
+  .optional()
+  .nullable()
+  .refine((val) => !val || !Number.isNaN(new Date(val).getTime()), {
     message: 'Invalid expiry date',
   });
 

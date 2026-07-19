@@ -17,5 +17,6 @@ router.get('/:id', authMiddleware, depotScopeMiddleware, deviceController.getOne
 router.get('/:id/sessions', authMiddleware, depotScopeMiddleware, deviceController.sessions);
 router.put('/:id', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), deviceController.update);
 router.post('/:id/unpair', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), deviceController.unpair);
+router.post('/:id/regenerate-pairing-code', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), deviceController.regeneratePairingCode);
 
 export default router;

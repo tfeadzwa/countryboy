@@ -204,15 +204,15 @@ const RegisterDeviceDialog = ({ open, onOpenChange, onSuccess }: RegisterDeviceD
               </div>
               <DialogTitle className="text-center text-lg">Device Registered Successfully!</DialogTitle>
               <DialogDescription className="text-center text-sm">
-                Save the pairing code below. It will only be displayed once.
+                Share this pairing code with the agent. You can view it again anytime from device details while unpaired.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3 py-2">
-              <Alert className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-900/20 py-2">
-                <Key className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-                <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm">
-                  <strong>Important:</strong> This pairing code cannot be retrieved later. The agent must use it to pair the device with the mobile app.
+              <Alert className="border-primary/20 bg-primary/5 py-2">
+                <Key className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-sm">
+                  If this code is lost, open the device details page to view it again or regenerate a new one.
                 </AlertDescription>
               </Alert>
 
@@ -240,9 +240,8 @@ const RegisterDeviceDialog = ({ open, onOpenChange, onSuccess }: RegisterDeviceD
                 <p className="font-medium mb-1 text-xs">Next Steps:</p>
                 <ol className="list-decimal list-inside space-y-0.5 text-xs">
                   <li>Share this pairing code with the agent</li>
-                  <li>Agent opens the mobile app</li>
-                  <li>Agent enters the pairing code when prompted</li>
-                  <li>Device will be activated and ready to use</li>
+                  <li>Agent opens the mobile app and enters the code</li>
+                  <li>If the code is lost, reopen this device to view or regenerate it</li>
                 </ol>
               </div>
             </div>
