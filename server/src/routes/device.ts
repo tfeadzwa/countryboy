@@ -4,7 +4,7 @@ import { depotScopeMiddleware } from '../middleware/depotScope';
 import { requireAnyRole } from '../middleware/rbac';
 import * as deviceController from '../controllers/deviceController';
 import { validate } from '../middleware/validate';
-import { deviceSchema } from '../validators/schemas';
+import { deviceSchema, updateDeviceSchema } from '../validators/schemas';
 
 const router = Router();
 
@@ -15,7 +15,8 @@ router.get('/', authMiddleware, depotScopeMiddleware, deviceController.list);
 router.post('/', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), validate(deviceSchema), deviceController.create);
 router.get('/:id', authMiddleware, depotScopeMiddleware, deviceController.getOne);
 router.get('/:id/sessions', authMiddleware, depotScopeMiddleware, deviceController.sessions);
-router.put('/:id', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), deviceController.update);
+router.put('/:id', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), validate(updateDeviceSchema), deviceController.update);
+router.delete('/:id', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), deviceController.remove);
 router.post('/:id/unpair', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), deviceController.unpair);
 router.post('/:id/regenerate-pairing-code', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), deviceController.regeneratePairingCode);
 

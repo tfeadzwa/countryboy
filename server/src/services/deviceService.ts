@@ -74,13 +74,98 @@ export const pairDevice = async (pairingCode: string, deviceInfo?: { device_name
   };
 };
 
-export const updateDevice = async (id: string, data: Partial<{ last_seen: Date; app_version: string; sync_errors: number; }>, updatedBy?: string) => {
+export const updateDevice = async (
+  id: string,
+  data: Partial<{
+    serial_number: string;
+    depot_id: string;
+    last_seen: Date;
+    app_version: string;
+    sync_errors: number;
+  }>,
+  updatedBy?: string,
+) => {
+  const existing = await prisma.tblDevices.findUnique({ where: { id } });
+  if (!existing) {
+    throw new Error('Device not found');
+  }
+
+  if (data.depot_id && data.depot_id !== existing.depot_id) {
+    if (existing.paired) {
+      throw new Error(
+        'Unpair the device before moving it to another depot.',
+      );
+    }
+    const depot = await prisma.tblDepots.findUnique({
+      where: { id: data.depot_id },
+    });
+    if (!depot) {
+      throw new Error('Depot not found');
+    }
+  }
+
   const device = await prisma.tblDevices.update({
     where: { id },
-    data: { ...data, updated_by: updatedBy },
+    data: {
+      ...(data.serial_number !== undefined
+        ? { serial_number: data.serial_number.trim() }
+        : {}),
+      ...(data.depot_id !== undefined ? { depot_id: data.depot_id } : {}),
+      ...(data.last_seen !== undefined ? { last_seen: data.last_seen } : {}),
+      ...(data.app_version !== undefined ? { app_version: data.app_version } : {}),
+      ...(data.sync_errors !== undefined ? { sync_errors: data.sync_errors } : {}),
+      updated_by: updatedBy,
+    },
     include: deviceInclude,
   });
   return mapDeviceRecord(device);
+};
+
+export const deleteDevice = async (id: string) => {
+  const device = await prisma.tblDevices.findUnique({
+    where: { id },
+    include: {
+      _count: {
+        select: {
+          tickets: true,
+          trips: true,
+          serialRanges: true,
+          voids: true,
+        },
+      },
+    },
+  });
+
+  if (!device) {
+    throw new Error('Device not found');
+  }
+
+  if (device.paired) {
+    throw new Error('Unpair the device before deleting it.');
+  }
+
+  const usage =
+    device._count.tickets +
+    device._count.trips +
+    device._count.serialRanges +
+    device._count.voids;
+
+  if (usage > 0) {
+    throw new Error(
+      'Cannot delete this device because it has ticket or trip history. Keep it unpaired instead.',
+    );
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.tblAgentDeviceSessions.deleteMany({ where: { device_id: id } });
+    await tx.tblDevices.delete({ where: { id } });
+  });
+
+  return {
+    id: device.id,
+    serial_number: device.serial_number,
+    message: 'Device deleted successfully.',
+  };
 };
 
 export const getDevice = async (id: string) => {

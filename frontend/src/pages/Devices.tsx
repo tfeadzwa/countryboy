@@ -86,6 +86,7 @@ const Devices = () => {
         onOpenChange={(open) => { if (!open) setSelectedDevice(null); }}
         device={selectedDevice}
         onUpdated={fetchDevices}
+        onDeleted={() => setSelectedDevice(null)}
       />
 
       {loading ? (

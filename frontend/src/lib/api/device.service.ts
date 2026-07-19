@@ -6,6 +6,8 @@ export interface CreateDeviceRequest {
 }
 
 export interface UpdateDeviceRequest {
+  serial_number?: string;
+  depot_id?: string;
   last_seen?: Date;
   app_version?: string;
   sync_errors?: number;
@@ -19,6 +21,12 @@ export interface UnpairDeviceResponse {
 }
 
 export type RegeneratePairingCodeResponse = UnpairDeviceResponse;
+
+export interface DeleteDeviceResponse {
+  id: string;
+  serial_number: string;
+  message: string;
+}
 
 class DeviceService {
   /**
@@ -53,11 +61,8 @@ class DeviceService {
   }
 
   /**
-   * Update an existing device
+   * Update an existing device (serial number and/or depot)
    * Requires DEPOT_ADMIN role
-   * @param id - Device ID
-   * @param data - Device data to update
-   * @param depotId - Required for SUPER_ADMIN to specify depot context
    */
   async update(id: string, data: UpdateDeviceRequest, depotId?: string): Promise<Device> {
     const config = depotId ? {
@@ -68,10 +73,19 @@ class DeviceService {
   }
 
   /**
+   * Delete an unpaired device with no ticket/trip history
+   */
+  async remove(id: string, depotId?: string): Promise<DeleteDeviceResponse> {
+    const config = depotId ? {
+      headers: { 'x-depot-id': depotId }
+    } : {};
+    const response = await apiClient.delete<DeleteDeviceResponse>(`/devices/${id}`, config);
+    return response.data;
+  }
+
+  /**
    * Unpair device - resets device to unpaired state with new pairing code
    * Requires DEPOT_ADMIN role
-   * @param id - Device ID
-   * @param depotId - Required for SUPER_ADMIN to specify depot context
    */
   async unpair(id: string, depotId?: string): Promise<UnpairDeviceResponse> {
     const config = depotId ? {

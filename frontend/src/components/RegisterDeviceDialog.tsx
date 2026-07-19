@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Smartphone, Loader2, AlertCircle, Copy, CheckCircle2, Key } from "lucide-react";
+import { Smartphone, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { deviceService } from "@/lib/api/device.service";
 import { depotService } from "@/lib/api/depot.service";
 import { useAuth } from "@/contexts/AuthContext";
 import { isSuperAdmin } from "@/lib/permissions";
+import PairingCodeDisplay from "@/components/PairingCodeDisplay";
 import type { Depot } from "@/types";
 
 interface RegisterDeviceDialogProps {
@@ -209,32 +210,11 @@ const RegisterDeviceDialog = ({ open, onOpenChange, onSuccess }: RegisterDeviceD
             </DialogHeader>
 
             <div className="space-y-3 py-2">
-              <Alert className="border-primary/20 bg-primary/5 py-2">
-                <Key className="h-4 w-4 text-primary" />
-                <AlertDescription className="text-sm">
-                  If this code is lost, open the device details page to view it again or regenerate a new one.
-                </AlertDescription>
-              </Alert>
-
-              <div className="space-y-1.5">
-                <Label>Pairing Code</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={pairingCode}
-                    readOnly
-                    className="font-mono text-lg text-center tracking-wider"
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="outline"
-                    onClick={copyPairingCode}
-                    className="shrink-0"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+              <PairingCodeDisplay
+                code={pairingCode}
+                onCopy={copyPairingCode}
+                hint="You can view this again anytime from device details while unpaired"
+              />
 
               <div className="rounded-md bg-muted p-2.5 text-sm text-muted-foreground">
                 <p className="font-medium mb-1 text-xs">Next Steps:</p>

@@ -59,8 +59,20 @@ export const agentSchema = z.object({
 
 export const deviceSchema = z.object({
   body: z.object({
-    serial_number: z.string(),
+    serial_number: z.string().min(1, 'Serial number is required'),
     token: z.string().optional(),
+  }),
+});
+
+export const updateDeviceSchema = z.object({
+  params: z.object({
+    id: z.string().min(1),
+  }),
+  body: z.object({
+    serial_number: z.string().min(1, 'Serial number is required').optional(),
+    depot_id: z.string().min(1).optional(),
+  }).refine((data) => data.serial_number !== undefined || data.depot_id !== undefined, {
+    message: 'Provide serial_number and/or depot_id to update',
   }),
 });
 
