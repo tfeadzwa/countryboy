@@ -87,7 +87,8 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated, onDeleted }: 
       setEditError(null);
       return;
     }
-    setPairingCode(!device.paired && device.pairing_code ? device.pairing_code : null);
+    const paired = device.paired === true;
+    setPairingCode(!paired && device.pairing_code ? device.pairing_code : null);
     setEditSerial(device.serial_number);
     setEditDepotId(device.depot_id);
   }, [open, device?.id, device?.paired, device?.pairing_code, device?.serial_number, device?.depot_id]);
@@ -453,17 +454,25 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated, onDeleted }: 
     );
   }
 
+  const paired = device.paired === true;
+  const lastConductor =
+    device.last_agent
+      ? `${device.last_agent.full_name} (${device.last_agent.agent_code})`
+      : device.active_session?.agent
+        ? `${device.active_session.agent.full_name} (${device.active_session.agent.agent_code})`
+        : null;
+
   const infoRows: InfoRow[] = [
     { label: "Serial Number", value: device.serial_number, icon: Smartphone, mono: true, copyable: true },
     { label: "Depot", value: device.depot_name || "N/A", icon: MapPin },
-    { label: "Status", value: device.paired ? "Paired" : "Awaiting pairing", icon: Activity, badge: true },
-    ...(device.paired && device.device_name
+    { label: "Status", value: paired ? "Paired" : "Awaiting pairing", icon: Activity, badge: true },
+    ...(paired && device.device_name
       ? [{ label: "Device Name", value: device.device_name, icon: Smartphone }]
       : []),
-    ...(device.paired && device.device_model
+    ...(paired && device.device_model
       ? [{ label: "Model", value: device.device_model, icon: Smartphone }]
       : []),
-    ...(device.paired && device.app_version
+    ...(paired && device.app_version
       ? [{ label: "App Version", value: device.app_version, icon: Activity }]
       : []),
     ...(device.paired_at
@@ -472,21 +481,15 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated, onDeleted }: 
     ...(device.last_seen
       ? [{ label: "Last Seen", value: new Date(device.last_seen).toLocaleString(), icon: Clock }]
       : []),
-    ...(device.last_agent
-      ? [
-          {
-            label: "Last Conductor",
-            value: `${device.last_agent.full_name} (${device.last_agent.agent_code})`,
-            icon: User,
-          },
-        ]
+    ...(lastConductor
+      ? [{ label: "Last Conductor", value: lastConductor, icon: User }]
       : []),
     ...(device.last_agent_login_at
       ? [{ label: "Last Sign In", value: new Date(device.last_agent_login_at).toLocaleString(), icon: Calendar }]
       : []),
   ];
 
-  const activeSessionCount = device.paired
+  const activeSessionCount = paired
     ? sessions.filter((s) => !s.ended_at).length
     : 0;
 
@@ -506,12 +509,12 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated, onDeleted }: 
             </div>
             <Badge
               className={`shrink-0 text-xs ${
-                device.paired
+                paired
                   ? "bg-success/10 text-success border border-success/20"
                   : "bg-muted text-muted-foreground border border-border"
               }`}
             >
-              {device.paired ? "Paired" : "Unpaired"}
+              {paired ? "Paired" : "Unpaired"}
             </Badge>
           </div>
         </DialogHeader>
@@ -535,7 +538,7 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated, onDeleted }: 
           </div>
 
           <TabsContent value="overview" className="mt-0 px-6 py-4 space-y-4 max-h-[min(60vh,480px)] overflow-y-auto">
-            {!device.paired && (
+            {!paired && (
               <div className="space-y-3">
                 {pairingCode ? (
                   <PairingCodeDisplay
@@ -604,7 +607,7 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated, onDeleted }: 
                       {item.badge ? (
                         <Badge
                           className={`text-xs ${
-                            device.paired
+                            paired
                               ? "bg-success/10 text-success border border-success/20"
                               : "bg-muted text-muted-foreground border border-border"
                           }`}
@@ -648,7 +651,7 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated, onDeleted }: 
                 </div>
                 <p className="text-sm font-medium">No sessions yet</p>
                 <p className="text-xs text-muted-foreground max-w-[240px]">
-                  {device.paired
+                  {paired
                     ? "Conductor sign-ins on this device will appear here."
                     : "No conductor sessions recorded for this device yet. Past sessions remain visible after unpairing."}
                 </p>
@@ -667,7 +670,7 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated, onDeleted }: 
                 )}
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 -mr-1 max-h-[min(50vh,360px)] space-y-2">
                   {sessions.map((session) => {
-                    const isActive = Boolean(device.paired && !session.ended_at);
+                    const isActive = Boolean(paired && !session.ended_at);
                     const loginLabel =
                       session.login_type === "offline"
                         ? "Offline login"
@@ -735,7 +738,7 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated, onDeleted }: 
                 Edit
               </Button>
             )}
-            {canManage && device.paired && (
+            {canManage && paired && (
               <Button
                 variant="destructive"
                 size="sm"
@@ -746,7 +749,7 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated, onDeleted }: 
                 Unpair
               </Button>
             )}
-            {canManage && !device.paired && (
+            {canManage && !paired && (
               <Button
                 variant="outline"
                 size="sm"

@@ -4,6 +4,41 @@ import { generatePairingCode, generateDeviceToken } from '../utils/tokenGenerato
 import { closeAllSessionsForDevice } from './agentSessionService';
 import { deviceInclude, mapDeviceRecord } from './deviceMapper';
 
+const clearUnpairedActivity = {
+  last_agent_id: null,
+  last_agent_login_at: null,
+  last_seen: null,
+  paired_at: null,
+} as const;
+
+/** Clear leftover activity fields left by older unpair (token kept working). */
+const healStaleUnpairedDevice = async <T extends {
+  id: string;
+  paired: boolean;
+  last_agent_id: string | null;
+  last_seen: Date | null;
+  paired_at: Date | null;
+  lastAgent?: unknown;
+}>(device: T): Promise<T> => {
+  if (
+    device.paired ||
+    (device.last_agent_id == null && device.last_seen == null && device.paired_at == null)
+  ) {
+    return device;
+  }
+
+  await prisma.tblDevices.update({
+    where: { id: device.id },
+    data: clearUnpairedActivity,
+  });
+
+  return {
+    ...device,
+    ...clearUnpairedActivity,
+    lastAgent: null,
+  };
+};
+
 export const listDevices = async (depotId?: string) => {
   const where: Prisma.tblDevicesWhereInput = {};
   if (depotId) where.depot_id = depotId;
@@ -14,7 +49,32 @@ export const listDevices = async (depotId?: string) => {
     orderBy: { serial_number: 'asc' },
   });
 
-  return devices.map((device) => mapDeviceRecord(device));
+  const staleIds = devices
+    .filter(
+      (d) =>
+        !d.paired &&
+        (d.last_agent_id != null || d.last_seen != null || d.paired_at != null),
+    )
+    .map((d) => d.id);
+
+  if (staleIds.length > 0) {
+    await prisma.tblDevices.updateMany({
+      where: { id: { in: staleIds } },
+      data: clearUnpairedActivity,
+    });
+  }
+
+  return devices.map((device) =>
+    mapDeviceRecord(
+      staleIds.includes(device.id)
+        ? {
+            ...device,
+            ...clearUnpairedActivity,
+            lastAgent: null,
+          }
+        : device,
+    ),
+  );
 };
 
 export const createDevice = async (depotId: string, data: { serial_number: string }, createdBy?: string) => {
@@ -174,7 +234,8 @@ export const getDevice = async (id: string) => {
     include: deviceInclude,
   });
   if (!device) return null;
-  return mapDeviceRecord(device);
+  const healed = await healStaleUnpairedDevice(device);
+  return mapDeviceRecord(healed);
 };
 
 export const unpairDevice = async (id: string) => {
@@ -187,6 +248,8 @@ export const unpairDevice = async (id: string) => {
   await closeAllSessionsForDevice(id, 'unpair');
 
   const newPairingCode = generatePairingCode();
+  // Rotate token so the previously paired phone can no longer authenticate.
+  const newToken = generateDeviceToken();
 
   const updated = await prisma.tblDevices.update({
     where: { id },
@@ -194,6 +257,7 @@ export const unpairDevice = async (id: string) => {
       paired: false,
       paired_at: null,
       pairing_code: newPairingCode,
+      token: newToken,
       device_name: null,
       device_model: null,
       app_version: null,

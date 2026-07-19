@@ -6,10 +6,13 @@ const deviceInclude = {
 
 export const resolveDeviceFromToken = async (token?: string) => {
   if (!token?.trim()) return null;
-  return prisma.tblDevices.findUnique({
+  const device = await prisma.tblDevices.findUnique({
     where: { token: token.trim() },
     include: deviceInclude,
   });
+  // Unpaired devices must not authenticate with an old token.
+  if (!device?.paired) return null;
+  return device;
 };
 
 export const resolveDeviceFromId = async (deviceId?: string) => {

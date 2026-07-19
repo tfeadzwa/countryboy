@@ -14,6 +14,12 @@ export const deviceAuthMiddleware = async (req: Request & { deviceId?: string; d
     return res.status(401).json({ error: 'Invalid device token' });
   }
 
+  if (!device.paired) {
+    return res.status(401).json({
+      error: 'Device is unpaired. Pair this device again with a new pairing code.',
+    });
+  }
+
   req.deviceId = device.id;
   if (req.depotId && device.depot_id !== req.depotId) {
     if (isSyncPushRequest(req)) {

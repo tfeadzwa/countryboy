@@ -52,37 +52,47 @@ export const mapDeviceRecord = (
   },
   options?: { includeToken?: boolean },
 ) => {
-  const openSession = device.paired
-    ? device.agentDeviceSessions?.find((s) => !s.ended_at)
-    : undefined;
+  const latestSession = device.agentDeviceSessions?.[0];
+  const openSession =
+    device.paired && latestSession && !latestSession.ended_at
+      ? latestSession
+      : undefined;
+
+  // Prefer explicit lastAgent relation; fall back to most recent session conductor.
+  const lastAgent =
+    agentSummary(device.lastAgent) ??
+    (device.paired ? agentSummary(latestSession?.agent) : null);
 
   return {
     id: device.id,
     serial_number: device.serial_number,
     ...(options?.includeToken ? { token: device.token } : {}),
-    pairing_code: device.pairing_code,
-    paired: device.paired,
-    paired_at: device.paired_at,
+    // Never expose pairing codes for paired devices.
+    pairing_code: device.paired ? null : device.pairing_code ?? null,
+    paired: Boolean(device.paired),
+    paired_at: device.paired_at ? device.paired_at.toISOString() : null,
     depot_id: device.depot_id,
     depot_name: device.depot?.name ?? null,
     device_name: device.device_name,
     device_model: device.device_model,
-    last_seen: device.last_seen,
+    last_seen: device.last_seen ? device.last_seen.toISOString() : null,
     last_agent_id: device.last_agent_id,
-    last_agent_login_at: device.last_agent_login_at,
-    last_agent: agentSummary(device.lastAgent),
+    last_agent_login_at: device.last_agent_login_at
+      ? device.last_agent_login_at.toISOString()
+      : null,
+    last_agent: lastAgent,
     active_session: openSession
       ? {
           id: openSession.id,
-          started_at: openSession.started_at,
+          started_at: openSession.started_at.toISOString(),
           login_type: openSession.login_type,
           agent: agentSummary(openSession.agent),
         }
       : null,
     app_version: device.app_version,
     sync_errors: device.sync_errors,
-    created_at: device.created_at,
-    updated_at: device.updated_at,
+    created_at: device.created_at.toISOString(),
+    updated_at: device.updated_at.toISOString(),
     created_by: device.created_by,
     updated_by: device.updated_by,
   };
@@ -91,8 +101,8 @@ export const mapDeviceRecord = (
 export const deviceInclude = {
   depot: { select: { name: true } },
   lastAgent: { select: { id: true, full_name: true, agent_code: true } },
+  // Latest session (active or ended) for last-conductor fallback.
   agentDeviceSessions: {
-    where: { ended_at: null },
     orderBy: { started_at: 'desc' as const },
     take: 1,
     include: {

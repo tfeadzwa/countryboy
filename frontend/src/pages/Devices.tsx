@@ -29,6 +29,32 @@ const columns = [
   { header: "Actions", className: "text-right" },
 ];
 
+const isPaired = (device: Device) => device.paired === true;
+
+const formatDateTime = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString();
+};
+
+const formatDate = (value?: string | null) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString();
+};
+
+const lastConductorLabel = (device: Device) => {
+  if (device.last_agent) {
+    return `${device.last_agent.full_name} (${device.last_agent.agent_code})`;
+  }
+  if (device.active_session?.agent) {
+    return `${device.active_session.agent.full_name} (active)`;
+  }
+  return null;
+};
+
 const Devices = () => {
   const { user } = useAuth();
   const [devices, setDevices] = useState<Device[]>([]);
@@ -112,14 +138,18 @@ const Devices = () => {
           data={devices}
           keyExtractor={(d) => d.id}
           renderRow={(d) => {
-            const config = d.paired ? statusConfig.paired : statusConfig.unpaired;
+            const paired = isPaired(d);
+            const config = paired ? statusConfig.paired : statusConfig.unpaired;
             const StatusIcon = config.icon;
+            const conductor = lastConductorLabel(d);
+            const lastSeen = formatDateTime(d.last_seen);
+            const pairedAt = formatDate(d.paired_at);
             return (
               <TableRow key={d.id} className="group cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setSelectedDevice(d)}>
                 <TableCell>
                   <div className="flex items-center gap-2.5">
-                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${d.paired ? "bg-success/10" : "bg-muted"}`}>
-                      <Smartphone className={`h-4 w-4 ${d.paired ? "text-success" : "text-muted-foreground"}`} />
+                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${paired ? "bg-success/10" : "bg-muted"}`}>
+                      <Smartphone className={`h-4 w-4 ${paired ? "text-success" : "text-muted-foreground"}`} />
                     </div>
                     <span className="font-mono font-medium text-sm">{d.serial_number}</span>
                   </div>
@@ -131,20 +161,16 @@ const Devices = () => {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {d.last_agent
-                    ? `${d.last_agent.full_name} (${d.last_agent.agent_code})`
-                    : d.active_session?.agent
-                      ? `${d.active_session.agent.full_name} (active)`
-                      : "—"}
+                  {conductor ?? "—"}
                 </TableCell>
                 <TableCell>
                   <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <Clock className="h-3.5 w-3.5" />
-                    {d.last_seen ? new Date(d.last_seen).toLocaleString() : "Never"}
+                    {lastSeen ?? "Never"}
                   </span>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
-                  {d.paired_at ? new Date(d.paired_at).toLocaleDateString() : "—"}
+                  {pairedAt ?? "—"}
                 </TableCell>
                 <TableCell className="text-right space-x-1">
                   <Button variant="ghost" size="sm" className="gap-1" onClick={(e) => { e.stopPropagation(); setSelectedDevice(d); }}>
@@ -155,14 +181,18 @@ const Devices = () => {
             );
           }}
           renderCard={(d) => {
-            const config = d.paired ? statusConfig.paired : statusConfig.unpaired;
+            const paired = isPaired(d);
+            const config = paired ? statusConfig.paired : statusConfig.unpaired;
             const StatusIcon = config.icon;
+            const conductor = lastConductorLabel(d);
+            const lastSeen = formatDate(d.last_seen);
+            const pairedAt = formatDate(d.paired_at);
             return (
               <div className="space-y-3 cursor-pointer" onClick={() => setSelectedDevice(d)}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${d.paired ? "bg-success/10" : "bg-muted"}`}>
-                      <Smartphone className={`h-4 w-4 ${d.paired ? "text-success" : "text-muted-foreground"}`} />
+                    <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${paired ? "bg-success/10" : "bg-muted"}`}>
+                      <Smartphone className={`h-4 w-4 ${paired ? "text-success" : "text-muted-foreground"}`} />
                     </div>
                     <div>
                       <p className="font-mono font-medium text-sm">{d.serial_number}</p>
@@ -176,19 +206,15 @@ const Devices = () => {
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs">Last Conductor</p>
-                    <p className="font-medium">
-                      {d.last_agent
-                        ? d.last_agent.full_name
-                        : d.active_session?.agent?.full_name ?? "—"}
-                    </p>
+                    <p className="font-medium">{conductor ?? "—"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">Last Seen</p>
-                    <p className="font-medium">{d.last_seen ? new Date(d.last_seen).toLocaleDateString() : "Never"}</p>
+                    <p className="font-medium">{lastSeen ?? "Never"}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">Paired At</p>
-                    <p>{d.paired_at ? new Date(d.paired_at).toLocaleDateString() : "—"}</p>
+                    <p>{pairedAt ?? "—"}</p>
                   </div>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-border/40">
