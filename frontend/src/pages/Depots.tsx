@@ -127,7 +127,13 @@ const Depots = () => {
           data={depots}
           keyExtractor={(d) => d.id}
           renderRow={(d) => (
-            <TableRow key={d.id} className="group hover:bg-muted/30 transition-colors">
+            <TableRow
+              key={d.id}
+              className={`group hover:bg-muted/30 transition-colors ${canManage ? "cursor-pointer" : ""}`}
+              onClick={() => {
+                if (canManage) handleEditClick(d);
+              }}
+            >
               <TableCell><Badge variant="outline" className="font-mono text-xs">{d.merchant_code}</Badge></TableCell>
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2.5">
@@ -147,7 +153,7 @@ const Depots = () => {
                   <Calendar className="h-3.5 w-3.5" />{formatDate(d.created_at)}
                 </span>
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                 {canManage ? (
                   <Button 
                     variant="ghost" 
@@ -163,7 +169,12 @@ const Depots = () => {
             </TableRow>
           )}
           renderCard={(d) => (
-            <div className="space-y-3">
+            <div
+              className={`space-y-3 ${canManage ? "cursor-pointer" : ""}`}
+              onClick={() => {
+                if (canManage) handleEditClick(d);
+              }}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -186,7 +197,10 @@ const Depots = () => {
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    onClick={() => handleEditClick(d)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditClick(d);
+                    }}
                   >
                     Edit
                   </Button>

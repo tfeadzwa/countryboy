@@ -228,7 +228,13 @@ const Fleets = () => {
                 data={fleets}
                 keyExtractor={(f) => f.id}
                 renderRow={(f) => (
-                  <TableRow key={f.id} className="group hover:bg-muted/30 transition-colors">
+                  <TableRow
+                    key={f.id}
+                    className={`group hover:bg-muted/30 transition-colors ${canManage ? "cursor-pointer" : ""}`}
+                    onClick={() => {
+                      if (canManage) handleEdit(f);
+                    }}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-2.5">
                         <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-primary/10">
@@ -271,7 +277,7 @@ const Fleets = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       {canManage && (
-                        <div className="flex justify-end gap-1">
+                        <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="sm" onClick={() => handleEdit(f)}>
                             Edit
                           </Button>
@@ -289,7 +295,12 @@ const Fleets = () => {
                   </TableRow>
                 )}
                 renderCard={(f) => (
-                  <div className="space-y-3">
+                  <div
+                    className={`space-y-3 ${canManage ? "cursor-pointer" : ""}`}
+                    onClick={() => {
+                      if (canManage) handleEdit(f);
+                    }}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
                         <div className="h-9 w-9 rounded-lg flex items-center justify-center bg-primary/10">
@@ -335,7 +346,10 @@ const Fleets = () => {
                       </div>
                     </div>
                     {canManage && (
-                      <div className="flex justify-end gap-1 pt-2 border-t border-border/40">
+                      <div
+                        className="flex justify-end gap-1 pt-2 border-t border-border/40"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Button variant="ghost" size="sm" onClick={() => handleEdit(f)}>
                           Edit
                         </Button>

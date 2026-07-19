@@ -276,7 +276,13 @@ const RoutesPage = () => {
                     data={paginatedRoutes}
                     keyExtractor={(r) => r.id}
                     renderRow={(r) => (
-                      <TableRow key={r.id} className="group hover:bg-muted/30 transition-colors">
+                      <TableRow
+                        key={r.id}
+                        className={`group hover:bg-muted/30 transition-colors ${canManageRoutesPermission ? "cursor-pointer" : ""}`}
+                        onClick={() => {
+                          if (canManageRoutesPermission) handleRouteEdit(r);
+                        }}
+                      >
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-primary/10">
@@ -318,7 +324,7 @@ const RoutesPage = () => {
                         <TableCell className="text-muted-foreground text-sm">{r.depot_name || "N/A"}</TableCell>
                         <TableCell className="text-right">
                           {canManageRoutesPermission && (
-                            <div className="flex justify-end gap-1">
+                            <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                               <Button variant="ghost" size="sm" onClick={() => handleRouteEdit(r)}>
                                 Edit
                               </Button>
@@ -338,7 +344,12 @@ const RoutesPage = () => {
                     renderCard={(r) => {
                       const routeFares = faresByRouteId.get(r.id) ?? [];
                       return (
-                        <div className="space-y-3">
+                        <div
+                          className={`space-y-3 ${canManageRoutesPermission ? "cursor-pointer" : ""}`}
+                          onClick={() => {
+                            if (canManageRoutesPermission) handleRouteEdit(r);
+                          }}
+                        >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
                               <div className="h-9 w-9 rounded-lg flex items-center justify-center bg-primary/10">
@@ -386,7 +397,10 @@ const RoutesPage = () => {
                           )}
 
                           {canManageRoutesPermission && (
-                            <div className="flex justify-end gap-1 pt-2 border-t border-border/40">
+                            <div
+                              className="flex justify-end gap-1 pt-2 border-t border-border/40"
+                              onClick={(e) => e.stopPropagation()}
+                            >
                               <Button variant="ghost" size="sm" onClick={() => handleRouteEdit(r)}>
                                 Edit
                               </Button>
