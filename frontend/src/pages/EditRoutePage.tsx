@@ -308,7 +308,7 @@ const EditRoutePage = () => {
         </Alert>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">Route details</CardTitle>
@@ -403,11 +403,11 @@ const EditRoutePage = () => {
           </CardHeader>
           <CardContent className="space-y-6">
             <RouteLinkPicker
-              label="Parent routes"
-              description="Where this route sits in the network (e.g. Masvingo → Beitbridge under Harare → Beitbridge)."
+              label="Child routes"
+              description="Segments that conductors can sell under this route during trips."
               routes={allRoutes}
-              selectedIds={parentRouteIds}
-              onChange={setParentRouteIds}
+              selectedIds={childRouteIds}
+              onChange={setChildRouteIds}
               excludeRouteId={route.id}
               depotId={isSuperAdminUser ? selectedDepotId : route.depot_id}
               disabled={saving}
@@ -416,11 +416,11 @@ const EditRoutePage = () => {
             <Separator />
 
             <RouteLinkPicker
-              label="Child routes"
-              description="Segments that conductors can sell under this route during trips."
+              label="Parent routes"
+              description="Where this route sits in the network (e.g. Masvingo → Beitbridge under Harare → Beitbridge)."
               routes={allRoutes}
-              selectedIds={childRouteIds}
-              onChange={setChildRouteIds}
+              selectedIds={parentRouteIds}
+              onChange={setParentRouteIds}
               excludeRouteId={route.id}
               depotId={isSuperAdminUser ? selectedDepotId : route.depot_id}
               disabled={saving}
