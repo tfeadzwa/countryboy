@@ -265,6 +265,7 @@ model tblTickets {
   destination               String?
   passenger_name            String?
   passenger_phone           String?
+  luggage_description       String?
   linked_passenger_ticket_id String?
   issued_at                 DateTime
   created_at                DateTime @default(now())

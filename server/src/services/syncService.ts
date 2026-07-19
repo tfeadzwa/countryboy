@@ -59,6 +59,8 @@ const normalizeTicketRecord = (raw: Record<string, unknown>, depotId: string) =>
   destination: (raw.destination as string | undefined) ?? null,
   passenger_name: null,
   passenger_phone: (raw.passenger_phone as string | undefined)?.trim() || null,
+  luggage_description:
+    (raw.luggage_description as string | undefined)?.trim() || null,
   linked_passenger_ticket_id:
     (raw.linked_passenger_ticket_id as string | undefined) ?? null,
   issued_at: parseSyncDateTime(raw.issued_at, 'issued_at'),

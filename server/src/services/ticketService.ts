@@ -13,6 +13,7 @@ interface IssueArgs {
   departure?: string;
   destination?: string;
   passenger_phone?: string | null;
+  luggage_description?: string | null;
   issued_at?: Date;
   linked_passenger_ticket_id?: string;
 }
@@ -34,6 +35,7 @@ export const issueTicket = async (args: IssueArgs) => {
         destination: args.destination,
         passenger_name: null,
         passenger_phone: args.passenger_phone?.trim() || null,
+        luggage_description: args.luggage_description?.trim() || null,
         issued_at: args.issued_at || new Date(),
         linked_passenger_ticket_id: args.linked_passenger_ticket_id,
         serial_number: serial,

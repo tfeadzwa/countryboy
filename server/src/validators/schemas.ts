@@ -166,6 +166,15 @@ export const ticketIssueSchema = z.object({
         .regex(/^[+]?[\d\s()-]+$/, 'Passenger phone contains invalid characters')
         .optional(),
     ),
+    luggage_description: z.preprocess(
+      (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+      z
+        .string()
+        .trim()
+        .min(2, 'Luggage description is too short')
+        .max(80, 'Luggage description must be 80 characters or less')
+        .optional(),
+    ),
   }),
 });
 

@@ -65,6 +65,7 @@ export const getPublicTicketVerification = async (ticketId: string) => {
       route_label:
         origin && destination ? `${origin} -> ${destination}` : null,
       passenger_phone: ticket.passenger_phone,
+      luggage_description: ticket.luggage_description,
       issued_at: ticket.issued_at.toISOString(),
     },
     trip: {
