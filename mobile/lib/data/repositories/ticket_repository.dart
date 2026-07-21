@@ -62,6 +62,8 @@ class TicketRepository {
     required String idempotencyKey,
     String? linkedPassengerTicketId,
     String? passengerPhone,
+    double? luggageAmount,
+    String? luggageDescription,
   }) async {
     if (await _db.ticketExistsByIdempotencyKey(idempotencyKey)) {
       final existing = await (_db.select(_db.localTickets)
@@ -80,6 +82,11 @@ class TicketRepository {
     final phone = passengerPhone?.trim().isEmpty == true
         ? null
         : passengerPhone?.trim();
+    final luggageNote = luggageDescription?.trim().isEmpty == true
+        ? null
+        : luggageDescription?.trim();
+    final luggageCharge =
+        luggageAmount != null && luggageAmount > 0 ? luggageAmount : null;
 
     var ticketId = _sync.generateId();
     final issuedAt = DateTime.now();
@@ -99,6 +106,8 @@ class TicketRepository {
         departure: Value(departure),
         destination: Value(destination),
         passengerPhone: Value(phone),
+        luggageAmount: Value(luggageCharge),
+        luggageDescription: Value(luggageNote),
         issuedAt: issuedAt,
         syncStatus: const Value('pending'),
         idempotencyKey: idempotencyKey,
@@ -121,6 +130,8 @@ class TicketRepository {
         agentJson['id'] as String,
         linkedPassengerTicketId,
         phone,
+        luggageCharge,
+        luggageNote,
         tripSerial!,
       );
       _sync.syncIfOnline();
@@ -142,6 +153,8 @@ class TicketRepository {
         issuedAt: issuedAt,
         linkedPassengerTicketId: linkedPassengerTicketId,
         passengerPhone: phone,
+        luggageAmount: luggageCharge,
+        luggageDescription: luggageNote,
       );
       final serverId = result['id'] as String;
       if (serverId != ticketId) {
@@ -159,6 +172,8 @@ class TicketRepository {
             departure: Value(departure),
             destination: Value(destination),
             passengerPhone: Value(phone),
+            luggageAmount: Value(luggageCharge),
+            luggageDescription: Value(luggageNote),
             issuedAt: issuedAt,
             syncStatus: const Value('synced'),
             idempotencyKey: idempotencyKey,
@@ -182,6 +197,8 @@ class TicketRepository {
         departure: departure,
         destination: destination,
         passengerPhone: phone,
+        luggageAmount: luggageCharge,
+        luggageDescription: luggageNote,
         serialNumber: result['serial_number'] as int?,
         issuedAt: issuedAt,
         syncStatus: 'synced',
@@ -206,6 +223,8 @@ class TicketRepository {
         agentJson['id'] as String,
         linkedPassengerTicketId,
         phone,
+        luggageCharge,
+        luggageNote,
         fallbackSerial,
       );
       _sync.syncIfOnline();
@@ -282,6 +301,8 @@ class TicketRepository {
     String agentId,
     String? linkedPassengerTicketId,
     String? passengerPhone,
+    double? luggageAmount,
+    String? luggageDescription,
     int? serialNumber,
   ) async {
     await _db.enqueueSync(
@@ -305,6 +326,9 @@ class TicketRepository {
           if (linkedPassengerTicketId != null)
             'linked_passenger_ticket_id': linkedPassengerTicketId,
           if (passengerPhone != null) 'passenger_phone': passengerPhone,
+          if (luggageAmount != null) 'luggage_amount': luggageAmount,
+          if (luggageDescription != null)
+            'luggage_description': luggageDescription,
         }),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -339,6 +363,8 @@ class TicketRepository {
         destination: t.destination,
         passengerName: t.passengerName,
         passengerPhone: t.passengerPhone,
+        luggageAmount: t.luggageAmount,
+        luggageDescription: t.luggageDescription,
         serialNumber: t.serialNumber,
         issuedAt: t.issuedAt,
         syncStatus: t.syncStatus,

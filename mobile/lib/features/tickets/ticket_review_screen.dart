@@ -38,33 +38,18 @@ class _TicketReviewScreenState extends ConsumerState<TicketReviewScreen> {
     final idempotencyKey = const Uuid().v4();
 
     try {
-      late TicketIssueResult result;
-
-      if (draft.isPair) {
-        final pair = await ref.read(ticketRepositoryProvider).issuePassengerLuggagePair(
-              tripId: draft.trip.id,
-              currency: draft.currency,
-              passengerAmount: draft.passengerAmount!,
-              luggageAmount: draft.luggageAmount!,
-              passengerPhone: draft.passengerPhone,
-              departure: draft.departure ?? draft.trip.routeOrigin,
-              destination: draft.destination ?? draft.trip.routeDestination,
-              idempotencyKey: idempotencyKey,
-            );
-        result = TicketIssueResult(trip: draft.trip, pair: pair);
-      } else {
-        final ticket = await ref.read(ticketRepositoryProvider).issueTicket(
-              tripId: draft.trip.id,
-              ticketCategory: draft.mode,
-              currency: draft.currency,
-              amount: draft.amount!,
-              departure: draft.departure ?? draft.trip.routeOrigin,
-              destination: draft.destination ?? draft.trip.routeDestination,
-              idempotencyKey: idempotencyKey,
-              passengerPhone: draft.passengerPhone,
-            );
-        result = TicketIssueResult(trip: draft.trip, single: ticket);
-      }
+      final ticket = await ref.read(ticketRepositoryProvider).issueTicket(
+            tripId: draft.trip.id,
+            ticketCategory: draft.mode,
+            currency: draft.currency,
+            amount: draft.amount!,
+            departure: draft.departure ?? draft.trip.routeOrigin,
+            destination: draft.destination ?? draft.trip.routeDestination,
+            idempotencyKey: idempotencyKey,
+            luggageAmount: draft.luggageAmount,
+            luggageDescription: draft.luggageDescription,
+          );
+      final result = TicketIssueResult(trip: draft.trip, single: ticket);
 
       ref.invalidate(homeDashboardProvider);
 
@@ -102,45 +87,7 @@ class _TicketReviewScreenState extends ConsumerState<TicketReviewScreen> {
               style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: AppSpacing.lg),
-            if (draft.isPair) ...[
-              TicketReceiptPreview.fromDraft(
-                draft,
-                ticketNumberOverride: 'Passenger ticket',
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TicketReceiptPreview(
-                title: 'Luggage ticket preview',
-                categoryLabel: 'LUGGAGE',
-                routeLabel: draft.routeLabel,
-                origin: draft.departure,
-                destination: draft.destination,
-                fleetNumber: draft.trip.fleetNumber ?? '-',
-                currency: draft.currency,
-                amount: draft.luggageAmount ?? 0,
-                passengerPhone: draft.passengerPhone,
-                ticketNumber: 'Luggage ticket',
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Total', style: Theme.of(context).textTheme.titleMedium),
-                      Text(
-                        '${draft.currency} ${draft.totalAmount!.toStringAsFixed(2)}',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: AppColors.brandRed,
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ] else
-              TicketReceiptPreview.fromDraft(draft),
+            TicketReceiptPreview.fromDraft(draft),
             if (_error != null) ...[
               const SizedBox(height: AppSpacing.md),
               Text(
@@ -151,7 +98,7 @@ class _TicketReviewScreenState extends ConsumerState<TicketReviewScreen> {
             ],
             const SizedBox(height: AppSpacing.xl),
             AppButton(
-              label: draft.isPair ? 'Confirm & issue 2 tickets' : 'Confirm & issue',
+              label: 'Confirm & issue',
               loading: _issuing,
               onPressed: _confirmAndIssue,
               icon: Icons.check_circle_outline,

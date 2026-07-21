@@ -188,6 +188,8 @@ class TicketApi {
     DateTime? issuedAt,
     String? linkedPassengerTicketId,
     String? passengerPhone,
+    double? luggageAmount,
+    String? luggageDescription,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/tickets',
@@ -204,6 +206,9 @@ class TicketApi {
           'linked_passenger_ticket_id': linkedPassengerTicketId,
         if (passengerPhone != null && passengerPhone.isNotEmpty)
           'passenger_phone': passengerPhone,
+        if (luggageAmount != null) 'luggage_amount': luggageAmount,
+        if (luggageDescription != null && luggageDescription.isNotEmpty)
+          'luggage_description': luggageDescription,
       },
     );
     return response.data!;

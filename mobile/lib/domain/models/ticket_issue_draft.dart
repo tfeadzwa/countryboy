@@ -11,27 +11,30 @@ class TicketIssueDraft {
     this.luggageAmount,
     this.departure,
     this.destination,
-    this.passengerPhone,
+    this.luggageDescription,
   });
 
   final TripModel trip;
-  /// `PASSENGER`, `PASSENGER_WITH_LUGGAGE`, `LUGGAGE`, or `PAIR` for linked pair.
+  /// `PASSENGER`, `PASSENGER_WITH_LUGGAGE`, or `LUGGAGE`.
   final String mode;
   final String currency;
+  /// Total charge stored on the ticket.
   final double? amount;
+  /// Route passenger fare (PASSENGER / PASSENGER_WITH_LUGGAGE).
   final double? passengerAmount;
+  /// Manually entered luggage charge (PASSENGER_WITH_LUGGAGE / LUGGAGE).
   final double? luggageAmount;
   final String? departure;
   final String? destination;
-  final String? passengerPhone;
+  final String? luggageDescription;
 
-  bool get isPair => mode == 'PAIR';
+  bool get hasLuggage =>
+      mode == 'PASSENGER_WITH_LUGGAGE' || mode == 'LUGGAGE';
 
   String get modeLabel => switch (mode) {
         'PASSENGER' => 'Passenger',
         'PASSENGER_WITH_LUGGAGE' => 'Passenger + luggage',
         'LUGGAGE' => 'Luggage only',
-        'PAIR' => 'Passenger + luggage (2 tickets)',
         _ => mode,
       };
 
@@ -42,13 +45,7 @@ class TicketIssueDraft {
     return trip.routeLabel;
   }
 
-  double? get totalAmount {
-    if (isPair) {
-      if (passengerAmount == null || luggageAmount == null) return null;
-      return passengerAmount! + luggageAmount!;
-    }
-    return amount;
-  }
+  double? get totalAmount => amount;
 }
 
 /// Result after successful issuance, passed to the print screen.

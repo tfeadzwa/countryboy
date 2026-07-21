@@ -261,6 +261,8 @@ model tblTickets {
   ticket_category           String
   currency                  String
   amount                    Decimal @db.Decimal(12, 2)
+  /// Manual luggage charge. For PASSENGER_WITH_LUGGAGE, amount = passenger fare + luggage_amount.
+  luggage_amount            Decimal? @db.Decimal(12, 2)
   departure                 String?
   destination               String?
   passenger_name            String?

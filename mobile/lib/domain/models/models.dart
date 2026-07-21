@@ -327,6 +327,8 @@ class TicketModel extends Equatable {
     this.destination,
     this.passengerName,
     this.passengerPhone,
+    this.luggageAmount,
+    this.luggageDescription,
     this.serialNumber,
     this.syncStatus = 'pending',
     this.lastError,
@@ -342,6 +344,8 @@ class TicketModel extends Equatable {
   final String? destination;
   final String? passengerName;
   final String? passengerPhone;
+  final double? luggageAmount;
+  final String? luggageDescription;
   final int? serialNumber;
   final DateTime issuedAt;
   final String syncStatus;
@@ -368,7 +372,15 @@ class TicketModel extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, tripId, ticketCategory, amount, syncStatus];
+  List<Object?> get props => [
+        id,
+        tripId,
+        ticketCategory,
+        amount,
+        syncStatus,
+        luggageAmount,
+        luggageDescription,
+      ];
 }
 
 class PassengerLuggagePairResult extends Equatable {

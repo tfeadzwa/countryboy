@@ -5,7 +5,7 @@ import { formatPrismaError } from '../utils/prismaErrors';
 
 export const issue = async (req: AuthenticatedRequest, res: Response) => {
   const depotId = req.depotId as string;
-  const { trip_id, device_id, ticket_category, currency, amount, departure, destination, issued_at, linked_passenger_ticket_id, passenger_phone, luggage_description } = req.body;
+  const { trip_id, device_id, ticket_category, currency, amount, luggage_amount, departure, destination, issued_at, linked_passenger_ticket_id, passenger_phone, luggage_description } = req.body;
 
   // agent_id is optional in the body — prefer it if provided (e.g. offline sync),
   // otherwise fall back to the agent identity extracted from the JWT by authMiddleware.
@@ -32,6 +32,7 @@ export const issue = async (req: AuthenticatedRequest, res: Response) => {
       ticket_category,
       currency,
       amount,
+      luggage_amount,
       departure,
       destination,
       passenger_phone,

@@ -19,9 +19,11 @@ class TicketReceiptPreview extends StatelessWidget {
     required this.fleetNumber,
     required this.currency,
     required this.amount,
+    this.passengerAmount,
+    this.luggageAmount,
     this.origin,
     this.destination,
-    this.passengerPhone,
+    this.luggageDescription,
     this.ticketNumber,
     this.issuedAt,
     this.syncPending = false,
@@ -40,10 +42,10 @@ class TicketReceiptPreview extends StatelessWidget {
       destination: draft.destination,
       fleetNumber: draft.trip.fleetNumber ?? '-',
       currency: draft.currency,
-      amount: draft.isPair
-          ? (draft.passengerAmount ?? 0)
-          : (draft.amount ?? 0),
-      passengerPhone: draft.passengerPhone,
+      amount: draft.amount ?? 0,
+      passengerAmount: draft.passengerAmount,
+      luggageAmount: draft.luggageAmount,
+      luggageDescription: draft.luggageDescription,
       ticketNumber: ticketNumberOverride ?? 'Pending',
     );
   }
@@ -58,7 +60,8 @@ class TicketReceiptPreview extends StatelessWidget {
       fleetNumber: receipt.trip.fleetNumber ?? '-',
       currency: receipt.ticket.currency,
       amount: receipt.ticket.amount,
-      passengerPhone: receipt.ticket.passengerPhone,
+      luggageAmount: receipt.ticket.luggageAmount,
+      luggageDescription: receipt.ticket.luggageDescription,
       ticketNumber: receipt.ticket.displayNumber,
       issuedAt: receipt.ticket.issuedAt,
       syncPending: receipt.ticket.syncStatus != 'synced',
@@ -72,9 +75,11 @@ class TicketReceiptPreview extends StatelessWidget {
   final String fleetNumber;
   final String currency;
   final double amount;
+  final double? passengerAmount;
+  final double? luggageAmount;
   final String? origin;
   final String? destination;
-  final String? passengerPhone;
+  final String? luggageDescription;
   final String? ticketNumber;
   final DateTime? issuedAt;
   final bool syncPending;
@@ -138,11 +143,36 @@ class TicketReceiptPreview extends StatelessWidget {
                   ),
               textAlign: TextAlign.center,
             ),
+            if (passengerAmount != null &&
+                luggageAmount != null &&
+                luggageAmount! > 0) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Passenger $currency ${passengerAmount!.toStringAsFixed(2)}'
+                ' + Luggage $currency ${luggageAmount!.toStringAsFixed(2)}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ] else if (luggageAmount != null &&
+                luggageAmount! > 0 &&
+                passengerAmount == null &&
+                categoryLabel.contains('PASSENGER')) ...[
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Incl. luggage $currency ${luggageAmount!.toStringAsFixed(2)}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                textAlign: TextAlign.center,
+              ),
+            ],
             const Divider(height: AppSpacing.lg),
             _row(context, 'Ticket', ticketNumber ?? '-'),
             _row(context, 'Bus', fleetNumber),
-            if (passengerPhone != null && passengerPhone!.isNotEmpty)
-              _row(context, 'Phone', passengerPhone!),
+            if (luggageDescription != null && luggageDescription!.isNotEmpty)
+              _row(context, 'Luggage', luggageDescription!),
             _row(context, 'Issued', issuedLabel),
             if (syncPending)
               Padding(

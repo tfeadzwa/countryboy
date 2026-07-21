@@ -55,6 +55,8 @@ const normalizeTicketRecord = (raw: Record<string, unknown>, depotId: string) =>
   ticket_category: raw.ticket_category as string,
   currency: raw.currency as string,
   amount: raw.amount as number | string,
+  luggage_amount:
+    raw.luggage_amount != null ? (raw.luggage_amount as number | string) : null,
   departure: (raw.departure as string | undefined) ?? null,
   destination: (raw.destination as string | undefined) ?? null,
   passenger_name: null,

@@ -2,9 +2,9 @@
  * Ticket Category Constants
  * 
  * Defines the three types of tickets that can be issued:
- * - PASSENGER: Travel ticket for a passenger only
- * - PASSENGER_WITH_LUGGAGE: Single ticket for passenger traveling with luggage
- * - LUGGAGE: Luggage sent without a passenger
+ * - PASSENGER: Travel ticket for a passenger only (amount = route fare)
+ * - PASSENGER_WITH_LUGGAGE: Single ticket; amount = route passenger fare + manual luggage_amount
+ * - LUGGAGE: Luggage sent without a passenger (amount entered manually)
  */
 
 export const TICKET_CATEGORIES = {

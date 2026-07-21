@@ -2206,6 +2206,28 @@ class $LocalTicketsTable extends LocalTickets
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _luggageAmountMeta = const VerificationMeta(
+    'luggageAmount',
+  );
+  @override
+  late final GeneratedColumn<double> luggageAmount = GeneratedColumn<double>(
+    'luggage_amount',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _luggageDescriptionMeta =
+      const VerificationMeta('luggageDescription');
+  @override
+  late final GeneratedColumn<String> luggageDescription =
+      GeneratedColumn<String>(
+        'luggage_description',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _serialNumberMeta = const VerificationMeta(
     'serialNumber',
   );
@@ -2288,6 +2310,8 @@ class $LocalTicketsTable extends LocalTickets
     destination,
     passengerName,
     passengerPhone,
+    luggageAmount,
+    luggageDescription,
     serialNumber,
     issuedAt,
     syncStatus,
@@ -2402,6 +2426,24 @@ class $LocalTicketsTable extends LocalTickets
         ),
       );
     }
+    if (data.containsKey('luggage_amount')) {
+      context.handle(
+        _luggageAmountMeta,
+        luggageAmount.isAcceptableOrUnknown(
+          data['luggage_amount']!,
+          _luggageAmountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('luggage_description')) {
+      context.handle(
+        _luggageDescriptionMeta,
+        luggageDescription.isAcceptableOrUnknown(
+          data['luggage_description']!,
+          _luggageDescriptionMeta,
+        ),
+      );
+    }
     if (data.containsKey('serial_number')) {
       context.handle(
         _serialNumberMeta,
@@ -2509,6 +2551,14 @@ class $LocalTicketsTable extends LocalTickets
         DriftSqlType.string,
         data['${effectivePrefix}passenger_phone'],
       ),
+      luggageAmount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}luggage_amount'],
+      ),
+      luggageDescription: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}luggage_description'],
+      ),
       serialNumber: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}serial_number'],
@@ -2555,6 +2605,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
   final String? destination;
   final String? passengerName;
   final String? passengerPhone;
+  final double? luggageAmount;
+  final String? luggageDescription;
   final int? serialNumber;
   final DateTime issuedAt;
   final String syncStatus;
@@ -2574,6 +2626,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
     this.destination,
     this.passengerName,
     this.passengerPhone,
+    this.luggageAmount,
+    this.luggageDescription,
     this.serialNumber,
     required this.issuedAt,
     required this.syncStatus,
@@ -2605,6 +2659,12 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
     }
     if (!nullToAbsent || passengerPhone != null) {
       map['passenger_phone'] = Variable<String>(passengerPhone);
+    }
+    if (!nullToAbsent || luggageAmount != null) {
+      map['luggage_amount'] = Variable<double>(luggageAmount);
+    }
+    if (!nullToAbsent || luggageDescription != null) {
+      map['luggage_description'] = Variable<String>(luggageDescription);
     }
     if (!nullToAbsent || serialNumber != null) {
       map['serial_number'] = Variable<int>(serialNumber);
@@ -2643,6 +2703,12 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
       passengerPhone: passengerPhone == null && nullToAbsent
           ? const Value.absent()
           : Value(passengerPhone),
+      luggageAmount: luggageAmount == null && nullToAbsent
+          ? const Value.absent()
+          : Value(luggageAmount),
+      luggageDescription: luggageDescription == null && nullToAbsent
+          ? const Value.absent()
+          : Value(luggageDescription),
       serialNumber: serialNumber == null && nullToAbsent
           ? const Value.absent()
           : Value(serialNumber),
@@ -2674,6 +2740,10 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
       destination: serializer.fromJson<String?>(json['destination']),
       passengerName: serializer.fromJson<String?>(json['passengerName']),
       passengerPhone: serializer.fromJson<String?>(json['passengerPhone']),
+      luggageAmount: serializer.fromJson<double?>(json['luggageAmount']),
+      luggageDescription: serializer.fromJson<String?>(
+        json['luggageDescription'],
+      ),
       serialNumber: serializer.fromJson<int?>(json['serialNumber']),
       issuedAt: serializer.fromJson<DateTime>(json['issuedAt']),
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
@@ -2698,6 +2768,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
       'destination': serializer.toJson<String?>(destination),
       'passengerName': serializer.toJson<String?>(passengerName),
       'passengerPhone': serializer.toJson<String?>(passengerPhone),
+      'luggageAmount': serializer.toJson<double?>(luggageAmount),
+      'luggageDescription': serializer.toJson<String?>(luggageDescription),
       'serialNumber': serializer.toJson<int?>(serialNumber),
       'issuedAt': serializer.toJson<DateTime>(issuedAt),
       'syncStatus': serializer.toJson<String>(syncStatus),
@@ -2720,6 +2792,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
     Value<String?> destination = const Value.absent(),
     Value<String?> passengerName = const Value.absent(),
     Value<String?> passengerPhone = const Value.absent(),
+    Value<double?> luggageAmount = const Value.absent(),
+    Value<String?> luggageDescription = const Value.absent(),
     Value<int?> serialNumber = const Value.absent(),
     DateTime? issuedAt,
     String? syncStatus,
@@ -2743,6 +2817,12 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
     passengerPhone: passengerPhone.present
         ? passengerPhone.value
         : this.passengerPhone,
+    luggageAmount: luggageAmount.present
+        ? luggageAmount.value
+        : this.luggageAmount,
+    luggageDescription: luggageDescription.present
+        ? luggageDescription.value
+        : this.luggageDescription,
     serialNumber: serialNumber.present ? serialNumber.value : this.serialNumber,
     issuedAt: issuedAt ?? this.issuedAt,
     syncStatus: syncStatus ?? this.syncStatus,
@@ -2772,6 +2852,12 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
       passengerPhone: data.passengerPhone.present
           ? data.passengerPhone.value
           : this.passengerPhone,
+      luggageAmount: data.luggageAmount.present
+          ? data.luggageAmount.value
+          : this.luggageAmount,
+      luggageDescription: data.luggageDescription.present
+          ? data.luggageDescription.value
+          : this.luggageDescription,
       serialNumber: data.serialNumber.present
           ? data.serialNumber.value
           : this.serialNumber,
@@ -2804,6 +2890,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
           ..write('destination: $destination, ')
           ..write('passengerName: $passengerName, ')
           ..write('passengerPhone: $passengerPhone, ')
+          ..write('luggageAmount: $luggageAmount, ')
+          ..write('luggageDescription: $luggageDescription, ')
           ..write('serialNumber: $serialNumber, ')
           ..write('issuedAt: $issuedAt, ')
           ..write('syncStatus: $syncStatus, ')
@@ -2828,6 +2916,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
     destination,
     passengerName,
     passengerPhone,
+    luggageAmount,
+    luggageDescription,
     serialNumber,
     issuedAt,
     syncStatus,
@@ -2851,6 +2941,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
           other.destination == this.destination &&
           other.passengerName == this.passengerName &&
           other.passengerPhone == this.passengerPhone &&
+          other.luggageAmount == this.luggageAmount &&
+          other.luggageDescription == this.luggageDescription &&
           other.serialNumber == this.serialNumber &&
           other.issuedAt == this.issuedAt &&
           other.syncStatus == this.syncStatus &&
@@ -2872,6 +2964,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
   final Value<String?> destination;
   final Value<String?> passengerName;
   final Value<String?> passengerPhone;
+  final Value<double?> luggageAmount;
+  final Value<String?> luggageDescription;
   final Value<int?> serialNumber;
   final Value<DateTime> issuedAt;
   final Value<String> syncStatus;
@@ -2892,6 +2986,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
     this.destination = const Value.absent(),
     this.passengerName = const Value.absent(),
     this.passengerPhone = const Value.absent(),
+    this.luggageAmount = const Value.absent(),
+    this.luggageDescription = const Value.absent(),
     this.serialNumber = const Value.absent(),
     this.issuedAt = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -2913,6 +3009,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
     this.destination = const Value.absent(),
     this.passengerName = const Value.absent(),
     this.passengerPhone = const Value.absent(),
+    this.luggageAmount = const Value.absent(),
+    this.luggageDescription = const Value.absent(),
     this.serialNumber = const Value.absent(),
     required DateTime issuedAt,
     this.syncStatus = const Value.absent(),
@@ -2942,6 +3040,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
     Expression<String>? destination,
     Expression<String>? passengerName,
     Expression<String>? passengerPhone,
+    Expression<double>? luggageAmount,
+    Expression<String>? luggageDescription,
     Expression<int>? serialNumber,
     Expression<DateTime>? issuedAt,
     Expression<String>? syncStatus,
@@ -2963,6 +3063,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
       if (destination != null) 'destination': destination,
       if (passengerName != null) 'passenger_name': passengerName,
       if (passengerPhone != null) 'passenger_phone': passengerPhone,
+      if (luggageAmount != null) 'luggage_amount': luggageAmount,
+      if (luggageDescription != null) 'luggage_description': luggageDescription,
       if (serialNumber != null) 'serial_number': serialNumber,
       if (issuedAt != null) 'issued_at': issuedAt,
       if (syncStatus != null) 'sync_status': syncStatus,
@@ -2986,6 +3088,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
     Value<String?>? destination,
     Value<String?>? passengerName,
     Value<String?>? passengerPhone,
+    Value<double?>? luggageAmount,
+    Value<String?>? luggageDescription,
     Value<int?>? serialNumber,
     Value<DateTime>? issuedAt,
     Value<String>? syncStatus,
@@ -3007,6 +3111,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
       destination: destination ?? this.destination,
       passengerName: passengerName ?? this.passengerName,
       passengerPhone: passengerPhone ?? this.passengerPhone,
+      luggageAmount: luggageAmount ?? this.luggageAmount,
+      luggageDescription: luggageDescription ?? this.luggageDescription,
       serialNumber: serialNumber ?? this.serialNumber,
       issuedAt: issuedAt ?? this.issuedAt,
       syncStatus: syncStatus ?? this.syncStatus,
@@ -3056,6 +3162,12 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
     if (passengerPhone.present) {
       map['passenger_phone'] = Variable<String>(passengerPhone.value);
     }
+    if (luggageAmount.present) {
+      map['luggage_amount'] = Variable<double>(luggageAmount.value);
+    }
+    if (luggageDescription.present) {
+      map['luggage_description'] = Variable<String>(luggageDescription.value);
+    }
     if (serialNumber.present) {
       map['serial_number'] = Variable<int>(serialNumber.value);
     }
@@ -3095,6 +3207,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
           ..write('destination: $destination, ')
           ..write('passengerName: $passengerName, ')
           ..write('passengerPhone: $passengerPhone, ')
+          ..write('luggageAmount: $luggageAmount, ')
+          ..write('luggageDescription: $luggageDescription, ')
           ..write('serialNumber: $serialNumber, ')
           ..write('issuedAt: $issuedAt, ')
           ..write('syncStatus: $syncStatus, ')
@@ -5000,6 +5114,8 @@ typedef $$LocalTicketsTableCreateCompanionBuilder =
       Value<String?> destination,
       Value<String?> passengerName,
       Value<String?> passengerPhone,
+      Value<double?> luggageAmount,
+      Value<String?> luggageDescription,
       Value<int?> serialNumber,
       required DateTime issuedAt,
       Value<String> syncStatus,
@@ -5022,6 +5138,8 @@ typedef $$LocalTicketsTableUpdateCompanionBuilder =
       Value<String?> destination,
       Value<String?> passengerName,
       Value<String?> passengerPhone,
+      Value<double?> luggageAmount,
+      Value<String?> luggageDescription,
       Value<int?> serialNumber,
       Value<DateTime> issuedAt,
       Value<String> syncStatus,
@@ -5097,6 +5215,16 @@ class $$LocalTicketsTableFilterComposer
 
   ColumnFilters<String> get passengerPhone => $composableBuilder(
     column: $table.passengerPhone,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get luggageAmount => $composableBuilder(
+    column: $table.luggageAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get luggageDescription => $composableBuilder(
+    column: $table.luggageDescription,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5200,6 +5328,16 @@ class $$LocalTicketsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get luggageAmount => $composableBuilder(
+    column: $table.luggageAmount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get luggageDescription => $composableBuilder(
+    column: $table.luggageDescription,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get serialNumber => $composableBuilder(
     column: $table.serialNumber,
     builder: (column) => ColumnOrderings(column),
@@ -5284,6 +5422,16 @@ class $$LocalTicketsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<double> get luggageAmount => $composableBuilder(
+    column: $table.luggageAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get luggageDescription => $composableBuilder(
+    column: $table.luggageDescription,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get serialNumber => $composableBuilder(
     column: $table.serialNumber,
     builder: (column) => column,
@@ -5354,6 +5502,8 @@ class $$LocalTicketsTableTableManager
                 Value<String?> destination = const Value.absent(),
                 Value<String?> passengerName = const Value.absent(),
                 Value<String?> passengerPhone = const Value.absent(),
+                Value<double?> luggageAmount = const Value.absent(),
+                Value<String?> luggageDescription = const Value.absent(),
                 Value<int?> serialNumber = const Value.absent(),
                 Value<DateTime> issuedAt = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
@@ -5374,6 +5524,8 @@ class $$LocalTicketsTableTableManager
                 destination: destination,
                 passengerName: passengerName,
                 passengerPhone: passengerPhone,
+                luggageAmount: luggageAmount,
+                luggageDescription: luggageDescription,
                 serialNumber: serialNumber,
                 issuedAt: issuedAt,
                 syncStatus: syncStatus,
@@ -5396,6 +5548,8 @@ class $$LocalTicketsTableTableManager
                 Value<String?> destination = const Value.absent(),
                 Value<String?> passengerName = const Value.absent(),
                 Value<String?> passengerPhone = const Value.absent(),
+                Value<double?> luggageAmount = const Value.absent(),
+                Value<String?> luggageDescription = const Value.absent(),
                 Value<int?> serialNumber = const Value.absent(),
                 required DateTime issuedAt,
                 Value<String> syncStatus = const Value.absent(),
@@ -5416,6 +5570,8 @@ class $$LocalTicketsTableTableManager
                 destination: destination,
                 passengerName: passengerName,
                 passengerPhone: passengerPhone,
+                luggageAmount: luggageAmount,
+                luggageDescription: luggageDescription,
                 serialNumber: serialNumber,
                 issuedAt: issuedAt,
                 syncStatus: syncStatus,

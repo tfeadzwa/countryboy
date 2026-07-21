@@ -178,14 +178,29 @@ class TicketPrintService {
         ),
       ),
     );
+    final luggageAmt = receipt.ticket.luggageAmount;
+    if (luggageAmt != null &&
+        luggageAmt > 0 &&
+        receipt.ticket.ticketCategory == 'PASSENGER_WITH_LUGGAGE') {
+      final passengerAmt = receipt.ticket.amount - luggageAmt;
+      bytes.addAll(
+        generator.text(
+          'Pax ${receipt.ticket.currency} ${passengerAmt.toStringAsFixed(2)}'
+          ' + Bag ${receipt.ticket.currency} ${luggageAmt.toStringAsFixed(2)}',
+          styles: const PosStyles(align: PosAlign.center),
+        ),
+      );
+    }
     bytes.addAll(generator.hr());
 
     // Ticket number sits with the other detail rows (normal size).
     bytes.addAll(_kv(generator, 'Ticket', ticketNo));
     bytes.addAll(_kv(generator, 'Bus', receipt.trip.fleetNumber ?? '-'));
-    if (receipt.ticket.passengerPhone != null &&
-        receipt.ticket.passengerPhone!.isNotEmpty) {
-      bytes.addAll(_kv(generator, 'Phone', receipt.ticket.passengerPhone!));
+    if (receipt.ticket.luggageDescription != null &&
+        receipt.ticket.luggageDescription!.isNotEmpty) {
+      bytes.addAll(
+        _kv(generator, 'Luggage', receipt.ticket.luggageDescription!),
+      );
     }
     bytes.addAll(_kv(generator, 'Issued', issued));
     bytes.addAll(_kv(generator, 'Depot', receipt.depotName));

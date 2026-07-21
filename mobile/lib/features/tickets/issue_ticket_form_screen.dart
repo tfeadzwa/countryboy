@@ -17,13 +17,15 @@ import 'widgets/issue_flow_step_header.dart';
 /// UI issue modes mapped to backend `ticket_category` values.
 enum IssueTicketMode {
   passenger('PASSENGER', 'Passenger'),
-  combined('PASSENGER_WITH_LUGGAGE', 'Passenger + luggage (1 ticket)'),
-  pair('PAIR', 'Passenger + luggage (2 linked tickets)'),
+  combined('PASSENGER_WITH_LUGGAGE', 'Passenger + luggage'),
   luggage('LUGGAGE', 'Luggage only');
 
   const IssueTicketMode(this.apiValue, this.label);
   final String apiValue;
   final String label;
+
+  bool get hasLuggage =>
+      this == IssueTicketMode.combined || this == IssueTicketMode.luggage;
 }
 
 class IssueTicketFormScreen extends ConsumerStatefulWidget {
@@ -42,8 +44,8 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
   String _currency = 'USD';
   List<FareModel> _routeFares = [];
   FareModel? _routeFare;
-  final _passengerPhoneController = TextEditingController();
   final _luggageAmountController = TextEditingController();
+  final _luggageDescriptionController = TextEditingController();
   bool _loading = true;
   bool _fareLoading = false;
   String? _error;
@@ -57,8 +59,8 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
 
   @override
   void dispose() {
-    _passengerPhoneController.dispose();
     _luggageAmountController.dispose();
+    _luggageDescriptionController.dispose();
     super.dispose();
   }
 
@@ -190,12 +192,14 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
   double? _amountForMode(IssueTicketMode mode) {
     switch (mode) {
       case IssueTicketMode.passenger:
-      case IssueTicketMode.combined:
         return _passengerFareAmount;
+      case IssueTicketMode.combined:
+        final passenger = _passengerFareAmount;
+        final luggage = _luggageFareAmount;
+        if (passenger == null || luggage == null) return null;
+        return passenger + luggage;
       case IssueTicketMode.luggage:
         return _luggageFareAmount;
-      case IssueTicketMode.pair:
-        return null;
     }
   }
 
@@ -207,18 +211,16 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
     return amount;
   }
 
-  ({String? phone}) _readOptionalPhone() {
-    final phone = _passengerPhoneController.text.trim();
-    if (phone.isEmpty) {
-      return (phone: null);
+  String? _optionalLuggageDescription() {
+    final description = _luggageDescriptionController.text.trim();
+    if (description.isEmpty) return null;
+    if (description.length < 2) {
+      throw ApiError(message: 'Luggage description is too short.');
     }
-    if (phone.length < 7) {
-      throw ApiError(message: 'Enter a valid passenger phone number (or leave blank).');
+    if (description.length > 80) {
+      throw ApiError(message: 'Luggage description must be 80 characters or less.');
     }
-    if (!RegExp(r'^[+]?[\d\s()-]+$').hasMatch(phone)) {
-      throw ApiError(message: 'Phone number contains invalid characters.');
-    }
-    return (phone: phone);
+    return description;
   }
 
   void _continueToReview() {
@@ -227,45 +229,48 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
     setState(() => _error = null);
 
     try {
-      if (_routeFare == null) {
+      if (_mode != IssueTicketMode.luggage && _routeFare == null) {
         throw ApiError(
           message: _fareError ?? 'Route fare is not available for this trip.',
         );
       }
 
-      final phone = _readOptionalPhone().phone;
       final departure = _selectedSubroute?.origin ?? _trip!.routeOrigin;
-      final destination = _selectedSubroute?.destination ?? _trip!.routeDestination;
+      final destination =
+          _selectedSubroute?.destination ?? _trip!.routeDestination;
+      final luggageDescription =
+          _mode.hasLuggage ? _optionalLuggageDescription() : null;
+
       late TicketIssueDraft draft;
 
-      if (_mode == IssueTicketMode.pair) {
+      if (_mode == IssueTicketMode.luggage) {
+        final luggageAmount = _requireLuggageAmount();
+        draft = TicketIssueDraft(
+          trip: _trip!,
+          mode: _mode.apiValue,
+          currency: _currency,
+          amount: luggageAmount,
+          luggageAmount: luggageAmount,
+          departure: departure,
+          destination: destination,
+          luggageDescription: luggageDescription,
+        );
+      } else if (_mode == IssueTicketMode.combined) {
         final passengerAmount = _passengerFareAmount;
         if (passengerAmount == null || passengerAmount <= 0) {
           throw ApiError(message: 'Route fare is not available for this trip.');
         }
         final luggageAmount = _requireLuggageAmount();
-
         draft = TicketIssueDraft(
           trip: _trip!,
           mode: _mode.apiValue,
           currency: _currency,
+          amount: passengerAmount + luggageAmount,
           passengerAmount: passengerAmount,
           luggageAmount: luggageAmount,
           departure: departure,
           destination: destination,
-          passengerPhone: phone,
-        );
-      } else if (_mode == IssueTicketMode.luggage) {
-        final amount = _requireLuggageAmount();
-
-        draft = TicketIssueDraft(
-          trip: _trip!,
-          mode: _mode.apiValue,
-          currency: _currency,
-          amount: amount,
-          departure: departure,
-          destination: destination,
-          passengerPhone: phone,
+          luggageDescription: luggageDescription,
         );
       } else {
         final amount = _amountForMode(_mode);
@@ -278,9 +283,9 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
           mode: _mode.apiValue,
           currency: _currency,
           amount: amount,
+          passengerAmount: amount,
           departure: departure,
           destination: destination,
-          passengerPhone: phone,
         );
       }
 
@@ -348,6 +353,24 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
     );
   }
 
+  Widget _buildLuggageDescriptionField() {
+    return TextField(
+      controller: _luggageDescriptionController,
+      maxLength: 80,
+      maxLines: 2,
+      textCapitalization: TextCapitalization.sentences,
+      onChanged: (_) {
+        if (_error != null) setState(() => _error = null);
+      },
+      decoration: const InputDecoration(
+        labelText: 'Luggage description',
+        hintText: 'e.g. 2 bags, suitcase',
+        helperText: 'Optional — short description of the luggage',
+        alignLabelWithHint: true,
+      ),
+    );
+  }
+
   Widget _buildRouteFareSection() {
     if (_fareLoading) {
       return const Padding(
@@ -356,7 +379,7 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
       );
     }
 
-    if (_fareError != null) {
+    if (_fareError != null && _mode != IssueTicketMode.luggage) {
       return Card(
         color: AppColors.error.withValues(alpha: 0.06),
         child: Padding(
@@ -380,57 +403,44 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
       );
     }
 
-    final passengerFare = _passengerFareAmount;
-    final luggageFare = _luggageFareAmount;
+    if (_mode == IssueTicketMode.luggage) {
+      return _buildLuggageAmountField();
+    }
 
-    if (_mode == IssueTicketMode.pair) {
-      if (passengerFare == null) return const SizedBox.shrink();
+    final passengerFare = _passengerFareAmount;
+    if (passengerFare == null) return const SizedBox.shrink();
+
+    final fareRouteLabel = _selectedSubroute?.label ?? _trip!.routeLabel;
+
+    if (_mode == IssueTicketMode.combined) {
+      final luggage = _luggageFareAmount;
+      final total =
+          luggage != null ? passengerFare + luggage : null;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildFareLine(
             label: 'Passenger fare',
             amount: passengerFare,
-            helper: 'From route fare',
+            helper: 'From route fare for $fareRouteLabel',
           ),
           const SizedBox(height: AppSpacing.md),
           _buildLuggageAmountField(),
-          if (luggageFare != null && luggageFare > 0) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Total', style: Theme.of(context).textTheme.titleMedium),
-                    Text(
-                      '$_currency ${(passengerFare + luggageFare).toStringAsFixed(2)}',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
+          if (total != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            _buildFareLine(
+              label: 'Total',
+              amount: total,
+              helper: 'Passenger fare + luggage',
             ),
           ],
         ],
       );
     }
 
-    if (_mode == IssueTicketMode.luggage) {
-      return _buildLuggageAmountField();
-    }
-
-    if (passengerFare == null) return const SizedBox.shrink();
-
-    final amount = _amountForMode(_mode)!;
-    final fareRouteLabel = _selectedSubroute?.label ?? _trip!.routeLabel;
-
     return _buildFareLine(
       label: 'Fare amount',
-      amount: amount,
+      amount: passengerFare,
       helper: 'From route fare for $fareRouteLabel',
     );
   }
@@ -529,18 +539,21 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
                             color: selected
                                 ? AppColors.brandRed.withValues(alpha: 0.08)
                                 : AppColors.surface,
-                            borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.radiusMd),
                             child: InkWell(
                               onTap: () => setState(() {
                                 _mode = mode;
                                 _error = null;
                               }),
-                              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                              borderRadius:
+                                  BorderRadius.circular(AppSpacing.radiusMd),
                               child: Container(
                                 padding: const EdgeInsets.all(AppSpacing.md),
                                 decoration: BoxDecoration(
-                                  borderRadius:
-                                      BorderRadius.circular(AppSpacing.radiusMd),
+                                  borderRadius: BorderRadius.circular(
+                                    AppSpacing.radiusMd,
+                                  ),
                                   border: Border.all(
                                     color: selected
                                         ? AppColors.brandRed
@@ -561,7 +574,9 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
                                     Expanded(
                                       child: Text(
                                         mode.label,
-                                        style: Theme.of(context).textTheme.titleMedium,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium,
                                       ),
                                     ),
                                   ],
@@ -591,7 +606,8 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
                               currencies: availableCurrencies,
                               selected: current,
                               title: 'Select currency',
-                              subtitle: 'Currencies available for this route fare',
+                              subtitle:
+                                  'Currencies available for this route fare',
                             );
                             if (picked != null && mounted) {
                               _onCurrencyChanged(picked);
@@ -600,24 +616,15 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
                         ),
                         const SizedBox(height: AppSpacing.lg),
                       ],
-                      Text(
-                        'Contact (optional)',
-                        style: Theme.of(context).textTheme.labelLarge,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      TextField(
-                        controller: _passengerPhoneController,
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[+0-9\s()-]')),
-                        ],
-                        decoration: const InputDecoration(
-                          labelText: 'Passenger phone',
-                          hintText: '+263 77 123 4567',
-                          helperText: 'Optional — leave blank if not provided',
+                      if (_mode.hasLuggage) ...[
+                        Text(
+                          'Luggage',
+                          style: Theme.of(context).textTheme.labelLarge,
                         ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
+                        const SizedBox(height: AppSpacing.sm),
+                        _buildLuggageDescriptionField(),
+                        const SizedBox(height: AppSpacing.lg),
+                      ],
                       Text('Fare', style: Theme.of(context).textTheme.labelLarge),
                       const SizedBox(height: AppSpacing.sm),
                       _buildRouteFareSection(),
@@ -632,7 +639,9 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
                       const SizedBox(height: AppSpacing.xl),
                       AppButton(
                         label: 'Review ticket',
-                        onPressed: _routeFare == null || _fareLoading
+                        onPressed: _fareLoading ||
+                                (_mode != IssueTicketMode.luggage &&
+                                    _routeFare == null)
                             ? null
                             : _continueToReview,
                         icon: Icons.arrow_forward,

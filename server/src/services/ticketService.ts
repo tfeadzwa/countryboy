@@ -10,6 +10,7 @@ interface IssueArgs {
   ticket_category: string; // PASSENGER, PASSENGER_WITH_LUGGAGE, LUGGAGE
   currency: string;
   amount: number;
+  luggage_amount?: number | null;
   departure?: string;
   destination?: string;
   passenger_phone?: string | null;
@@ -31,6 +32,7 @@ export const issueTicket = async (args: IssueArgs) => {
         ticket_category: args.ticket_category,
         currency: args.currency,
         amount: args.amount,
+        luggage_amount: args.luggage_amount ?? null,
         departure: args.departure,
         destination: args.destination,
         passenger_name: null,

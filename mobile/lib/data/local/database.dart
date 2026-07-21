@@ -31,7 +31,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -45,6 +45,12 @@ class AppDatabase extends _$AppDatabase {
             // for multi-parent JSON fields; next online sync will refill rows.
             await m.deleteTable('cached_routes');
             await m.createTable(cachedRoutes);
+          }
+          if (from < 5) {
+            await m.addColumn(localTickets, localTickets.luggageDescription);
+          }
+          if (from < 6) {
+            await m.addColumn(localTickets, localTickets.luggageAmount);
           }
         },
       );

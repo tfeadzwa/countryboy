@@ -73,6 +73,8 @@ class LocalTickets extends Table {
   TextColumn get destination => text().nullable()();
   TextColumn get passengerName => text().nullable()();
   TextColumn get passengerPhone => text().nullable()();
+  RealColumn get luggageAmount => real().nullable()();
+  TextColumn get luggageDescription => text().nullable()();
   IntColumn get serialNumber => integer().nullable()();
   DateTimeColumn get issuedAt => dateTime()();
   TextColumn get syncStatus =>

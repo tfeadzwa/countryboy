@@ -143,39 +143,63 @@ export const startTripSchema = z.object({
 export const endTripSchema = z.object({ params: z.object({ id: z.string() }) });
 
 export const ticketIssueSchema = z.object({
-  body: z.object({
-    trip_id: z.string(),
-    agent_id: z.string().optional(), // Optional – falls back to the authenticated agent from JWT
-    device_id: z.string().optional(),
-    ticket_category: z.enum(['PASSENGER', 'PASSENGER_WITH_LUGGAGE', 'LUGGAGE']),
-    currency: z.string(),
-    amount: z.coerce.number(),
-    departure: z.string().optional(),
-    destination: z.string().optional(),
-    issued_at: z.string().optional(),
-    linked_passenger_ticket_id: z.string().optional(),
-    // Passenger name is no longer collected; accept legacy payloads and ignore.
-    passenger_name: z.string().trim().max(100).optional(),
-    passenger_phone: z.preprocess(
-      (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
-      z
-        .string()
-        .trim()
-        .min(7, 'Passenger phone must be at least 7 digits')
-        .max(20, 'Passenger phone is too long')
-        .regex(/^[+]?[\d\s()-]+$/, 'Passenger phone contains invalid characters')
-        .optional(),
-    ),
-    luggage_description: z.preprocess(
-      (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
-      z
-        .string()
-        .trim()
-        .min(2, 'Luggage description is too short')
-        .max(80, 'Luggage description must be 80 characters or less')
-        .optional(),
-    ),
-  }),
+  body: z
+    .object({
+      trip_id: z.string(),
+      agent_id: z.string().optional(), // Optional – falls back to the authenticated agent from JWT
+      device_id: z.string().optional(),
+      ticket_category: z.enum(['PASSENGER', 'PASSENGER_WITH_LUGGAGE', 'LUGGAGE']),
+      currency: z.string(),
+      /** Total ticket charge. For PASSENGER_WITH_LUGGAGE = passenger fare + luggage_amount. */
+      amount: z.coerce.number().positive('Amount must be greater than 0'),
+      /** Manual luggage charge (required for PASSENGER_WITH_LUGGAGE). */
+      luggage_amount: z.coerce.number().positive().optional(),
+      departure: z.string().optional(),
+      destination: z.string().optional(),
+      issued_at: z.string().optional(),
+      linked_passenger_ticket_id: z.string().optional(),
+      // Passenger name is no longer collected; accept legacy payloads and ignore.
+      passenger_name: z.string().trim().max(100).optional(),
+      passenger_phone: z.preprocess(
+        (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+        z
+          .string()
+          .trim()
+          .min(7, 'Passenger phone must be at least 7 digits')
+          .max(20, 'Passenger phone is too long')
+          .regex(/^[+]?[\d\s()-]+$/, 'Passenger phone contains invalid characters')
+          .optional(),
+      ),
+      luggage_description: z.preprocess(
+        (val) => (typeof val === 'string' && val.trim() === '' ? undefined : val),
+        z
+          .string()
+          .trim()
+          .min(2, 'Luggage description is too short')
+          .max(80, 'Luggage description must be 80 characters or less')
+          .optional(),
+      ),
+    })
+    .superRefine((data, ctx) => {
+      if (data.ticket_category === 'PASSENGER_WITH_LUGGAGE') {
+        if (data.luggage_amount == null) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['luggage_amount'],
+            message: 'Luggage amount is required for passenger + luggage tickets',
+          });
+          return;
+        }
+        if (data.amount <= data.luggage_amount) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['amount'],
+            message:
+              'Total amount must include the passenger fare plus the luggage charge',
+          });
+        }
+      }
+    }),
 });
 
 export const ticketVoidSchema = z.object({

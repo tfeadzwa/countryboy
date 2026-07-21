@@ -60,6 +60,8 @@ export const getPublicTicketVerification = async (ticketId: string) => {
       category_label: categoryLabel(ticket.ticket_category),
       currency: ticket.currency,
       amount: Number(ticket.amount),
+      luggage_amount:
+        ticket.luggage_amount != null ? Number(ticket.luggage_amount) : null,
       origin,
       destination,
       route_label:
