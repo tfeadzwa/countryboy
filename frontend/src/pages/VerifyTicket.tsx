@@ -10,7 +10,7 @@ import {
   User,
   BadgeCheck,
   Ticket,
-  Phone,
+  Luggage,
   AlertTriangle,
   Loader2,
 } from "lucide-react";
@@ -188,6 +188,16 @@ const VerifyTicket = () => {
                   >
                     {formatMoney(data.ticket.currency, data.ticket.amount)}
                   </p>
+                  {data.ticket.luggage_amount != null &&
+                    data.ticket.luggage_amount > 0 && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Incl. luggage{" "}
+                        {formatMoney(
+                          data.ticket.currency,
+                          data.ticket.luggage_amount,
+                        )}
+                      </p>
+                    )}
                 </div>
 
                 {(data.ticket.origin || data.ticket.destination) && (
@@ -247,11 +257,11 @@ const VerifyTicket = () => {
                     label="Conductor"
                     value={data.conductor?.name ?? "—"}
                   />
-                  {data.ticket.passenger_phone && (
+                  {data.ticket.luggage_description && (
                     <Detail
-                      icon={Phone}
-                      label="Phone"
-                      value={data.ticket.passenger_phone}
+                      icon={Luggage}
+                      label="Luggage"
+                      value={data.ticket.luggage_description}
                     />
                   )}
                 </dl>

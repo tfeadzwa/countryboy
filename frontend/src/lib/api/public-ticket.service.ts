@@ -14,10 +14,12 @@ export interface TicketVerificationResult {
     category_label: string;
     currency: string;
     amount: number;
+    luggage_amount: number | null;
     origin: string | null;
     destination: string | null;
     route_label: string | null;
     passenger_phone: string | null;
+    luggage_description: string | null;
     issued_at: string;
   };
   trip: {
