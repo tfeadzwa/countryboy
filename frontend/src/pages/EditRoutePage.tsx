@@ -28,6 +28,7 @@ import { isSuperAdmin } from "@/lib/permissions";
 import { routeService } from "@/lib/api/route.service";
 import { fareService } from "@/lib/api/fare.service";
 import { depotService } from "@/lib/api/depot.service";
+import { validateTicketFareAmount } from "@/lib/constants/currencies";
 import type { Depot, Fare, RouteInfo } from "@/types";
 
 const normalizeRouteIds = (ids: string[]) =>
@@ -164,6 +165,14 @@ const EditRoutePage = () => {
     if (new Set(currencies).size !== currencies.length) {
       setSaveError("Each currency can only be added once per route.");
       return;
+    }
+
+    for (const fare of fareRows) {
+      const fareError = validateTicketFareAmount(fare.currency, fare.amount);
+      if (fareError) {
+        setSaveError(`${fare.currency}: ${fareError}`);
+        return;
+      }
     }
 
     setSaving(true);

@@ -255,9 +255,9 @@ class TripModel extends Equatable {
     required this.id,
     required this.agentId,
     required this.fleetId,
-    required this.routeId,
     required this.status,
     required this.startedAt,
+    this.routeId,
     this.deviceId,
     this.fleetNumber,
     this.routeOrigin,
@@ -270,7 +270,7 @@ class TripModel extends Equatable {
   final String id;
   final String agentId;
   final String fleetId;
-  final String routeId;
+  final String? routeId;
   final String? deviceId;
   final String status;
   final DateTime startedAt;
@@ -282,10 +282,13 @@ class TripModel extends Equatable {
   final String syncStatus;
 
   String get routeLabel {
-    if (routeOrigin != null && routeDestination != null) {
+    if (routeOrigin != null &&
+        routeOrigin!.isNotEmpty &&
+        routeDestination != null &&
+        routeDestination!.isNotEmpty) {
       return '$routeOrigin -> $routeDestination';
     }
-    return 'Route';
+    return 'Corridor';
   }
 
   bool get isActive => status == 'ACTIVE';

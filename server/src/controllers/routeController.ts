@@ -1,8 +1,31 @@
 import { AuthenticatedRequest } from '../middleware/auth';
 import { Response } from 'express';
 import * as routeService from '../services/routeService';
+import * as tripService from '../services/tripService';
 import { formatPrismaError } from '../utils/prismaErrors';
 import { buildPaginatedResult, parsePagination, wantsPagination } from '../utils/pagination';
+
+/** Conductor-run corridors derived from trips (read-only admin view). */
+export const listCorridors = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const corridors = await tripService.listCorridors(req.depotId);
+    res.json(corridors);
+  } catch (err) {
+    res.status(500).json({ error: 'Unable to list corridors', details: err });
+  }
+};
+
+export const getCorridor = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const detail = await tripService.getCorridorDetail(req.params.id, req.depotId);
+    if (!detail) {
+      return res.status(404).json({ error: 'Route corridor not found' });
+    }
+    res.json(detail);
+  } catch (err) {
+    res.status(500).json({ error: 'Unable to load corridor detail', details: err });
+  }
+};
 
 export const list = async (req: AuthenticatedRequest, res: Response) => {
   try {

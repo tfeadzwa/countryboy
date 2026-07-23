@@ -42,7 +42,7 @@ class LocalTrips extends Table {
   TextColumn get id => text()();
   TextColumn get agentId => text()();
   TextColumn get fleetId => text()();
-  TextColumn get routeId => text()();
+  TextColumn get routeId => text().nullable()();
   TextColumn get deviceId => text().nullable()();
   TextColumn get depotId => text()();
   TextColumn get status => text().withDefault(const Constant('ACTIVE'))();

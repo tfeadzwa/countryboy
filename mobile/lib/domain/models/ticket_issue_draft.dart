@@ -20,7 +20,7 @@ class TicketIssueDraft {
   final String currency;
   /// Total charge stored on the ticket.
   final double? amount;
-  /// Route passenger fare (PASSENGER / PASSENGER_WITH_LUGGAGE).
+  /// Manual passenger fare (PASSENGER / PASSENGER_WITH_LUGGAGE).
   final double? passengerAmount;
   /// Manually entered luggage charge (PASSENGER_WITH_LUGGAGE / LUGGAGE).
   final double? luggageAmount;

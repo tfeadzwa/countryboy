@@ -27,7 +27,7 @@ const RouteFareFields = ({
   onChange,
   disabled = false,
   label = "Fares",
-  description = "Set ticket prices for this route. Add one row per currency.",
+  description = "Optional reference prices for this corridor. Conductors enter ticket fares manually on the mobile app.",
   canRemove = () => true,
 }: RouteFareFieldsProps) => {
   const updateFare = (index: number, patch: Partial<FareDraft>) => {
@@ -83,14 +83,19 @@ const RouteFareFields = ({
                 {index === 0 && <Label className="text-xs text-muted-foreground">Amount</Label>}
                 <Input
                   type="number"
-                  step="0.01"
+                  step="1"
                   min="0"
-                  placeholder="0.00"
+                  placeholder={fare.currency === "ZAR" ? "20" : "0"}
                   value={fare.amount}
                   onChange={(e) => updateFare(index, { amount: e.target.value })}
                   disabled={disabled}
                   className="h-9"
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  {fare.currency === "ZAR"
+                    ? "Whole amounts from 20, steps of 10"
+                    : "Whole amounts only"}
+                </p>
               </div>
               {canRemove(fare) ? (
                 <Button

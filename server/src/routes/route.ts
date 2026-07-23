@@ -9,6 +9,8 @@ import { routeSchema } from '../validators/schemas';
 const router = Router();
 
 router.get('/', authMiddleware, depotScopeMiddleware, routeController.list);
+router.get('/corridors', authMiddleware, depotScopeMiddleware, routeController.listCorridors);
+router.get('/corridors/:id', authMiddleware, depotScopeMiddleware, routeController.getCorridor);
 router.post('/', authMiddleware, depotScopeMiddleware, requireAnyRole(['SUPER_ADMIN', 'DEPOT_ADMIN']), validate(routeSchema), routeController.create);
 router.get('/:id/children', authMiddleware, depotScopeMiddleware, routeController.listChildren);
 router.get('/:id', authMiddleware, depotScopeMiddleware, routeController.getOne);

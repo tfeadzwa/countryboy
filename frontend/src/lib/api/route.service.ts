@@ -3,6 +3,56 @@ import { RouteInfo } from '@/types';
 import type { PaginatedResult } from '@/types/pagination';
 import { DEFAULT_PAGE_SIZE, normalizePaginatedResult } from '@/types/pagination';
 
+export interface CorridorSummary {
+  id: string;
+  key: string;
+  origin: string;
+  destination: string;
+  trip_count: number;
+  active_trip_count: number;
+  ticket_count: number;
+  child_route_count?: number;
+  last_trip_at: string | null;
+  fleets: string[];
+}
+
+export interface CorridorDetail {
+  id: string;
+  origin: string;
+  destination: string;
+  label: string;
+  depot: { id: string; name: string };
+  is_active: boolean;
+  created_at: string;
+  summary: {
+    trip_count: number;
+    active_trip_count: number;
+    ticket_count: number;
+    child_route_count: number;
+    fleets: string[];
+    revenue_by_currency: Record<string, number>;
+  };
+  child_routes: Array<{
+    id: string;
+    origin: string;
+    destination: string;
+    label: string;
+    is_active: boolean;
+    ticket_count: number;
+    revenue: number;
+  }>;
+  recent_trips: Array<{
+    id: string;
+    status: string;
+    started_at: string;
+    ended_at: string | null;
+    fleet_number: string | null;
+    agent_name: string | null;
+    ticket_count: number;
+    segments: string[];
+  }>;
+}
+
 export interface CreateRouteRequest {
   origin: string;
   destination: string;
@@ -26,6 +76,16 @@ export interface UpdateRouteRequest {
 }
 
 class RouteService {
+  async getCorridors(): Promise<CorridorSummary[]> {
+    const response = await apiClient.get<CorridorSummary[]>('/routes/corridors');
+    return response.data;
+  }
+
+  async getCorridor(id: string): Promise<CorridorDetail> {
+    const response = await apiClient.get<CorridorDetail>(`/routes/corridors/${id}`);
+    return response.data;
+  }
+
   async getAll(): Promise<RouteInfo[]> {
     const response = await apiClient.get<RouteInfo[] | PaginatedResult<RouteInfo>>('/routes');
     const data = response.data;
@@ -50,17 +110,21 @@ class RouteService {
   }
 
   async create(data: CreateRouteRequest, depotId?: string): Promise<RouteInfo> {
-    const config = depotId ? {
-      headers: { 'x-depot-id': depotId }
-    } : {};
+    const config = depotId
+      ? {
+          headers: { 'x-depot-id': depotId },
+        }
+      : {};
     const response = await apiClient.post<RouteInfo>('/routes', data, config);
     return response.data;
   }
 
   async update(id: string, data: UpdateRouteRequest, depotId?: string): Promise<RouteInfo> {
-    const config = depotId ? {
-      headers: { 'x-depot-id': depotId }
-    } : {};
+    const config = depotId
+      ? {
+          headers: { 'x-depot-id': depotId },
+        }
+      : {};
     const response = await apiClient.put<RouteInfo>(`/routes/${id}`, data, config);
     return response.data;
   }

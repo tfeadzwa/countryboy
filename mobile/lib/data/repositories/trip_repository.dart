@@ -104,10 +104,9 @@ class TripRepository {
 
   Future<TripModel> startTrip({
     required String fleetId,
-    required String routeId,
     required String fleetNumber,
-    required String routeOrigin,
-    required String routeDestination,
+    required String origin,
+    required String destination,
   }) async {
     final agentJson = await _storage.getAgentProfile();
     final depotId = await _storage.getDepotId();
@@ -144,18 +143,30 @@ class TripRepository {
         id: tripId,
         agentId: agentId,
         fleetId: fleetId,
-        routeId: routeId,
+        routeId: const Value(null),
         deviceId: Value(deviceId),
         depotId: depotId,
         status: const Value('ACTIVE'),
         startedOffline: Value(offline),
         startedAt: startedAt,
         fleetNumber: Value(fleetNumber),
-        routeOrigin: Value(routeOrigin),
-        routeDestination: Value(routeDestination),
+        routeOrigin: Value(origin),
+        routeDestination: Value(destination),
         syncStatus: Value(offline ? 'pending' : 'syncing'),
       ),
     );
+
+    final syncPayload = {
+      'id': tripId,
+      'fleet_id': fleetId,
+      'origin': origin,
+      'destination': destination,
+      'device_id': deviceId,
+      'started_offline': true,
+      'started_at': startedAt.toUtc().toIso8601String(),
+      'agent_id': agentId,
+      'status': 'ACTIVE',
+    };
 
     if (offline) {
       await _db.enqueueSync(
@@ -163,13 +174,7 @@ class TripRepository {
           entityType: 'trip',
           entityId: tripId,
           operation: 'CREATE_TRIP',
-          payloadJson: jsonEncode({
-            'id': tripId,
-            'fleet_id': fleetId,
-            'route_id': routeId,
-            'device_id': deviceId,
-            'started_offline': true,
-          }),
+          payloadJson: jsonEncode(syncPayload),
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         ),
@@ -178,13 +183,12 @@ class TripRepository {
         id: tripId,
         agentId: agentId,
         fleetId: fleetId,
-        routeId: routeId,
         deviceId: deviceId,
         status: 'ACTIVE',
         startedAt: startedAt,
         fleetNumber: fleetNumber,
-        routeOrigin: routeOrigin,
-        routeDestination: routeDestination,
+        routeOrigin: origin,
+        routeDestination: destination,
         syncStatus: 'pending',
       );
     }
@@ -193,7 +197,8 @@ class TripRepository {
       final response = await _api.startTrip(
         tripId: tripId,
         fleetId: fleetId,
-        routeId: routeId,
+        origin: origin,
+        destination: destination,
         deviceId: deviceId,
         startedOffline: false,
       );
@@ -205,14 +210,14 @@ class TripRepository {
           id: serverId,
           agentId: agentId,
           fleetId: fleetId,
-          routeId: routeId,
+          routeId: Value(trip['route_id'] as String?),
           deviceId: Value(deviceId),
           depotId: depotId,
           status: const Value('ACTIVE'),
           startedAt: startedAt,
           fleetNumber: Value(fleetNumber),
-          routeOrigin: Value(routeOrigin),
-          routeDestination: Value(routeDestination),
+          routeOrigin: Value(origin),
+          routeDestination: Value(destination),
           syncStatus: const Value('synced'),
         ),
       );
@@ -257,13 +262,7 @@ class TripRepository {
           entityType: 'trip',
           entityId: tripId,
           operation: 'CREATE_TRIP',
-          payloadJson: jsonEncode({
-            'id': tripId,
-            'fleet_id': fleetId,
-            'route_id': routeId,
-            'device_id': deviceId,
-            'started_offline': true,
-          }),
+          payloadJson: jsonEncode(syncPayload),
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         ),
@@ -272,13 +271,12 @@ class TripRepository {
         id: tripId,
         agentId: agentId,
         fleetId: fleetId,
-        routeId: routeId,
         deviceId: deviceId,
         status: 'ACTIVE',
         startedAt: startedAt,
         fleetNumber: fleetNumber,
-        routeOrigin: routeOrigin,
-        routeDestination: routeDestination,
+        routeOrigin: origin,
+        routeDestination: destination,
         syncStatus: 'pending',
       );
     }
@@ -288,7 +286,9 @@ class TripRepository {
     await _api.startTrip(
       tripId: payload['id'] as String,
       fleetId: payload['fleet_id'] as String,
-      routeId: payload['route_id'] as String,
+      origin: payload['origin'] as String,
+      destination: payload['destination'] as String,
+      routeId: payload['route_id'] as String?,
       deviceId: payload['device_id'] as String?,
       startedOffline: payload['started_offline'] as bool? ?? true,
     );
@@ -377,20 +377,24 @@ class TripRepository {
 
     final fleet = json['fleet'] as Map<String, dynamic>?;
     final route = json['route'] as Map<String, dynamic>?;
+    final origin =
+        (json['origin'] as String?) ?? (route?['origin'] as String?);
+    final destination =
+        (json['destination'] as String?) ?? (route?['destination'] as String?);
 
     await _db.upsertTrip(
       LocalTripsCompanion.insert(
         id: json['id'] as String,
         agentId: json['agent_id'] as String,
         fleetId: json['fleet_id'] as String,
-        routeId: json['route_id'] as String? ?? '',
+        routeId: Value(json['route_id'] as String?),
         deviceId: Value(json['device_id'] as String?),
         depotId: depotId,
         status: Value(json['status'] as String? ?? 'ACTIVE'),
         startedAt: DateTime.parse(json['started_at'] as String),
         fleetNumber: Value(fleet?['number'] as String?),
-        routeOrigin: Value(route?['origin'] as String?),
-        routeDestination: Value(route?['destination'] as String?),
+        routeOrigin: Value(origin),
+        routeDestination: Value(destination),
         syncStatus: const Value('synced'),
       ),
     );
@@ -413,17 +417,21 @@ class TripRepository {
   TripModel _mapRemoteTrip(Map<String, dynamic> json) {
     final fleet = json['fleet'] as Map<String, dynamic>?;
     final route = json['route'] as Map<String, dynamic>?;
+    final origin =
+        (json['origin'] as String?) ?? (route?['origin'] as String?);
+    final destination =
+        (json['destination'] as String?) ?? (route?['destination'] as String?);
     return TripModel(
       id: json['id'] as String,
       agentId: json['agent_id'] as String,
       fleetId: json['fleet_id'] as String,
-      routeId: json['route_id'] as String? ?? '',
+      routeId: json['route_id'] as String?,
       deviceId: json['device_id'] as String?,
       status: json['status'] as String? ?? 'ACTIVE',
       startedAt: DateTime.parse(json['started_at'] as String),
       fleetNumber: fleet?['number'] as String?,
-      routeOrigin: route?['origin'] as String?,
-      routeDestination: route?['destination'] as String?,
+      routeOrigin: origin,
+      routeDestination: destination,
       ticketsCount: json['tickets_count'] as int? ?? 0,
       totalRevenue: (json['total_revenue'] as num?)?.toDouble() ?? 0,
       syncStatus: 'synced',

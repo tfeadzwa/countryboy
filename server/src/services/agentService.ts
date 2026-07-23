@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import bcrypt from '../lib/bcrypt';
 import jwt from 'jsonwebtoken';
 import { touchDeviceActivity } from './agentSessionService';
+import { ensureRoute } from './routeService';
 
 export const listAgents = async (
   depotId?: string,
@@ -372,11 +373,26 @@ export const startAgentTrip = async (data: {
   id?: string;
   agentId: string;
   fleetId: string;
-  routeId: string;
+  origin: string;
+  destination: string;
+  routeId?: string | null;
   deviceId?: string;
   startedOffline?: boolean;
 }) => {
-  const { id, agentId, fleetId, routeId, deviceId, startedOffline } = data;
+  const { id, agentId, fleetId, origin, destination, deviceId, startedOffline } =
+    data;
+
+  const trimmedOrigin = origin.trim();
+  const trimmedDestination = destination.trim();
+  if (trimmedOrigin.length < 2) {
+    throw new Error('Origin must be at least 2 characters');
+  }
+  if (trimmedDestination.length < 2) {
+    throw new Error('Destination must be at least 2 characters');
+  }
+  if (trimmedOrigin.toLowerCase() === trimmedDestination.toLowerCase()) {
+    throw new Error('Origin and destination must be different');
+  }
 
   // Step 1: Verify agent exists and is active
   const agent = await prisma.tblAgents.findUnique({
@@ -433,18 +449,9 @@ export const startAgentTrip = async (data: {
     throw new Error('Fleet does not belong to agent\'s depot');
   }
 
-  // Step 4: Validate route exists and belongs to same depot
-  const route = await prisma.tblRoutes.findUnique({
-    where: { id: routeId }
-  });
-
-  if (!route) {
-    throw new Error('Route not found');
-  }
-
-  if (route.depot_id !== depotId) {
-    throw new Error('Route does not belong to agent\'s depot');
-  }
+  // Step 4: Upsert main parent corridor from conductor-entered origin/destination
+  const parentRoute = await ensureRoute(depotId, trimmedOrigin, trimmedDestination);
+  const resolvedRouteId = parentRoute.id;
 
   // Step 5: Create the trip record (reuse client id when syncing offline trips)
   const trip = await prisma.tblTrips.create({
@@ -453,7 +460,9 @@ export const startAgentTrip = async (data: {
       depot_id: depotId,
       agent_id: agentId,
       fleet_id: fleetId,
-      route_id: routeId,
+      route_id: resolvedRouteId,
+      origin: trimmedOrigin,
+      destination: trimmedDestination,
       device_id: deviceId,
       started_at: new Date(),
       status: 'ACTIVE',

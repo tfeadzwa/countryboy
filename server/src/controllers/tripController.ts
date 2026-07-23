@@ -5,7 +5,8 @@ import { formatPrismaError } from '../utils/prismaErrors';
 
 export const start = async (req: AuthenticatedRequest, res: Response) => {
   const depotId = req.depotId as string;
-  const { agent_id, fleet_id, route_id, device_id, started_offline } = req.body;
+  const { agent_id, fleet_id, origin, destination, route_id, device_id, started_offline } =
+    req.body;
 
   if (!depotId) {
     return res.status(400).json({
@@ -14,10 +15,25 @@ export const start = async (req: AuthenticatedRequest, res: Response) => {
   }
 
   try {
-    const trip = await tripService.startTrip(depotId, { agent_id, fleet_id, route_id, device_id, started_offline });
+    const trip = await tripService.startTrip(depotId, {
+      agent_id,
+      fleet_id,
+      origin,
+      destination,
+      route_id,
+      device_id,
+      started_offline,
+    });
     res.status(201).json(trip);
   } catch (err) {
-    const friendly = formatPrismaError(err, { agent_id, fleet_id, route_id, device_id });
+    const friendly = formatPrismaError(err, {
+      agent_id,
+      fleet_id,
+      origin,
+      destination,
+      route_id,
+      device_id,
+    });
     if (friendly) {
       return res.status(friendly.status).json({ error: friendly.message });
     }
@@ -98,7 +114,9 @@ export const list = async (req: AuthenticatedRequest, res: Response) => {
         fleet_id: t.fleet_id,
         fleet_number: t.fleet?.number,
         route_id: t.route_id,
-        route_label: t.route ? `${t.route.origin} → ${t.route.destination}` : null,
+        origin: t.origin,
+        destination: t.destination,
+        route_label: `${t.origin} → ${t.destination}`,
         status: t.status,
         started_at: t.started_at,
         ended_at: t.ended_at,

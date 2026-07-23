@@ -2,7 +2,7 @@ import prisma from '../utils/prisma';
 import logger from '../utils/logger';
 import { touchDeviceActivity } from './agentSessionService';
 import { listFleets } from './fleetService';
-import { listRoutes } from './routeService';
+import { listRoutes, ensureRoute, linkTicketSegmentToTrip } from './routeService';
 import { listFares } from './fareService';
 import { allocateTripSerial } from '../utils/ticketSerial';
 
@@ -32,18 +32,33 @@ const parseSyncDateTime = (value: unknown, field: string): Date => {
   throw new Error(`Invalid ${field} datetime: ${String(value)}`);
 };
 
-const normalizeTripRecord = (raw: Record<string, unknown>, depotId: string) => ({
-  id: raw.id as string,
-  depot_id: depotId,
-  agent_id: raw.agent_id as string,
-  fleet_id: raw.fleet_id as string,
-  route_id: (raw.route_id as string | undefined) ?? null,
-  device_id: (raw.device_id as string | undefined) ?? null,
-  started_at: parseSyncDateTime(raw.started_at, 'started_at'),
-  ended_at: raw.ended_at != null ? parseSyncDateTime(raw.ended_at, 'ended_at') : null,
-  status: (raw.status as string | undefined) ?? 'ACTIVE',
-  started_offline: Boolean(raw.started_offline),
-});
+const normalizeTripRecord = (raw: Record<string, unknown>, depotId: string) => {
+  const origin = String(raw.origin ?? '').trim();
+  const destination = String(raw.destination ?? '').trim();
+  if (origin.length < 2 || destination.length < 2) {
+    throw new Error(
+      'Trip origin and destination are required (at least 2 characters each)',
+    );
+  }
+  if (origin.toLowerCase() === destination.toLowerCase()) {
+    throw new Error('Trip origin and destination must be different');
+  }
+
+  return {
+    id: raw.id as string,
+    depot_id: depotId,
+    agent_id: raw.agent_id as string,
+    fleet_id: raw.fleet_id as string,
+    route_id: (raw.route_id as string | undefined) ?? null,
+    origin,
+    destination,
+    device_id: (raw.device_id as string | undefined) ?? null,
+    started_at: parseSyncDateTime(raw.started_at, 'started_at'),
+    ended_at: raw.ended_at != null ? parseSyncDateTime(raw.ended_at, 'ended_at') : null,
+    status: (raw.status as string | undefined) ?? 'ACTIVE',
+    started_offline: Boolean(raw.started_offline),
+  };
+};
 
 const normalizeTicketRecord = (raw: Record<string, unknown>, depotId: string) => ({
   id: raw.id as string,
@@ -83,6 +98,12 @@ export const pushData = async (
       for (const t of payload.trips) {
         const data = normalizeTripRecord(t, depotId);
 
+        // Ensure main parent corridor exists for conductor-entered OD.
+        const parent = await ensureRoute(depotId, data.origin, data.destination, {
+          client: prismaTx,
+        });
+        data.route_id = parent.id;
+
         // Offline sync may legitimately replace a stale server-side active trip.
         if (data.status === 'ACTIVE') {
           await prismaTx.tblTrips.updateMany({
@@ -118,6 +139,26 @@ export const pushData = async (
 
       for (const ti of sortedTickets) {
         const data = normalizeTicketRecord(ti, depotId);
+
+        const trip = await prismaTx.tblTrips.findUnique({
+          where: { id: data.trip_id },
+          select: {
+            id: true,
+            depot_id: true,
+            origin: true,
+            destination: true,
+            route_id: true,
+          },
+        });
+        if (trip) {
+          await linkTicketSegmentToTrip(
+            trip,
+            data.departure,
+            data.destination,
+            { client: prismaTx },
+          );
+        }
+
         const upserted = await prismaTx.tblTickets.upsert({
           where: { id: data.id },
           update: { ...data, updated_at: new Date() },

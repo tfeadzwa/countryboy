@@ -133,9 +133,11 @@ class TripApi {
 
   Future<Map<String, dynamic>> startTrip({
     required String fleetId,
-    required String routeId,
+    required String origin,
+    required String destination,
     String? tripId,
     String? deviceId,
+    String? routeId,
     bool startedOffline = false,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
@@ -143,7 +145,9 @@ class TripApi {
       data: {
         if (tripId != null) 'id': tripId,
         'fleet_id': fleetId,
-        'route_id': routeId,
+        'origin': origin,
+        'destination': destination,
+        if (routeId != null) 'route_id': routeId,
         if (deviceId != null) 'device_id': deviceId,
         'started_offline': startedOffline,
       },
@@ -182,9 +186,9 @@ class TicketApi {
     required String ticketCategory,
     required String currency,
     required double amount,
+    required String departure,
+    required String destination,
     String? deviceId,
-    String? departure,
-    String? destination,
     DateTime? issuedAt,
     String? linkedPassengerTicketId,
     String? passengerPhone,
@@ -198,9 +202,9 @@ class TicketApi {
         'ticket_category': ticketCategory,
         'currency': currency,
         'amount': amount,
+        'departure': departure,
+        'destination': destination,
         if (deviceId != null) 'device_id': deviceId,
-        if (departure != null) 'departure': departure,
-        if (destination != null) 'destination': destination,
         if (issuedAt != null) 'issued_at': issuedAt.toIso8601String(),
         if (linkedPassengerTicketId != null)
           'linked_passenger_ticket_id': linkedPassengerTicketId,

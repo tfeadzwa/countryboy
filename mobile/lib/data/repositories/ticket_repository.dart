@@ -57,8 +57,8 @@ class TicketRepository {
     required String ticketCategory,
     required String currency,
     required double amount,
-    String? departure,
-    String? destination,
+    required String departure,
+    required String destination,
     required String idempotencyKey,
     String? linkedPassengerTicketId,
     String? passengerPhone,
@@ -240,9 +240,9 @@ class TicketRepository {
     required String currency,
     required double passengerAmount,
     required double luggageAmount,
+    required String departure,
+    required String destination,
     String? passengerPhone,
-    String? departure,
-    String? destination,
     required String idempotencyKey,
   }) async {
     if (passengerAmount <= 0 || luggageAmount <= 0) {
@@ -270,6 +270,7 @@ class TicketRepository {
       idempotencyKey: '$idempotencyKey-luggage',
       linkedPassengerTicketId: passenger.id,
       passengerPhone: passengerPhone,
+      luggageAmount: luggageAmount,
     );
 
     return PassengerLuggagePairResult(passenger: passenger, luggage: luggage);

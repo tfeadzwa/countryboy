@@ -438,3 +438,120 @@ export const listChildRoutes = async (parentRouteId: string, depotId?: string) =
 
   return links.map((link) => formatRouteRecord(link.childRoute));
 };
+
+const normalizePlace = (value: string) => value.trim().replace(/\s+/g, ' ');
+
+type DbClient = Prisma.TransactionClient | typeof prisma;
+
+/**
+ * Find or create a normal route for a depot by origin/destination.
+ * Used for trip parent corridors and ticket segment (child) routes.
+ */
+export const ensureRoute = async (
+  depotId: string,
+  origin: string,
+  destination: string,
+  opts?: { createdBy?: string; client?: DbClient },
+) => {
+  const client = opts?.client ?? prisma;
+  const trimmedOrigin = normalizePlace(origin);
+  const trimmedDestination = normalizePlace(destination);
+
+  if (trimmedOrigin.length < 2 || trimmedDestination.length < 2) {
+    throw new Error('Origin and destination must be at least 2 characters');
+  }
+  if (trimmedOrigin.toLowerCase() === trimmedDestination.toLowerCase()) {
+    throw new Error('Origin and destination must be different');
+  }
+
+  return client.tblRoutes.upsert({
+    where: {
+      depot_id_origin_destination: {
+        depot_id: depotId,
+        origin: trimmedOrigin,
+        destination: trimmedDestination,
+      },
+    },
+    create: {
+      depot_id: depotId,
+      origin: trimmedOrigin,
+      destination: trimmedDestination,
+      is_active: true,
+      created_by: opts?.createdBy,
+    },
+    update: {
+      is_active: true,
+      updated_by: opts?.createdBy,
+    },
+  });
+};
+
+/**
+ * Link a child segment under a parent corridor without wiping other links.
+ */
+export const ensureParentChildLink = async (
+  depotId: string,
+  parentRouteId: string,
+  childRouteId: string,
+  opts?: { createdBy?: string; client?: DbClient },
+) => {
+  if (parentRouteId === childRouteId) return null;
+
+  const client = opts?.client ?? prisma;
+  await assertNoCycle(parentRouteId, childRouteId);
+
+  return client.tblRouteLinks.upsert({
+    where: {
+      parent_route_id_child_route_id: {
+        parent_route_id: parentRouteId,
+        child_route_id: childRouteId,
+      },
+    },
+    create: {
+      depot_id: depotId,
+      parent_route_id: parentRouteId,
+      child_route_id: childRouteId,
+      created_by: opts?.createdBy,
+    },
+    update: {},
+  });
+};
+
+/**
+ * Ensure trip has a parent corridor route_id, creating the route from trip OD if needed.
+ */
+export const ensureTripParentRoute = async (
+  trip: { id: string; depot_id: string; origin: string; destination: string; route_id: string | null },
+  opts?: { createdBy?: string; client?: DbClient },
+) => {
+  const client = opts?.client ?? prisma;
+  if (trip.route_id) return trip.route_id;
+
+  const parent = await ensureRoute(trip.depot_id, trip.origin, trip.destination, opts);
+  await client.tblTrips.update({
+    where: { id: trip.id },
+    data: { route_id: parent.id },
+  });
+  return parent.id;
+};
+
+/**
+ * From a ticket segment, ensure child route exists and link under the trip parent corridor.
+ */
+export const linkTicketSegmentToTrip = async (
+  trip: { id: string; depot_id: string; origin: string; destination: string; route_id: string | null },
+  departure?: string | null,
+  destination?: string | null,
+  opts?: { createdBy?: string; client?: DbClient },
+) => {
+  const dep = departure?.trim();
+  const dest = destination?.trim();
+  if (!dep || !dest) return null;
+
+  const parentRouteId = await ensureTripParentRoute(trip, opts);
+  const child = await ensureRoute(trip.depot_id, dep, dest, opts);
+  if (child.id !== parentRouteId) {
+    await ensureParentChildLink(trip.depot_id, parentRouteId, child.id, opts);
+  }
+  return child;
+};

@@ -15,6 +15,7 @@ import { isSuperAdmin } from "@/lib/permissions";
 import RouteLinkPicker from "@/components/RouteLinkPicker";
 import RouteFareFields, { emptyFare, type FareDraft } from "@/components/RouteFareFields";
 import { fareService } from "@/lib/api/fare.service";
+import { validateTicketFareAmount } from "@/lib/constants/currencies";
 import type { Depot, RouteInfo } from "@/types";
 
 interface AddRouteDialogProps {
@@ -104,6 +105,14 @@ const AddRouteDialog = ({ open, onOpenChange, onSuccess }: AddRouteDialogProps) 
     if (new Set(currencies).size !== currencies.length) {
       setError("Each currency can only be added once per route.");
       return;
+    }
+
+    for (const fare of fareRows) {
+      const fareError = validateTicketFareAmount(fare.currency, fare.amount);
+      if (fareError) {
+        setError(`${fare.currency}: ${fareError}`);
+        return;
+      }
     }
 
     setLoading(true);

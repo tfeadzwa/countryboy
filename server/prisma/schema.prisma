@@ -233,7 +233,11 @@ model tblTrips {
   agent_id        String
   device_id       String?
   fleet_id        String
+  /// Legacy link to admin route catalog (optional; new trips use origin/destination).
   route_id        String?
+  /// Conductor-entered trip corridor.
+  origin          String
+  destination     String
   started_at      DateTime
   ended_at        DateTime?
   status          String   @default("ACTIVE")
@@ -249,6 +253,8 @@ model tblTrips {
   fleet       tblFleets @relation(fields: [fleet_id], references: [id])
   route       tblRoutes? @relation(fields: [route_id], references: [id])
   tickets     tblTickets[]
+
+  @@index([depot_id, origin, destination])
 }
 
 model tblTickets {

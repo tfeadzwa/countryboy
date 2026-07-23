@@ -270,17 +270,16 @@ export const login = async (req: Request, res: Response) => {
  * @access Private (Authenticated agents only)
  * @body {
  *   fleet_id: string,        // Bus/vehicle ID (required)
- *   route_id: string,        // Route ID (required)
+ *   origin: string,          // Conductor-entered origin (required)
+ *   destination: string,     // Conductor-entered destination (required)
+ *   route_id?: string,       // Legacy optional route catalog id
  *   device_id?: string,      // Device ID (optional, extracted from token if available)
  *   started_offline?: boolean // Whether trip started without internet (default: false)
  * }
  * @returns {
- *   id: string,              // Trip ID
- *   started_at: DateTime,    // When trip started
- *   status: "ACTIVE",
- *   agent: {...},            // Agent details
- *   fleet: {...},            // Vehicle details
- *   route: {...}             // Route details
+ *   trip: {
+ *     id, origin, destination, status, agent, fleet, route?
+ *   }
  * }
  */
 export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
@@ -295,14 +294,18 @@ export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
     }
 
     // Extract trip details from request body
-    const { id, fleet_id, route_id, device_id, started_offline } = req.body;
+    const { id, fleet_id, origin, destination, route_id, device_id, started_offline } =
+      req.body;
 
     // Validate required fields
     if (!fleet_id) {
       return res.status(400).json({ error: 'fleet_id is required' });
     }
-    if (!route_id) {
-      return res.status(400).json({ error: 'route_id is required' });
+    if (!origin || !String(origin).trim()) {
+      return res.status(400).json({ error: 'origin is required' });
+    }
+    if (!destination || !String(destination).trim()) {
+      return res.status(400).json({ error: 'destination is required' });
     }
 
     // Start the trip using agent service
@@ -310,6 +313,8 @@ export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
       id,
       agentId,
       fleetId: fleet_id,
+      origin: String(origin),
+      destination: String(destination),
       routeId: route_id,
       deviceId: device_id,
       startedOffline: started_offline || false
@@ -317,7 +322,15 @@ export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
 
     res.status(201).json({
       message: 'Trip started successfully',
-      trip
+      trip: {
+        ...trip,
+        // Older mobile clients expect nested route origin/destination.
+        route: trip.route ?? {
+          id: null,
+          origin: trip.origin,
+          destination: trip.destination,
+        },
+      },
     });
 
   } catch (err: any) {
@@ -332,6 +345,12 @@ export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
     }
     if (err.message === 'Fleet not found' || err.message === 'Route not found') {
       return res.status(404).json({ error: err.message });
+    }
+    if (
+      typeof err.message === 'string' &&
+      (err.message.includes('Origin') || err.message.includes('Destination'))
+    ) {
+      return res.status(400).json({ error: err.message });
     }
     
     res.status(500).json({ 

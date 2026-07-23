@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -9,6 +10,7 @@ import '../../core/storage/secure_storage_service.dart';
 import '../data/api/api_services.dart';
 import '../data/local/database.dart';
 import '../data/repositories/reference_repository.dart';
+
 const _uuid = Uuid();
 
 final syncServiceProvider = Provider<SyncService>((ref) {
@@ -114,20 +116,56 @@ class SyncService {
     Map<String, dynamic> payload,
   ) async {
     final localTripId = payload['id'] as String;
+    final localTrip = await _db.getTripById(localTripId);
+
+    final origin = _resolveTripPlace(
+      payload['origin'],
+      localTrip?.routeOrigin,
+    );
+    final destination = _resolveTripPlace(
+      payload['destination'],
+      localTrip?.routeDestination,
+    );
+
+    if (origin.length < 2 || destination.length < 2) {
+      throw ApiError(
+        message:
+            'Trip origin/destination are required before syncing. Re-enter the corridor and retry.',
+      );
+    }
 
     try {
-      await _tripApi.startTrip(
+      final response = await _tripApi.startTrip(
         tripId: localTripId,
-        fleetId: payload['fleet_id'] as String,
-        routeId: payload['route_id'] as String,
-        deviceId: payload['device_id'] as String?,
+        fleetId: payload['fleet_id'] as String? ?? localTrip?.fleetId ?? '',
+        origin: origin,
+        destination: destination,
+        routeId: payload['route_id'] as String? ?? localTrip?.routeId,
+        deviceId: payload['device_id'] as String? ?? localTrip?.deviceId,
         startedOffline: payload['started_offline'] as bool? ?? true,
+      );
+
+      final serverTrip = response['trip'] as Map<String, dynamic>?;
+      await _applySyncedTripFields(
+        localTripId,
+        routeId: serverTrip?['route_id'] as String?,
+        origin: origin,
+        destination: destination,
       );
     } on ApiError catch (e) {
       if (e.statusCode == 409) {
         final active = await _tripApi.getActiveTrip();
         if (active != null && active['id'] == localTripId) {
-          await _db.updateTripSyncStatus(localTripId, 'synced');
+          await _applySyncedTripFields(
+            localTripId,
+            routeId: active['route_id'] as String?,
+            origin: (active['origin'] as String?) ??
+                (active['route'] as Map?)?['origin'] as String? ??
+                origin,
+            destination: (active['destination'] as String?) ??
+                (active['route'] as Map?)?['destination'] as String? ??
+                destination,
+          );
           await _db.updateSyncItem(item.id, status: 'synced');
           return;
         }
@@ -143,8 +181,32 @@ class SyncService {
       rethrow;
     }
 
-    await _db.updateTripSyncStatus(localTripId, 'synced');
     await _db.updateSyncItem(item.id, status: 'synced');
+  }
+
+  String _resolveTripPlace(dynamic payloadValue, String? localValue) {
+    final fromPayload = payloadValue is String ? payloadValue.trim() : '';
+    if (fromPayload.isNotEmpty) return fromPayload;
+    return localValue?.trim() ?? '';
+  }
+
+  Future<void> _applySyncedTripFields(
+    String tripId, {
+    String? routeId,
+    String? origin,
+    String? destination,
+  }) async {
+    await (_db.update(_db.localTrips)..where((t) => t.id.equals(tripId))).write(
+      LocalTripsCompanion(
+        syncStatus: const Value('synced'),
+        routeId: routeId != null ? Value(routeId) : const Value.absent(),
+        routeOrigin:
+            origin != null && origin.isNotEmpty ? Value(origin) : const Value.absent(),
+        routeDestination: destination != null && destination.isNotEmpty
+            ? Value(destination)
+            : const Value.absent(),
+      ),
+    );
   }
 
   Future<void> _processTicketQueue() async {
@@ -195,7 +257,11 @@ class SyncService {
     }
 
     for (final tripId in tripIds) {
-      await _ensureTripOnServer(tripId);
+      try {
+        await _ensureTripOnServer(tripId);
+      } catch (_) {
+        // Ticket queue will retry ensure + surface the error per ticket.
+      }
     }
   }
 
@@ -205,23 +271,55 @@ class SyncService {
       throw ApiError(message: 'Trip not found on device.');
     }
 
-    await _syncApi.push(trips: [_tripPayload(trip)]);
-    await _db.updateTripSyncStatus(tripId, 'synced');
+    final origin = trip.routeOrigin?.trim() ?? '';
+    final destination = trip.routeDestination?.trim() ?? '';
+    if (origin.length < 2 || destination.length < 2) {
+      throw ApiError(
+        message:
+            'Trip corridor is missing on device. End and restart the trip before syncing tickets.',
+      );
+    }
+
+    final result = await _syncApi.push(trips: [_tripPayload(trip)]);
+    Map<String, dynamic>? synced;
+    for (final raw in result['trips'] as List<dynamic>? ?? []) {
+      final row = raw as Map<String, dynamic>;
+      if (row['id'] == tripId) {
+        synced = row;
+        break;
+      }
+    }
+    synced ??= (result['trips'] as List?)?.isNotEmpty == true
+        ? (result['trips'] as List).first as Map<String, dynamic>
+        : null;
+
+    await _applySyncedTripFields(
+      tripId,
+      routeId: synced?['route_id'] as String?,
+      origin: origin,
+      destination: destination,
+    );
   }
 
-  Map<String, dynamic> _tripPayload(LocalTrip trip) => {
-        'id': trip.id,
-        'depot_id': trip.depotId,
-        'agent_id': trip.agentId,
-        'fleet_id': trip.fleetId,
-        'route_id': trip.routeId,
-        'device_id': trip.deviceId,
-        'started_at': trip.startedAt.toUtc().toIso8601String(),
-        'status': trip.status,
-        'started_offline': trip.startedOffline,
-        if (trip.endedAt != null)
-          'ended_at': trip.endedAt!.toUtc().toIso8601String(),
-      };
+  Map<String, dynamic> _tripPayload(LocalTrip trip) {
+    final origin = trip.routeOrigin?.trim() ?? '';
+    final destination = trip.routeDestination?.trim() ?? '';
+    return {
+      'id': trip.id,
+      'depot_id': trip.depotId,
+      'agent_id': trip.agentId,
+      'fleet_id': trip.fleetId,
+      if (trip.routeId != null) 'route_id': trip.routeId,
+      'origin': origin,
+      'destination': destination,
+      'device_id': trip.deviceId,
+      'started_at': trip.startedAt.toUtc().toIso8601String(),
+      'status': trip.status,
+      'started_offline': trip.startedOffline,
+      if (trip.endedAt != null)
+        'ended_at': trip.endedAt!.toUtc().toIso8601String(),
+    };
+  }
 
   Future<void> _pushPendingTrips() async {
     final agent = await _storage.getAgentProfile();
@@ -234,13 +332,27 @@ class SyncService {
 
     if (pendingTrips.isEmpty) return;
 
-    final tripPayloads = pendingTrips.map(_tripPayload).toList();
+    // Skip trips that cannot form a parent corridor yet.
+    final syncable = pendingTrips.where((trip) {
+      final origin = trip.routeOrigin?.trim() ?? '';
+      final destination = trip.routeDestination?.trim() ?? '';
+      return origin.length >= 2 && destination.length >= 2;
+    }).toList();
 
+    if (syncable.isEmpty) return;
+
+    final tripPayloads = syncable.map(_tripPayload).toList();
     final result = await _syncApi.push(trips: tripPayloads);
 
-    for (final trip in result['trips'] as List<dynamic>? ?? []) {
+    for (final raw in result['trips'] as List<dynamic>? ?? []) {
+      final trip = raw as Map<String, dynamic>;
       final id = trip['id'] as String;
-      await _db.updateTripSyncStatus(id, 'synced');
+      await _applySyncedTripFields(
+        id,
+        routeId: trip['route_id'] as String?,
+        origin: trip['origin'] as String?,
+        destination: trip['destination'] as String?,
+      );
     }
   }
 

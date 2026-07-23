@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import SuperAdminRoute from "./components/auth/SuperAdminRoute";
@@ -13,7 +13,7 @@ import Agents from "./pages/Agents";
 import Fleets from "./pages/Fleets";
 import EditFleetPage from "./pages/EditFleetPage";
 import RoutesPage from "./pages/RoutesPage";
-import EditRoutePage from "./pages/EditRoutePage";
+import RouteDetailPage from "./pages/RouteDetailPage";
 import Trips from "./pages/Trips";
 import Tickets from "./pages/Tickets";
 import Devices from "./pages/Devices";
@@ -52,7 +52,8 @@ const App = () => (
               <Route path="/fleets" element={<Fleets />} />
               <Route path="/fleets/:id/edit" element={<EditFleetPage />} />
               <Route path="/routes" element={<RoutesPage />} />
-              <Route path="/routes/:id/edit" element={<EditRoutePage />} />
+              <Route path="/routes/:id" element={<RouteDetailPage />} />
+              <Route path="/routes/:id/edit" element={<Navigate to="/routes" replace />} />
               <Route path="/trips" element={<Trips />} />
               <Route path="/tickets" element={<Tickets />} />
               <Route path="/devices" element={<Devices />} />

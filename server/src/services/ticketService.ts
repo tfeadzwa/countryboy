@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma';
 import { Prisma } from '@prisma/client';
+import { linkTicketSegmentToTrip } from './routeService';
 import { allocateTripSerial } from '../utils/ticketSerial';
 
 interface IssueArgs {
@@ -21,6 +22,29 @@ interface IssueArgs {
 
 export const issueTicket = async (args: IssueArgs) => {
   return prisma.$transaction(async (tx) => {
+    const trip = await tx.tblTrips.findUnique({
+      where: { id: args.trip_id },
+      select: {
+        id: true,
+        depot_id: true,
+        origin: true,
+        destination: true,
+        route_id: true,
+      },
+    });
+
+    if (!trip) {
+      throw new Error('Trip not found');
+    }
+
+    // Ticket OD becomes a normal route; link as child under the trip's main corridor.
+    await linkTicketSegmentToTrip(
+      trip,
+      args.departure,
+      args.destination,
+      { client: tx },
+    );
+
     const serial = await allocateTripSerial(tx, args.trip_id);
 
     return tx.tblTickets.create({

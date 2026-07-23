@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { validateFareAmount } from '../utils/fareCurrency';
 
 export const loginSchema = z.object({
   body: z.object({
@@ -131,13 +132,25 @@ export const fareSchema = z.object({
 });
 
 export const startTripSchema = z.object({
-  body: z.object({
-    agent_id: z.string(),
-    fleet_id: z.string(),
-    route_id: z.string().optional(),
-    device_id: z.string().optional(),
-    started_offline: z.boolean().optional(),
-  }),
+  body: z
+    .object({
+      agent_id: z.string(),
+      fleet_id: z.string(),
+      origin: z.string().trim().min(2).max(100),
+      destination: z.string().trim().min(2).max(100),
+      route_id: z.string().optional(),
+      device_id: z.string().optional(),
+      started_offline: z.boolean().optional(),
+    })
+    .superRefine((data, ctx) => {
+      if (data.origin.toLowerCase() === data.destination.toLowerCase()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['destination'],
+          message: 'Origin and destination must be different',
+        });
+      }
+    }),
 });
 
 export const endTripSchema = z.object({ params: z.object({ id: z.string() }) });
@@ -149,13 +162,21 @@ export const ticketIssueSchema = z.object({
       agent_id: z.string().optional(), // Optional – falls back to the authenticated agent from JWT
       device_id: z.string().optional(),
       ticket_category: z.enum(['PASSENGER', 'PASSENGER_WITH_LUGGAGE', 'LUGGAGE']),
-      currency: z.string(),
+      currency: z.enum(['USD', 'ZWL', 'ZAR']),
       /** Total ticket charge. For PASSENGER_WITH_LUGGAGE = passenger fare + luggage_amount. */
       amount: z.coerce.number().positive('Amount must be greater than 0'),
       /** Manual luggage charge (required for PASSENGER_WITH_LUGGAGE). */
       luggage_amount: z.coerce.number().positive().optional(),
-      departure: z.string().optional(),
-      destination: z.string().optional(),
+      departure: z
+        .string()
+        .trim()
+        .min(2, 'Origin must be at least 2 characters')
+        .max(100, 'Origin is too long'),
+      destination: z
+        .string()
+        .trim()
+        .min(2, 'Destination must be at least 2 characters')
+        .max(100, 'Destination is too long'),
       issued_at: z.string().optional(),
       linked_passenger_ticket_id: z.string().optional(),
       // Passenger name is no longer collected; accept legacy payloads and ignore.
@@ -181,24 +202,61 @@ export const ticketIssueSchema = z.object({
       ),
     })
     .superRefine((data, ctx) => {
-      if (data.ticket_category === 'PASSENGER_WITH_LUGGAGE') {
-        if (data.luggage_amount == null) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['luggage_amount'],
-            message: 'Luggage amount is required for passenger + luggage tickets',
-          });
-          return;
-        }
-        if (data.amount <= data.luggage_amount) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['amount'],
-            message:
-              'Total amount must include the passenger fare plus the luggage charge',
-          });
-        }
+      if (data.departure.toLowerCase() === data.destination.toLowerCase()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['destination'],
+          message: 'Origin and destination must be different',
+        });
       }
+
+      const addFareIssue = (path: string[], message: string) => {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path, message });
+      };
+
+      if (data.ticket_category === 'PASSENGER') {
+        const err = validateFareAmount(data.currency, data.amount, 'Fare');
+        if (err) addFareIssue(['amount'], err);
+        return;
+      }
+
+      if (data.ticket_category === 'LUGGAGE') {
+        const err = validateFareAmount(data.currency, data.amount, 'Luggage amount');
+        if (err) addFareIssue(['amount'], err);
+        return;
+      }
+
+      // PASSENGER_WITH_LUGGAGE
+      if (data.luggage_amount == null) {
+        addFareIssue(
+          ['luggage_amount'],
+          'Luggage amount is required for passenger + luggage tickets',
+        );
+        return;
+      }
+
+      const luggageErr = validateFareAmount(
+        data.currency,
+        data.luggage_amount,
+        'Luggage amount',
+      );
+      if (luggageErr) addFareIssue(['luggage_amount'], luggageErr);
+
+      const passengerAmount = data.amount - data.luggage_amount;
+      if (passengerAmount <= 0) {
+        addFareIssue(
+          ['amount'],
+          'Total amount must include the passenger fare plus the luggage charge',
+        );
+        return;
+      }
+
+      const passengerErr = validateFareAmount(
+        data.currency,
+        passengerAmount,
+        'Passenger fare',
+      );
+      if (passengerErr) addFareIssue(['amount'], passengerErr);
     }),
 });
 

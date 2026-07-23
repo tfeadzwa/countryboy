@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/config/app_colors.dart';
 import '../../core/config/app_spacing.dart';
+import '../../core/config/fare_currency.dart';
 import '../../core/network/api_error.dart';
-import '../../data/repositories/reference_repository.dart';
 import '../../data/repositories/trip_repository.dart';
 import '../../domain/models/models.dart';
 import '../../domain/models/ticket_issue_draft.dart';
@@ -16,16 +16,24 @@ import 'widgets/issue_flow_step_header.dart';
 
 /// UI issue modes mapped to backend `ticket_category` values.
 enum IssueTicketMode {
-  passenger('PASSENGER', 'Passenger'),
-  combined('PASSENGER_WITH_LUGGAGE', 'Passenger + luggage'),
-  luggage('LUGGAGE', 'Luggage only');
+  passenger('PASSENGER', 'Passenger', Icons.person_outline_rounded),
+  combined(
+    'PASSENGER_WITH_LUGGAGE',
+    'Passenger + luggage',
+    Icons.luggage_outlined,
+  ),
+  luggage('LUGGAGE', 'Luggage only', Icons.work_outline_rounded);
 
-  const IssueTicketMode(this.apiValue, this.label);
+  const IssueTicketMode(this.apiValue, this.label, this.icon);
   final String apiValue;
   final String label;
+  final IconData icon;
 
   bool get hasLuggage =>
       this == IssueTicketMode.combined || this == IssueTicketMode.luggage;
+
+  bool get hasPassengerFare =>
+      this == IssueTicketMode.passenger || this == IssueTicketMode.combined;
 }
 
 class IssueTicketFormScreen extends ConsumerStatefulWidget {
@@ -38,18 +46,17 @@ class IssueTicketFormScreen extends ConsumerStatefulWidget {
 
 class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
   TripModel? _trip;
-  List<RouteModel> _subroutes = [];
-  RouteModel? _selectedSubroute;
   IssueTicketMode _mode = IssueTicketMode.passenger;
   String _currency = 'USD';
-  List<FareModel> _routeFares = [];
-  FareModel? _routeFare;
+
+  final _originController = TextEditingController();
+  final _destinationController = TextEditingController();
+  final _fareController = TextEditingController();
   final _luggageAmountController = TextEditingController();
   final _luggageDescriptionController = TextEditingController();
+
   bool _loading = true;
-  bool _fareLoading = false;
   String? _error;
-  String? _fareError;
 
   @override
   void initState() {
@@ -59,6 +66,9 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
 
   @override
   void dispose() {
+    _originController.dispose();
+    _destinationController.dispose();
+    _fareController.dispose();
     _luggageAmountController.dispose();
     _luggageDescriptionController.dispose();
     super.dispose();
@@ -72,146 +82,119 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
         return;
       }
 
-      final referenceRepo = ref.read(referenceRepositoryProvider);
-      await referenceRepo.refreshReferenceDataIfOnline();
+      _originController.text = trip.routeOrigin?.trim() ?? '';
+      _destinationController.text = trip.routeDestination?.trim() ?? '';
 
-      final options = await referenceRepo.getTicketRouteOptions(trip.routeId);
-      if (options.isEmpty) {
-        setState(() {
-          _trip = trip;
-          _subroutes = [
-            RouteModel(
-              id: trip.routeId,
-              origin: trip.routeOrigin ?? 'Origin',
-              destination: trip.routeDestination ?? 'Destination',
-            ),
-          ];
-          _selectedSubroute = _subroutes.first;
-        });
-      } else {
-        setState(() {
-          _trip = trip;
-          _subroutes = options;
-          _selectedSubroute = options.firstWhere(
-            (route) => route.id == trip.routeId,
-            orElse: () => options.first,
-          );
-        });
-      }
-      await _loadRouteFares();
+      setState(() => _trip = trip);
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _loadRouteFares() async {
-    final trip = _trip;
-    if (trip == null) return;
-    final fareRouteId = _selectedSubroute?.id ?? trip.routeId;
-    final fareRouteLabel = _selectedSubroute?.label ?? trip.routeLabel;
+  double? get _passengerFare =>
+      _mode.hasPassengerFare ? parseFareInput(_fareController.text) : null;
 
-    setState(() {
-      _fareLoading = true;
-      _fareError = null;
-    });
+  double? get _luggageFare =>
+      _mode.hasLuggage ? parseFareInput(_luggageAmountController.text) : null;
+
+  double? get _totalAmount {
+    switch (_mode) {
+      case IssueTicketMode.passenger:
+        return _passengerFare;
+      case IssueTicketMode.luggage:
+        return _luggageFare;
+      case IssueTicketMode.combined:
+        final p = _passengerFare;
+        final l = _luggageFare;
+        if (p == null || l == null) return null;
+        return p + l;
+    }
+  }
+
+  void _clearError() {
+    if (_error != null) setState(() => _error = null);
+  }
+
+  void _continueToReview() {
+    if (_trip == null) return;
+    setState(() => _error = null);
 
     try {
-      final fares =
-          await ref.read(referenceRepositoryProvider).getFaresForRoute(fareRouteId);
-      if (fares.isEmpty) {
-        setState(() {
-          _routeFares = [];
-          _routeFare = null;
-          _fareError =
-              'No fare configured for $fareRouteLabel. Contact your depot admin.';
-        });
-        return;
+      final origin = _originController.text.trim();
+      final destination = _destinationController.text.trim();
+
+      if (origin.length < 2) {
+        throw ApiError(message: 'Enter the passenger origin (at least 2 characters).');
+      }
+      if (destination.length < 2) {
+        throw ApiError(
+          message: 'Enter the passenger destination (at least 2 characters).',
+        );
+      }
+      if (origin.toLowerCase() == destination.toLowerCase()) {
+        throw ApiError(message: 'Origin and destination must be different.');
       }
 
-      final currencies = fares.map((f) => f.currency).toSet().toList()..sort();
-      final currency = currencies.contains(_currency)
-          ? _currency
-          : (currencies.contains('USD') ? 'USD' : currencies.first);
-      final fare = fares.firstWhere((f) => f.currency == currency);
+      final luggageDescription = _optionalLuggageDescription();
 
-      setState(() {
-        _routeFares = fares;
-        _currency = currency;
-        _routeFare = fare;
-      });
+      late TicketIssueDraft draft;
+
+      switch (_mode) {
+        case IssueTicketMode.passenger:
+          final fare = _requireValidFare(_passengerFare, label: 'Fare');
+          draft = TicketIssueDraft(
+            trip: _trip!,
+            mode: _mode.apiValue,
+            currency: _currency,
+            amount: fare,
+            passengerAmount: fare,
+            departure: origin,
+            destination: destination,
+          );
+        case IssueTicketMode.luggage:
+          final luggage = _requireValidFare(_luggageFare, label: 'Luggage amount');
+          draft = TicketIssueDraft(
+            trip: _trip!,
+            mode: _mode.apiValue,
+            currency: _currency,
+            amount: luggage,
+            luggageAmount: luggage,
+            departure: origin,
+            destination: destination,
+            luggageDescription: luggageDescription,
+          );
+        case IssueTicketMode.combined:
+          final passenger =
+              _requireValidFare(_passengerFare, label: 'Passenger fare');
+          final luggage =
+              _requireValidFare(_luggageFare, label: 'Luggage amount');
+          draft = TicketIssueDraft(
+            trip: _trip!,
+            mode: _mode.apiValue,
+            currency: _currency,
+            amount: passenger + luggage,
+            passengerAmount: passenger,
+            luggageAmount: luggage,
+            departure: origin,
+            destination: destination,
+            luggageDescription: luggageDescription,
+          );
+      }
+
+      context.push('/tickets/issue/review', extra: draft);
     } on ApiError catch (e) {
-      setState(() {
-        _routeFares = [];
-        _routeFare = null;
-        _fareError = e.message;
-      });
-    } catch (_) {
-      setState(() {
-        _routeFares = [];
-        _routeFare = null;
-        _fareError = 'Unable to load route fare. Try again when online.';
-      });
-    } finally {
-      setState(() => _fareLoading = false);
+      setState(() => _error = e.message);
     }
   }
 
-  void _onCurrencyChanged(String? currency) {
-    if (currency == null || currency == _currency) return;
-    final fare = _routeFares.cast<FareModel?>().firstWhere(
-          (f) => f!.currency == currency,
-          orElse: () => null,
-        );
-    if (fare == null) return;
-    setState(() {
-      _currency = currency;
-      _routeFare = fare;
-      _fareError = null;
-    });
-  }
-
-  void _onSubrouteChanged(RouteModel? route) {
-    if (route?.id == _selectedSubroute?.id) return;
-    setState(() {
-      _selectedSubroute = route;
-      _routeFares = [];
-      _routeFare = null;
-      _fareError = null;
-    });
-    _loadRouteFares();
-  }
-
-  double? get _passengerFareAmount => _routeFare?.amount;
-
-  double? get _luggageFareAmount {
-    final raw = _luggageAmountController.text.trim().replaceAll(',', '');
-    if (raw.isEmpty) return null;
-    return double.tryParse(raw);
-  }
-
-  double? _amountForMode(IssueTicketMode mode) {
-    switch (mode) {
-      case IssueTicketMode.passenger:
-        return _passengerFareAmount;
-      case IssueTicketMode.combined:
-        final passenger = _passengerFareAmount;
-        final luggage = _luggageFareAmount;
-        if (passenger == null || luggage == null) return null;
-        return passenger + luggage;
-      case IssueTicketMode.luggage:
-        return _luggageFareAmount;
-    }
-  }
-
-  double _requireLuggageAmount() {
-    final amount = _luggageFareAmount;
-    if (amount == null || amount <= 0) {
-      throw ApiError(message: 'Enter the luggage amount before continuing.');
-    }
-    return amount;
+  double _requireValidFare(double? amount, {required String label}) {
+    final error = validateFareAmount(_currency, amount, label: label);
+    if (error != null) throw ApiError(message: error);
+    return amount!.toDouble();
   }
 
   String? _optionalLuggageDescription() {
+    if (!_mode.hasLuggage) return null;
     final description = _luggageDescriptionController.text.trim();
     if (description.isEmpty) return null;
     if (description.length < 2) {
@@ -223,232 +206,25 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
     return description;
   }
 
-  void _continueToReview() {
-    if (_trip == null) return;
-
-    setState(() => _error = null);
-
-    try {
-      if (_mode != IssueTicketMode.luggage && _routeFare == null) {
-        throw ApiError(
-          message: _fareError ?? 'Route fare is not available for this trip.',
-        );
-      }
-
-      final departure = _selectedSubroute?.origin ?? _trip!.routeOrigin;
-      final destination =
-          _selectedSubroute?.destination ?? _trip!.routeDestination;
-      final luggageDescription =
-          _mode.hasLuggage ? _optionalLuggageDescription() : null;
-
-      late TicketIssueDraft draft;
-
-      if (_mode == IssueTicketMode.luggage) {
-        final luggageAmount = _requireLuggageAmount();
-        draft = TicketIssueDraft(
-          trip: _trip!,
-          mode: _mode.apiValue,
-          currency: _currency,
-          amount: luggageAmount,
-          luggageAmount: luggageAmount,
-          departure: departure,
-          destination: destination,
-          luggageDescription: luggageDescription,
-        );
-      } else if (_mode == IssueTicketMode.combined) {
-        final passengerAmount = _passengerFareAmount;
-        if (passengerAmount == null || passengerAmount <= 0) {
-          throw ApiError(message: 'Route fare is not available for this trip.');
-        }
-        final luggageAmount = _requireLuggageAmount();
-        draft = TicketIssueDraft(
-          trip: _trip!,
-          mode: _mode.apiValue,
-          currency: _currency,
-          amount: passengerAmount + luggageAmount,
-          passengerAmount: passengerAmount,
-          luggageAmount: luggageAmount,
-          departure: departure,
-          destination: destination,
-          luggageDescription: luggageDescription,
-        );
-      } else {
-        final amount = _amountForMode(_mode);
-        if (amount == null || amount <= 0) {
-          throw ApiError(message: 'Route fare is not available for this trip.');
-        }
-
-        draft = TicketIssueDraft(
-          trip: _trip!,
-          mode: _mode.apiValue,
-          currency: _currency,
-          amount: amount,
-          passengerAmount: amount,
-          departure: departure,
-          destination: destination,
-        );
-      }
-
-      context.push('/tickets/issue/review', extra: draft);
-    } on ApiError catch (e) {
-      setState(() => _error = e.message);
-    }
-  }
-
-  Widget _buildFareLine({
-    required String label,
-    required double amount,
-    String? helper,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelLarge),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            '$_currency ${amount.toStringAsFixed(2)}',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: AppColors.brandRed,
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-          if (helper != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              helper,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-            ),
-          ],
-        ],
-      ),
+  Future<void> _pickCurrency() async {
+    final picked = await showCurrencyPickerSheet(
+      context: context,
+      currencies: kTicketCurrencies,
+      selected: _currency,
+      title: 'Select currency',
+      subtitle: 'Fare rules change with the currency',
     );
-  }
-
-  Widget _buildLuggageAmountField() {
-    return TextField(
-      controller: _luggageAmountController,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-      ],
-      onChanged: (_) {
-        if (_error != null) setState(() => _error = null);
-        setState(() {});
-      },
-      decoration: InputDecoration(
-        labelText: 'Luggage amount *',
-        hintText: '0.00',
-        prefixText: '$_currency ',
-        helperText: 'Enter the luggage charge for this ticket',
-      ),
-    );
-  }
-
-  Widget _buildLuggageDescriptionField() {
-    return TextField(
-      controller: _luggageDescriptionController,
-      maxLength: 80,
-      maxLines: 2,
-      textCapitalization: TextCapitalization.sentences,
-      onChanged: (_) {
-        if (_error != null) setState(() => _error = null);
-      },
-      decoration: const InputDecoration(
-        labelText: 'Luggage description',
-        hintText: 'e.g. 2 bags, suitcase',
-        helperText: 'Optional — short description of the luggage',
-        alignLabelWithHint: true,
-      ),
-    );
-  }
-
-  Widget _buildRouteFareSection() {
-    if (_fareLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-        child: Center(child: CircularProgressIndicator()),
-      );
+    if (picked != null && mounted) {
+      setState(() {
+        _currency = picked;
+        _error = null;
+      });
     }
-
-    if (_fareError != null && _mode != IssueTicketMode.luggage) {
-      return Card(
-        color: AppColors.error.withValues(alpha: 0.06),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.error_outline, color: AppColors.error, size: 20),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  _fareError!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.error,
-                      ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (_mode == IssueTicketMode.luggage) {
-      return _buildLuggageAmountField();
-    }
-
-    final passengerFare = _passengerFareAmount;
-    if (passengerFare == null) return const SizedBox.shrink();
-
-    final fareRouteLabel = _selectedSubroute?.label ?? _trip!.routeLabel;
-
-    if (_mode == IssueTicketMode.combined) {
-      final luggage = _luggageFareAmount;
-      final total =
-          luggage != null ? passengerFare + luggage : null;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildFareLine(
-            label: 'Passenger fare',
-            amount: passengerFare,
-            helper: 'From route fare for $fareRouteLabel',
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _buildLuggageAmountField(),
-          if (total != null) ...[
-            const SizedBox(height: AppSpacing.md),
-            _buildFareLine(
-              label: 'Total',
-              amount: total,
-              helper: 'Passenger fare + luggage',
-            ),
-          ],
-        ],
-      );
-    }
-
-    return _buildFareLine(
-      label: 'Fare amount',
-      amount: passengerFare,
-      helper: 'From route fare for $fareRouteLabel',
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final availableCurrencies =
-        _routeFares.map((f) => f.currency).toSet().toList()..sort();
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -466,189 +242,380 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
                     onPressed: () => context.push('/trips/start'),
                   ),
                 )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const IssueFlowStepHeader(
-                        step: 1,
-                        total: 3,
-                        label: 'Ticket details',
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.md),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _trip!.routeLabel,
-                                style: Theme.of(context).textTheme.titleLarge,
+              : Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.lg,
+                          AppSpacing.lg,
+                          AppSpacing.lg,
+                          AppSpacing.md,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const IssueFlowStepHeader(
+                              step: 1,
+                              total: 3,
+                              label: 'Ticket details',
+                            ),
+                            const SizedBox(height: AppSpacing.lg),
+                            _TripContextCard(trip: _trip!),
+                            const SizedBox(height: AppSpacing.xl),
+                            Text(
+                              'Ticket type',
+                              style: theme.textTheme.labelLarge,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            ...IssueTicketMode.values.map(_buildModeTile),
+                            const SizedBox(height: AppSpacing.xl),
+                            Text(
+                              'Passenger journey',
+                              style: theme.textTheme.labelLarge,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              'Enter this passenger’s origin and destination. '
+                              'They can differ from the trip corridor.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppColors.textSecondary,
                               ),
-                              Text('Bus ${_trip!.fleetNumber ?? '—'}'),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            TextField(
+                              controller: _originController,
+                              textCapitalization: TextCapitalization.words,
+                              textInputAction: TextInputAction.next,
+                              onChanged: (_) {
+                                _clearError();
+                                setState(() {});
+                              },
+                              decoration: const InputDecoration(
+                                labelText: 'Origin *',
+                                hintText: 'e.g. Harare',
+                                prefixIcon: Icon(Icons.trip_origin_rounded),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            TextField(
+                              controller: _destinationController,
+                              textCapitalization: TextCapitalization.words,
+                              textInputAction: TextInputAction.next,
+                              onChanged: (_) {
+                                _clearError();
+                                setState(() {});
+                              },
+                              decoration: const InputDecoration(
+                                labelText: 'Destination *',
+                                hintText: 'e.g. Bulawayo',
+                                prefixIcon: Icon(Icons.flag_outlined),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xl),
+                            SearchableSelectField(
+                              label: 'Currency',
+                              hint: 'Select currency',
+                              valueText: currencyLabel(_currency),
+                              subtitle: currencyHelperText(_currency),
+                              leadingIcon: Icons.payments_outlined,
+                              onTap: _pickCurrency,
+                            ),
+                            const SizedBox(height: AppSpacing.xl),
+                            Text('Fare', style: theme.textTheme.labelLarge),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              currencyHelperText(_currency),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            if (_mode.hasPassengerFare) ...[
+                              _AmountField(
+                                controller: _fareController,
+                                currency: _currency,
+                                label: _mode == IssueTicketMode.combined
+                                    ? 'Passenger fare *'
+                                    : 'Fare amount *',
+                                onChanged: () {
+                                  _clearError();
+                                  setState(() {});
+                                },
+                              ),
+                              if (_mode == IssueTicketMode.combined)
+                                const SizedBox(height: AppSpacing.md),
                             ],
-                          ),
-                        ),
-                      ),
-                      SearchableSelectField(
-                        label: 'Ticket section',
-                        hint: 'Search corridor or segment',
-                        enabled: !_fareLoading && _subroutes.isNotEmpty,
-                        valueText: _selectedSubroute == null
-                            ? null
-                            : '${_selectedSubroute!.origin}  →  ${_selectedSubroute!.destination}',
-                        subtitle: _selectedSubroute?.hasParents == true
-                            ? 'Linked segment'
-                            : _selectedSubroute == null
-                                ? null
-                                : 'Full trip corridor',
-                        leadingIcon: Icons.alt_route_rounded,
-                        onTap: () async {
-                          if (_subroutes.isEmpty) return;
-                          final picked = await showRoutePickerSheet(
-                            context: context,
-                            routes: _subroutes,
-                            selected: _selectedSubroute,
-                            title: 'Ticket section',
-                            subtitle:
-                                'Choose the full corridor or a linked segment for this ticket.',
-                            searchHint: 'Search origin or destination',
-                          );
-                          if (picked != null && mounted) {
-                            _onSubrouteChanged(picked);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Each corridor segment uses its own fare.',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Text('Ticket type', style: Theme.of(context).textTheme.labelLarge),
-                      const SizedBox(height: AppSpacing.sm),
-                      ...IssueTicketMode.values.map((mode) {
-                        final selected = _mode == mode;
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: Material(
-                            color: selected
-                                ? AppColors.brandRed.withValues(alpha: 0.08)
-                                : AppColors.surface,
-                            borderRadius:
-                                BorderRadius.circular(AppSpacing.radiusMd),
-                            child: InkWell(
-                              onTap: () => setState(() {
-                                _mode = mode;
-                                _error = null;
-                              }),
-                              borderRadius:
-                                  BorderRadius.circular(AppSpacing.radiusMd),
-                              child: Container(
-                                padding: const EdgeInsets.all(AppSpacing.md),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(
-                                    AppSpacing.radiusMd,
-                                  ),
-                                  border: Border.all(
-                                    color: selected
-                                        ? AppColors.brandRed
-                                        : AppColors.border,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      selected
-                                          ? Icons.radio_button_checked
-                                          : Icons.radio_button_off,
-                                      color: selected
-                                          ? AppColors.brandRed
-                                          : AppColors.textSecondary,
-                                    ),
-                                    const SizedBox(width: AppSpacing.md),
-                                    Expanded(
-                                      child: Text(
-                                        mode.label,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium,
-                                      ),
-                                    ),
-                                  ],
+                            if (_mode.hasLuggage) ...[
+                              _AmountField(
+                                controller: _luggageAmountController,
+                                currency: _currency,
+                                label: 'Luggage amount *',
+                                onChanged: () {
+                                  _clearError();
+                                  setState(() {});
+                                },
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              TextField(
+                                controller: _luggageDescriptionController,
+                                maxLength: 80,
+                                maxLines: 2,
+                                textCapitalization: TextCapitalization.sentences,
+                                onChanged: (_) => _clearError(),
+                                decoration: const InputDecoration(
+                                  labelText: 'Luggage description',
+                                  hintText: 'e.g. 2 bags, suitcase',
+                                  helperText: 'Optional',
+                                  alignLabelWithHint: true,
                                 ),
                               ),
-                            ),
-                          ),
-                        );
-                      }),
-                      const SizedBox(height: AppSpacing.lg),
-                      if (availableCurrencies.isNotEmpty) ...[
-                        SearchableSelectField(
-                          label: 'Currency',
-                          hint: 'Select currency',
-                          enabled: !_fareLoading,
-                          valueText: availableCurrencies.contains(_currency)
-                              ? _currency
-                              : availableCurrencies.first,
-                          leadingIcon: Icons.payments_outlined,
-                          onTap: () async {
-                            final current =
-                                availableCurrencies.contains(_currency)
-                                    ? _currency
-                                    : availableCurrencies.first;
-                            final picked = await showCurrencyPickerSheet(
-                              context: context,
-                              currencies: availableCurrencies,
-                              selected: current,
-                              title: 'Select currency',
-                              subtitle:
-                                  'Currencies available for this route fare',
-                            );
-                            if (picked != null && mounted) {
-                              _onCurrencyChanged(picked);
-                            }
-                          },
+                            ],
+                            if (_mode == IssueTicketMode.combined &&
+                                _totalAmount != null) ...[
+                              const SizedBox(height: AppSpacing.md),
+                              _TotalBanner(
+                                currency: _currency,
+                                total: _totalAmount!,
+                              ),
+                            ],
+                            if (_error != null) ...[
+                              const SizedBox(height: AppSpacing.md),
+                              Text(
+                                _error!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: AppColors.error),
+                              ),
+                            ],
+                            const SizedBox(height: AppSpacing.xl),
+                          ],
                         ),
-                        const SizedBox(height: AppSpacing.lg),
-                      ],
-                      if (_mode.hasLuggage) ...[
-                        Text(
-                          'Luggage',
-                          style: Theme.of(context).textTheme.labelLarge,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        _buildLuggageDescriptionField(),
-                        const SizedBox(height: AppSpacing.lg),
-                      ],
-                      Text('Fare', style: Theme.of(context).textTheme.labelLarge),
-                      const SizedBox(height: AppSpacing.sm),
-                      _buildRouteFareSection(),
-                      if (_error != null) ...[
-                        const SizedBox(height: AppSpacing.md),
-                        Text(
-                          _error!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: AppColors.error),
-                        ),
-                      ],
-                      const SizedBox(height: AppSpacing.xl),
-                      AppButton(
-                        label: 'Review ticket',
-                        onPressed: _fareLoading ||
-                                (_mode != IssueTicketMode.luggage &&
-                                    _routeFare == null)
-                            ? null
-                            : _continueToReview,
-                        icon: Icons.arrow_forward,
                       ),
-                    ],
+                    ),
+                    SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.lg,
+                          AppSpacing.sm,
+                          AppSpacing.lg,
+                          AppSpacing.lg,
+                        ),
+                        child: AppButton(
+                          label: 'Review ticket',
+                          onPressed: _continueToReview,
+                          icon: Icons.arrow_forward,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+    );
+  }
+
+  Widget _buildModeTile(IssueTicketMode mode) {
+    final selected = _mode == mode;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Material(
+        color: selected
+            ? AppColors.brandRed.withValues(alpha: 0.08)
+            : AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        child: InkWell(
+          onTap: () => setState(() {
+            _mode = mode;
+            _error = null;
+          }),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 56),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.md,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+              border: Border.all(
+                color: selected ? AppColors.brandRed : AppColors.border,
+                width: selected ? 1.5 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  mode.icon,
+                  color: selected ? AppColors.brandRed : AppColors.textSecondary,
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    mode.label,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.w500,
+                        ),
                   ),
                 ),
+                Icon(
+                  selected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: selected ? AppColors.brandRed : AppColors.textSecondary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TripContextCard extends StatelessWidget {
+  const _TripContextCard({required this.trip});
+
+  final TripModel trip;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.brandRed.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.directions_bus_filled_rounded,
+              color: AppColors.brandRed,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Bus ${trip.fleetNumber ?? '—'}',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Trip corridor: ${trip.routeLabel}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AmountField extends StatelessWidget {
+  const _AmountField({
+    required this.controller,
+    required this.currency,
+    required this.label,
+    required this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final String currency;
+  final String label;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final parsed = parseFareInput(controller.text);
+    final fieldError = parsed == null && controller.text.trim().isNotEmpty
+        ? 'Enter a valid number'
+        : validateFareAmount(currency, parsed, label: label.replaceAll(' *', ''));
+
+    return TextField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: false),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+      ],
+      onChanged: (_) => onChanged(),
+      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+          ),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: currency == 'ZAR' ? '20' : '0',
+        prefixText: '$currency ',
+        helperText: currencyHelperText(currency),
+        errorText: controller.text.trim().isEmpty ? null : fieldError,
+      ),
+    );
+  }
+}
+
+class _TotalBanner extends StatelessWidget {
+  const _TotalBanner({required this.currency, required this.total});
+
+  final String currency;
+  final double total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.brandRed.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+        border: Border.all(color: AppColors.brandRed.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.summarize_outlined, color: AppColors.brandRed),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Total',
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+                Text(
+                  'Passenger fare + luggage',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '$currency ${total.toStringAsFixed(0)}',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppColors.brandRed,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+        ],
+      ),
     );
   }
 }

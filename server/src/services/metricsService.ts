@@ -173,13 +173,15 @@ export const getRoutePerformance = async (depotId?: string, from?: Date, to?: Da
   const routeMap: Record<string, { route_id: string; route_label: string; ticket_count: number; revenue: number }> = {};
 
   trips.forEach((trip) => {
-    if (!trip.route) return; // Skip trips without routes
+    const origin = trip.origin || trip.route?.origin;
+    const destination = trip.destination || trip.route?.destination;
+    if (!origin || !destination) return;
 
-    const routeKey = trip.route_id || 'unknown';
+    const routeKey = `${origin.trim().toLowerCase()}→${destination.trim().toLowerCase()}`;
     if (!routeMap[routeKey]) {
       routeMap[routeKey] = {
-        route_id: trip.route_id || '',
-        route_label: `${trip.route.origin} → ${trip.route.destination}`,
+        route_id: trip.route_id || routeKey,
+        route_label: `${origin} → ${destination}`,
         ticket_count: 0,
         revenue: 0,
       };

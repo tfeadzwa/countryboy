@@ -31,7 +31,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -51,6 +51,11 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 6) {
             await m.addColumn(localTickets, localTickets.luggageAmount);
+          }
+          if (from < 7) {
+            // Recreate local trips so routeId can be nullable (manual corridors).
+            await m.deleteTable('local_trips');
+            await m.createTable(localTrips);
           }
         },
       );

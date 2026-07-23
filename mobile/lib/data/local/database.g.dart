@@ -1294,9 +1294,9 @@ class $LocalTripsTable extends LocalTrips
   late final GeneratedColumn<String> routeId = GeneratedColumn<String>(
     'route_id',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _deviceIdMeta = const VerificationMeta(
     'deviceId',
@@ -1467,8 +1467,6 @@ class $LocalTripsTable extends LocalTrips
         _routeIdMeta,
         routeId.isAcceptableOrUnknown(data['route_id']!, _routeIdMeta),
       );
-    } else if (isInserting) {
-      context.missing(_routeIdMeta);
     }
     if (data.containsKey('device_id')) {
       context.handle(
@@ -1570,7 +1568,7 @@ class $LocalTripsTable extends LocalTrips
       routeId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}route_id'],
-      )!,
+      ),
       deviceId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}device_id'],
@@ -1624,7 +1622,7 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
   final String id;
   final String agentId;
   final String fleetId;
-  final String routeId;
+  final String? routeId;
   final String? deviceId;
   final String depotId;
   final String status;
@@ -1639,7 +1637,7 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
     required this.id,
     required this.agentId,
     required this.fleetId,
-    required this.routeId,
+    this.routeId,
     this.deviceId,
     required this.depotId,
     required this.status,
@@ -1657,7 +1655,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
     map['id'] = Variable<String>(id);
     map['agent_id'] = Variable<String>(agentId);
     map['fleet_id'] = Variable<String>(fleetId);
-    map['route_id'] = Variable<String>(routeId);
+    if (!nullToAbsent || routeId != null) {
+      map['route_id'] = Variable<String>(routeId);
+    }
     if (!nullToAbsent || deviceId != null) {
       map['device_id'] = Variable<String>(deviceId);
     }
@@ -1686,7 +1686,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
       id: Value(id),
       agentId: Value(agentId),
       fleetId: Value(fleetId),
-      routeId: Value(routeId),
+      routeId: routeId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(routeId),
       deviceId: deviceId == null && nullToAbsent
           ? const Value.absent()
           : Value(deviceId),
@@ -1719,7 +1721,7 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
       id: serializer.fromJson<String>(json['id']),
       agentId: serializer.fromJson<String>(json['agentId']),
       fleetId: serializer.fromJson<String>(json['fleetId']),
-      routeId: serializer.fromJson<String>(json['routeId']),
+      routeId: serializer.fromJson<String?>(json['routeId']),
       deviceId: serializer.fromJson<String?>(json['deviceId']),
       depotId: serializer.fromJson<String>(json['depotId']),
       status: serializer.fromJson<String>(json['status']),
@@ -1739,7 +1741,7 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
       'id': serializer.toJson<String>(id),
       'agentId': serializer.toJson<String>(agentId),
       'fleetId': serializer.toJson<String>(fleetId),
-      'routeId': serializer.toJson<String>(routeId),
+      'routeId': serializer.toJson<String?>(routeId),
       'deviceId': serializer.toJson<String?>(deviceId),
       'depotId': serializer.toJson<String>(depotId),
       'status': serializer.toJson<String>(status),
@@ -1757,7 +1759,7 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
     String? id,
     String? agentId,
     String? fleetId,
-    String? routeId,
+    Value<String?> routeId = const Value.absent(),
     Value<String?> deviceId = const Value.absent(),
     String? depotId,
     String? status,
@@ -1772,7 +1774,7 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
     id: id ?? this.id,
     agentId: agentId ?? this.agentId,
     fleetId: fleetId ?? this.fleetId,
-    routeId: routeId ?? this.routeId,
+    routeId: routeId.present ? routeId.value : this.routeId,
     deviceId: deviceId.present ? deviceId.value : this.deviceId,
     depotId: depotId ?? this.depotId,
     status: status ?? this.status,
@@ -1877,7 +1879,7 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
   final Value<String> id;
   final Value<String> agentId;
   final Value<String> fleetId;
-  final Value<String> routeId;
+  final Value<String?> routeId;
   final Value<String?> deviceId;
   final Value<String> depotId;
   final Value<String> status;
@@ -1910,7 +1912,7 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
     required String id,
     required String agentId,
     required String fleetId,
-    required String routeId,
+    this.routeId = const Value.absent(),
     this.deviceId = const Value.absent(),
     required String depotId,
     this.status = const Value.absent(),
@@ -1925,7 +1927,6 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
   }) : id = Value(id),
        agentId = Value(agentId),
        fleetId = Value(fleetId),
-       routeId = Value(routeId),
        depotId = Value(depotId),
        startedAt = Value(startedAt);
   static Insertable<LocalTrip> custom({
@@ -1968,7 +1969,7 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
     Value<String>? id,
     Value<String>? agentId,
     Value<String>? fleetId,
-    Value<String>? routeId,
+    Value<String?>? routeId,
     Value<String?>? deviceId,
     Value<String>? depotId,
     Value<String>? status,
@@ -4727,7 +4728,7 @@ typedef $$LocalTripsTableCreateCompanionBuilder =
       required String id,
       required String agentId,
       required String fleetId,
-      required String routeId,
+      Value<String?> routeId,
       Value<String?> deviceId,
       required String depotId,
       Value<String> status,
@@ -4745,7 +4746,7 @@ typedef $$LocalTripsTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> agentId,
       Value<String> fleetId,
-      Value<String> routeId,
+      Value<String?> routeId,
       Value<String?> deviceId,
       Value<String> depotId,
       Value<String> status,
@@ -5015,7 +5016,7 @@ class $$LocalTripsTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> agentId = const Value.absent(),
                 Value<String> fleetId = const Value.absent(),
-                Value<String> routeId = const Value.absent(),
+                Value<String?> routeId = const Value.absent(),
                 Value<String?> deviceId = const Value.absent(),
                 Value<String> depotId = const Value.absent(),
                 Value<String> status = const Value.absent(),
@@ -5049,7 +5050,7 @@ class $$LocalTripsTableTableManager
                 required String id,
                 required String agentId,
                 required String fleetId,
-                required String routeId,
+                Value<String?> routeId = const Value.absent(),
                 Value<String?> deviceId = const Value.absent(),
                 required String depotId,
                 Value<String> status = const Value.absent(),
