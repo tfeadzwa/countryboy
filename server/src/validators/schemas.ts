@@ -111,6 +111,27 @@ export const fleetUpdateSchema = z.object({
   }),
 });
 
+export const driverSchema = z.object({
+  body: z.object({
+    full_name: z.string().trim().min(2, 'Full name is required'),
+    employee_code: z.string().trim().min(1).max(40).optional().nullable(),
+    phone: z.string().trim().min(7).max(30).optional().nullable(),
+    licence_number: z.string().trim().min(1).max(60).optional().nullable(),
+    status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional().default('ACTIVE'),
+  }),
+});
+
+export const driverUpdateSchema = z.object({
+  body: z.object({
+    full_name: z.string().trim().min(2).optional(),
+    employee_code: z.string().trim().min(1).max(40).optional().nullable(),
+    phone: z.string().trim().min(7).max(30).optional().nullable(),
+    licence_number: z.string().trim().min(1).max(60).optional().nullable(),
+    status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
+    depot_id: z.string().uuid().optional(),
+  }),
+});
+
 export const routeSchema = z.object({
   body: z.object({
     origin: z.string(),
@@ -136,6 +157,7 @@ export const startTripSchema = z.object({
     .object({
       agent_id: z.string(),
       fleet_id: z.string(),
+      driver_id: z.string().optional(),
       origin: z.string().trim().min(2).max(100),
       destination: z.string().trim().min(2).max(100),
       route_id: z.string().optional(),

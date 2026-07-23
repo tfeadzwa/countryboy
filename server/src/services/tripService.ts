@@ -7,6 +7,7 @@ export const startTrip = async (
   data: {
     agent_id: string;
     fleet_id: string;
+    driver_id?: string;
     origin: string;
     destination: string;
     route_id?: string;
@@ -16,11 +17,21 @@ export const startTrip = async (
 ) => {
   const parent = await ensureRoute(depotId, data.origin, data.destination);
 
+  if (data.driver_id) {
+    const driver = await prisma.tblDrivers.findUnique({
+      where: { id: data.driver_id },
+    });
+    if (!driver || driver.depot_id !== depotId) {
+      throw new Error('Driver not found in this depot');
+    }
+  }
+
   return prisma.tblTrips.create({
     data: {
       depot_id: depotId,
       agent_id: data.agent_id,
       fleet_id: data.fleet_id,
+      driver_id: data.driver_id ?? null,
       origin: data.origin.trim(),
       destination: data.destination.trim(),
       route_id: parent.id,

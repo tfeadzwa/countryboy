@@ -376,11 +376,20 @@ export const startAgentTrip = async (data: {
   origin: string;
   destination: string;
   routeId?: string | null;
+  driverId?: string | null;
   deviceId?: string;
   startedOffline?: boolean;
 }) => {
-  const { id, agentId, fleetId, origin, destination, deviceId, startedOffline } =
-    data;
+  const {
+    id,
+    agentId,
+    fleetId,
+    origin,
+    destination,
+    deviceId,
+    startedOffline,
+    driverId,
+  } = data;
 
   const trimmedOrigin = origin.trim();
   const trimmedDestination = destination.trim();
@@ -429,6 +438,7 @@ export const startAgentTrip = async (data: {
             select: { id: true, full_name: true, agent_code: true },
           },
           fleet: { select: { id: true, number: true } },
+          driver: { select: { id: true, full_name: true, employee_code: true } },
           route: { select: { id: true, origin: true, destination: true } },
         },
       });
@@ -449,6 +459,24 @@ export const startAgentTrip = async (data: {
     throw new Error('Fleet does not belong to agent\'s depot');
   }
 
+  // Step 3b: Validate driver belongs to same depot when provided
+  let resolvedDriverId: string | null = null;
+  if (driverId) {
+    const driver = await prisma.tblDrivers.findUnique({
+      where: { id: driverId },
+    });
+    if (!driver) {
+      throw new Error('Driver not found');
+    }
+    if (driver.depot_id !== depotId) {
+      throw new Error('Driver does not belong to agent\'s depot');
+    }
+    if (driver.status !== 'ACTIVE') {
+      throw new Error('Driver is not active');
+    }
+    resolvedDriverId = driver.id;
+  }
+
   // Step 4: Upsert main parent corridor from conductor-entered origin/destination
   const parentRoute = await ensureRoute(depotId, trimmedOrigin, trimmedDestination);
   const resolvedRouteId = parentRoute.id;
@@ -460,6 +488,7 @@ export const startAgentTrip = async (data: {
       depot_id: depotId,
       agent_id: agentId,
       fleet_id: fleetId,
+      driver_id: resolvedDriverId,
       route_id: resolvedRouteId,
       origin: trimmedOrigin,
       destination: trimmedDestination,
@@ -480,6 +509,13 @@ export const startAgentTrip = async (data: {
         select: {
           id: true,
           number: true
+        }
+      },
+      driver: {
+        select: {
+          id: true,
+          full_name: true,
+          employee_code: true,
         }
       },
       route: {
@@ -624,6 +660,13 @@ export const getAgentActiveTrip = async (agentId: string) => {
         select: {
           id: true,
           number: true
+        }
+      },
+      driver: {
+        select: {
+          id: true,
+          full_name: true,
+          employee_code: true,
         }
       },
       route: {

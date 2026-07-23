@@ -41,6 +41,7 @@ model tblDepots {
   agents           tblAgents[]
   devices          tblDevices[]
   fleets           tblFleets[]
+  drivers          tblDrivers[]
   routes           tblRoutes[]
   routeLinks       tblRouteLinks[]
   fares            tblFares[]
@@ -172,6 +173,26 @@ enum FleetStatus {
   RETIRED
 }
 
+model tblDrivers {
+  id            String   @id @default(uuid())
+  full_name     String
+  employee_code String?
+  phone         String?
+  licence_number String?
+  depot_id      String
+  status        String   @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  created_by    String?
+  updated_by    String?
+
+  depot         tblDepots @relation(fields: [depot_id], references: [id])
+  trips         tblTrips[]
+
+  @@unique([depot_id, employee_code])
+  @@index([depot_id, status])
+}
+
 model tblRoutes {
   id          String   @id @default(uuid())
   origin      String
@@ -233,6 +254,7 @@ model tblTrips {
   agent_id        String
   device_id       String?
   fleet_id        String
+  driver_id       String?
   /// Legacy link to admin route catalog (optional; new trips use origin/destination).
   route_id        String?
   /// Conductor-entered trip corridor.
@@ -251,10 +273,12 @@ model tblTrips {
   agent       tblAgents @relation(fields: [agent_id], references: [id])
   device      tblDevices? @relation(fields: [device_id], references: [id])
   fleet       tblFleets @relation(fields: [fleet_id], references: [id])
+  driver      tblDrivers? @relation(fields: [driver_id], references: [id])
   route       tblRoutes? @relation(fields: [route_id], references: [id])
   tickets     tblTickets[]
 
   @@index([depot_id, origin, destination])
+  @@index([driver_id])
 }
 
 model tblTickets {

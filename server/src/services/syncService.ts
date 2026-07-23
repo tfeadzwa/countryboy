@@ -2,6 +2,7 @@ import prisma from '../utils/prisma';
 import logger from '../utils/logger';
 import { touchDeviceActivity } from './agentSessionService';
 import { listFleets } from './fleetService';
+import { listDrivers } from './driverService';
 import { listRoutes, ensureRoute, linkTicketSegmentToTrip } from './routeService';
 import { listFares } from './fareService';
 import { allocateTripSerial } from '../utils/ticketSerial';
@@ -49,6 +50,7 @@ const normalizeTripRecord = (raw: Record<string, unknown>, depotId: string) => {
     depot_id: depotId,
     agent_id: raw.agent_id as string,
     fleet_id: raw.fleet_id as string,
+    driver_id: (raw.driver_id as string | undefined) ?? null,
     route_id: (raw.route_id as string | undefined) ?? null,
     origin,
     destination,
@@ -97,6 +99,16 @@ export const pushData = async (
     if (payload.trips) {
       for (const t of payload.trips) {
         const data = normalizeTripRecord(t, depotId);
+
+        if (data.driver_id) {
+          const driver = await prismaTx.tblDrivers.findUnique({
+            where: { id: data.driver_id },
+            select: { id: true, depot_id: true, status: true },
+          });
+          if (!driver || driver.depot_id !== depotId) {
+            throw new Error('Driver not found in this depot');
+          }
+        }
 
         // Ensure main parent corridor exists for conductor-entered OD.
         const parent = await ensureRoute(depotId, data.origin, data.destination, {
@@ -200,8 +212,9 @@ export const pushData = async (
 };
 
 const buildReferenceSnapshot = async (depotId: string) => {
-  const [fleets, routes, fares] = await Promise.all([
+  const [fleets, drivers, routes, fares] = await Promise.all([
     listFleets(depotId),
+    listDrivers(depotId),
     listRoutes(depotId),
     listFares(depotId),
   ]);
@@ -212,6 +225,14 @@ const buildReferenceSnapshot = async (depotId: string) => {
       number: f.number,
       status: f.status,
     })),
+    drivers: drivers
+      .filter((d) => d.status === 'ACTIVE')
+      .map((d) => ({
+        id: d.id,
+        full_name: d.full_name,
+        employee_code: d.employee_code,
+        status: d.status,
+      })),
     routes,
     fares: fares.map((f) => ({
       id: f.id,

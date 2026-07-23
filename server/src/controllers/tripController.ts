@@ -5,7 +5,7 @@ import { formatPrismaError } from '../utils/prismaErrors';
 
 export const start = async (req: AuthenticatedRequest, res: Response) => {
   const depotId = req.depotId as string;
-  const { agent_id, fleet_id, origin, destination, route_id, device_id, started_offline } =
+  const { agent_id, fleet_id, driver_id, origin, destination, route_id, device_id, started_offline } =
     req.body;
 
   if (!depotId) {
@@ -18,6 +18,7 @@ export const start = async (req: AuthenticatedRequest, res: Response) => {
     const trip = await tripService.startTrip(depotId, {
       agent_id,
       fleet_id,
+      driver_id,
       origin,
       destination,
       route_id,
@@ -29,6 +30,7 @@ export const start = async (req: AuthenticatedRequest, res: Response) => {
     const friendly = formatPrismaError(err, {
       agent_id,
       fleet_id,
+      driver_id,
       origin,
       destination,
       route_id,

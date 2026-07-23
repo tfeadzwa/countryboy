@@ -294,7 +294,7 @@ export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
     }
 
     // Extract trip details from request body
-    const { id, fleet_id, origin, destination, route_id, device_id, started_offline } =
+    const { id, fleet_id, origin, destination, route_id, device_id, started_offline, driver_id } =
       req.body;
 
     // Validate required fields
@@ -307,6 +307,9 @@ export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
     if (!destination || !String(destination).trim()) {
       return res.status(400).json({ error: 'destination is required' });
     }
+    if (!driver_id) {
+      return res.status(400).json({ error: 'driver_id is required' });
+    }
 
     // Start the trip using agent service
     const trip = await agentService.startAgentTrip({
@@ -316,6 +319,7 @@ export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
       origin: String(origin),
       destination: String(destination),
       routeId: route_id,
+      driverId: driver_id,
       deviceId: device_id,
       startedOffline: started_offline || false
     });
@@ -343,8 +347,15 @@ export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
     if (err.message === 'Agent not found' || err.message === 'Agent is not active') {
       return res.status(403).json({ error: err.message });
     }
-    if (err.message === 'Fleet not found' || err.message === 'Route not found') {
+    if (err.message === 'Fleet not found' || err.message === 'Route not found' || err.message === 'Driver not found') {
       return res.status(404).json({ error: err.message });
+    }
+    if (
+      typeof err.message === 'string' &&
+      (err.message.includes('does not belong') ||
+        err.message === 'Driver is not active')
+    ) {
+      return res.status(400).json({ error: err.message });
     }
     if (
       typeof err.message === 'string' &&
