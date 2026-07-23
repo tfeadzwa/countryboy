@@ -218,7 +218,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               _HomeActionTile(
                 icon: Icons.receipt_long_outlined,
                 title: 'Sales & Tickets',
-                subtitle: 'Trip totals, ticket types, and reprints',
+                subtitle: 'Trip totals and ticket types',
                 onTap: () => context.go('/tickets'),
               ),
               const SizedBox(height: AppSpacing.sm),

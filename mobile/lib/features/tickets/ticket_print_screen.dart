@@ -27,6 +27,7 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
   List<TicketReceiptData>? _receipts;
   bool _loading = true;
   bool _printing = false;
+  bool _printed = false;
   bool _connecting = false;
   String? _error;
   String? _printerLabel;
@@ -145,7 +146,7 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
 
   Future<void> _printAll() async {
     final receipts = _receipts;
-    if (receipts == null || receipts.isEmpty || _printing) return;
+    if (receipts == null || receipts.isEmpty || _printing || _printed) return;
 
     setState(() {
       _printing = true;
@@ -155,30 +156,16 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
     try {
       if (!await _ensurePrinter()) return;
       await ref.read(ticketPrintServiceProvider).printReceipts(receipts);
+      if (!mounted) return;
+      setState(() => _printed = true);
     } on PrinterException catch (e) {
-      setState(() => _error = e.message);
+      if (mounted) setState(() => _error = e.message);
     } catch (_) {
-      setState(() => _error = 'Print failed. Check the printer and try again.');
-    } finally {
-      if (mounted) setState(() => _printing = false);
-    }
-  }
-
-  Future<void> _printOne(TicketReceiptData receipt) async {
-    if (_printing) return;
-
-    setState(() {
-      _printing = true;
-      _error = null;
-    });
-
-    try {
-      if (!await _ensurePrinter()) return;
-      await ref.read(ticketPrintServiceProvider).printReceipt(receipt);
-    } on PrinterException catch (e) {
-      setState(() => _error = e.message);
-    } catch (_) {
-      setState(() => _error = 'Print failed. Check the printer and try again.');
+      if (mounted) {
+        setState(
+          () => _error = 'Print failed. Check the printer and try again.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _printing = false);
     }
@@ -223,29 +210,14 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
                     label: _printerLabel,
                     connected: _printerConnected,
                     connecting: _connecting,
-                    onTap: _printing ? null : _changePrinter,
+                    onTap: (_printing || _printed) ? null : _changePrinter,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   if (_receipts != null)
                     ..._receipts!.map((receipt) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            TicketReceiptPreview.fromReceipt(receipt),
-                            if (isPair) ...[
-                              const SizedBox(height: AppSpacing.sm),
-                              AppButton(
-                                label: 'Print ${receipt.categoryLabel}',
-                                outlined: true,
-                                loading: _printing,
-                                onPressed: () => _printOne(receipt),
-                                icon: Icons.print_outlined,
-                              ),
-                            ],
-                          ],
-                        ),
+                        child: TicketReceiptPreview.fromReceipt(receipt),
                       );
                     }),
                   if (_error != null) ...[
@@ -256,11 +228,17 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                   ],
-                  AppButton(
-                    label: isPair ? 'Print all tickets' : 'Print ticket',
-                    loading: _printing,
-                    onPressed: _printAll,
-                    icon: Icons.print,
+                  AnimatedOpacity(
+                    opacity: _printed ? 0.45 : 1,
+                    duration: const Duration(milliseconds: 280),
+                    child: AppButton(
+                      label: _printed
+                          ? (isPair ? 'Tickets printed' : 'Ticket printed')
+                          : (isPair ? 'Print all tickets' : 'Print ticket'),
+                      loading: _printing,
+                      onPressed: _printed ? null : _printAll,
+                      icon: _printed ? Icons.check_circle_outline : Icons.print,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   AppButton(

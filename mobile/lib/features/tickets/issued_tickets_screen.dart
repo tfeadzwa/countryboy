@@ -7,10 +7,7 @@ import '../../core/config/app_spacing.dart';
 import '../../data/repositories/ticket_repository.dart';
 import '../../data/repositories/trip_repository.dart';
 import '../../domain/models/models.dart';
-import '../../services/ticket_print_service.dart';
-import '../../services/ticket_receipt_builder.dart';
 import '../../shared/widgets/widgets.dart';
-import 'widgets/printer_picker_sheet.dart';
 
 enum _TicketScope { trip, today, all, pending }
 
@@ -266,7 +263,6 @@ class _IssuedTicketsScreenState extends ConsumerState<IssuedTicketsScreen> {
                                             }
                                           });
                                         },
-                                        onPrint: _printTicket,
                                       ),
                                     );
                                   }),
@@ -346,35 +342,6 @@ class _IssuedTicketsScreenState extends ConsumerState<IssuedTicketsScreen> {
     return groups;
   }
 
-  Future<void> _printTicket(TicketModel ticket) async {
-    try {
-      final service = ref.read(ticketPrintServiceProvider);
-      if (!await service.isConnected()) {
-        final reconnected = await service.connectSaved();
-        if (!reconnected) {
-          if (!mounted) return;
-          final selected = await showPrinterPickerSheet(context, ref);
-          if (selected == null) return;
-        }
-      }
-      final receipt = await buildReceiptForTicket(ref, ticket);
-      await service.printReceipt(receipt);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ticket sent to printer.')),
-      );
-    } on PrinterException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not print ticket. Try again.')),
-      );
-    }
-  }
 }
 
 int _compareTicketOrder(TicketModel a, TicketModel b) {
@@ -739,13 +706,11 @@ class _TripSalesSection extends StatelessWidget {
     required this.group,
     required this.expanded,
     required this.onToggle,
-    required this.onPrint,
   });
 
   final _TripTicketGroup group;
   final bool expanded;
   final VoidCallback onToggle;
-  final Future<void> Function(TicketModel ticket) onPrint;
 
   @override
   Widget build(BuildContext context) {
@@ -932,10 +897,7 @@ class _TripSalesSection extends StatelessWidget {
                 children: [
                   for (var i = 0; i < group.tickets.length; i++) ...[
                     if (i > 0) const SizedBox(height: AppSpacing.sm),
-                    _TicketTile(
-                      ticket: group.tickets[i],
-                      onPrint: () => onPrint(group.tickets[i]),
-                    ),
+                    _TicketTile(ticket: group.tickets[i]),
                   ],
                 ],
               ),
@@ -993,13 +955,9 @@ class _TripStatBox extends StatelessWidget {
 }
 
 class _TicketTile extends StatelessWidget {
-  const _TicketTile({
-    required this.ticket,
-    required this.onPrint,
-  });
+  const _TicketTile({required this.ticket});
 
   final TicketModel ticket;
-  final VoidCallback onPrint;
 
   @override
   Widget build(BuildContext context) {
@@ -1008,9 +966,9 @@ class _TicketTile extends StatelessWidget {
       if (ticket.passengerName != null &&
           ticket.passengerName!.trim().isNotEmpty)
         ticket.passengerName!.trim(),
-            if (ticket.passengerPhone != null && ticket.passengerPhone!.isNotEmpty)
-              ticket.passengerPhone!,
-            ticket.routeLabel,
+      if (ticket.passengerPhone != null && ticket.passengerPhone!.isNotEmpty)
+        ticket.passengerPhone!,
+      ticket.routeLabel,
       DateFormat.MMMd().add_jm().format(ticket.issuedAt),
     ].join(' · ');
 
@@ -1023,7 +981,7 @@ class _TicketTile extends StatelessWidget {
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        children: [
           Container(
             width: 44,
             height: 44,
@@ -1068,15 +1026,14 @@ class _TicketTile extends StatelessWidget {
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
-            ),
-            IconButton(
-                visualDensity: VisualDensity.compact,
-              icon: const Icon(Icons.print_outlined),
-              tooltip: 'Print ticket',
-              color: AppColors.brandRed,
-              onPressed: onPrint,
-            ),
-          ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Icon(
+                Icons.confirmation_number_outlined,
+                size: 22,
+                color: AppColors.textSecondary.withValues(alpha: 0.55),
+              ),
+            ],
           ),
         ],
       ),
