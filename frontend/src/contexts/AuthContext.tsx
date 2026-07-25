@@ -8,6 +8,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   logout: () => void;
+  updateUser: (patch: Partial<User>) => void;
   error: string | null;
   clearError: () => void;
 }
@@ -85,6 +86,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const userData: User = {
         id: response.user.id,
         username: response.user.username,
+        email: response.user.email ?? null,
         full_name: response.user.full_name,
         depot_id: response.user.depot_id,
         roles: response.user.roles || [], // Ensure roles array exists
@@ -116,6 +118,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     navigate('/login');
   };
 
+  const updateUser = (patch: Partial<User>) => {
+    setUser((current) => {
+      if (!current) return current;
+      const next = { ...current, ...patch };
+      const token = authService.getToken();
+      if (token) authService.storeAuth(token, next);
+      return next;
+    });
+  };
+
   const clearError = () => {
     setError(null);
   };
@@ -126,6 +138,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     login,
     logout,
+    updateUser,
     error,
     clearError,
   };

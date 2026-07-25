@@ -16,8 +16,11 @@ interface ConfirmDeleteDialogProps {
   title: string;
   description: string;
   confirmLabel?: string;
+  loadingLabel?: string;
   loading?: boolean;
   onConfirm: () => void;
+  /** Defaults to destructive (delete). Use "default" for non-delete confirms. */
+  tone?: "destructive" | "default";
 }
 
 const ConfirmDeleteDialog = ({
@@ -26,8 +29,10 @@ const ConfirmDeleteDialog = ({
   title,
   description,
   confirmLabel = "Delete",
+  loadingLabel = "Deleting…",
   loading = false,
   onConfirm,
+  tone = "destructive",
 }: ConfirmDeleteDialogProps) => (
   <AlertDialog open={open} onOpenChange={onOpenChange}>
     <AlertDialogContent>
@@ -43,12 +48,16 @@ const ConfirmDeleteDialog = ({
             onConfirm();
           }}
           disabled={loading}
-          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          className={
+            tone === "destructive"
+              ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              : undefined
+          }
         >
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Deleting…
+              {loadingLabel}
             </>
           ) : (
             confirmLabel

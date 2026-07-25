@@ -26,7 +26,7 @@ export interface CreateAdminUserRequest {
   username: string;
   full_name: string;
   email?: string;
-  role: 'DEPOT_ADMIN' | 'MANAGER' | 'VIEWER';
+  role: Exclude<AdminUserRole, 'SUPER_ADMIN'>;
   depot_id?: string;
   password?: string;
 }
@@ -34,7 +34,7 @@ export interface CreateAdminUserRequest {
 export interface UpdateAdminUserRequest {
   full_name?: string;
   email?: string | null;
-  role?: 'DEPOT_ADMIN' | 'MANAGER' | 'VIEWER';
+  role?: Exclude<AdminUserRole, 'SUPER_ADMIN'>;
   depot_id?: string | null;
   status?: AdminUserStatus;
 }
@@ -52,6 +52,17 @@ class AdminUsersService {
 
   async update(id: string, data: UpdateAdminUserRequest): Promise<AdminUserListItem> {
     const response = await apiClient.put<AdminUserListItem>(`/admin-users/${id}`, data);
+    return response.data;
+  }
+
+  async resetPassword(
+    id: string,
+    password?: string,
+  ): Promise<AdminUserListItem & { temporaryPassword: string }> {
+    const response = await apiClient.post<AdminUserListItem & { temporaryPassword: string }>(
+      `/admin-users/${id}/reset-password`,
+      password ? { password } : {},
+    );
     return response.data;
   }
 }

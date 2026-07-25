@@ -106,6 +106,27 @@ const AdminUsers = () => {
 
   const [credsDialog, setCredsDialog] = useState<{ username: string; password: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [resetTarget, setResetTarget] = useState<AdminUserListItem | null>(null);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [resetMode, setResetMode] = useState<"generate" | "manual">("generate");
+  const [resetManualPassword, setResetManualPassword] = useState("");
+  const [resetShowPassword, setResetShowPassword] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+
+  const openResetDialog = (admin: AdminUserListItem) => {
+    setResetTarget(admin);
+    setResetMode("generate");
+    setResetManualPassword("");
+    setResetShowPassword(false);
+    setResetError(null);
+  };
+
+  const closeResetDialog = () => {
+    if (resettingPassword) return;
+    setResetTarget(null);
+    setResetManualPassword("");
+    setResetError(null);
+  };
 
   const fetchData = useCallback(async (opts?: { silent?: boolean }) => {
     try {
@@ -224,6 +245,44 @@ const AdminUsers = () => {
         description: err instanceof Error ? err.message : "Failed to update status",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleResetPasswordConfirm = async () => {
+    if (!resetTarget) return;
+    setResetError(null);
+
+    const manual = resetManualPassword.trim();
+    if (resetMode === "manual") {
+      if (manual.length < 8) {
+        setResetError("Password must be at least 8 characters");
+        return;
+      }
+    }
+
+    setResettingPassword(true);
+    try {
+      const result = await adminUsersService.resetPassword(
+        resetTarget.id,
+        resetMode === "manual" ? manual : undefined,
+      );
+      setResetTarget(null);
+      setResetManualPassword("");
+      setCredsDialog({
+        username: result.username,
+        password: result.temporaryPassword,
+      });
+      toast({
+        title: "Password reset",
+        description:
+          resetMode === "manual"
+            ? `Password updated for ${result.full_name}.`
+            : `A new temporary password was generated for ${result.full_name}.`,
+      });
+    } catch (err) {
+      setResetError(err instanceof Error ? err.message : "Failed to reset password");
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -505,7 +564,7 @@ const AdminUsers = () => {
             <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
               <ShieldCheck className="h-6 w-6 text-success" />
             </div>
-            <DialogTitle className="text-center">Admin Account Created</DialogTitle>
+            <DialogTitle className="text-center">Temporary password</DialogTitle>
             <DialogDescription className="text-center">
               Share these credentials securely. The password will not be shown again.
             </DialogDescription>
@@ -532,7 +591,7 @@ const AdminUsers = () => {
               </div>
             </div>
             <p className="text-xs text-muted-foreground text-center">
-              The admin should change their password on first login.
+              The admin should sign in with this password and change it if needed.
             </p>
           </div>
 
@@ -545,6 +604,119 @@ const AdminUsers = () => {
               }}
             >
               Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!resetTarget}
+        onOpenChange={(open) => {
+          if (!open) closeResetDialog();
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset password</DialogTitle>
+            <DialogDescription>
+              Set a new password for{" "}
+              <strong>
+                {resetTarget?.full_name} ({resetTarget?.username})
+              </strong>
+              . Their current password will stop working immediately.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-1">
+            {resetError && (
+              <Alert variant="destructive" className="py-2.5">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="text-sm">{resetError}</AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setResetMode("generate");
+                  setResetError(null);
+                }}
+                className={`w-full rounded-lg border px-3 py-3 text-left transition-colors ${
+                  resetMode === "generate"
+                    ? "border-primary bg-primary/5"
+                    : "border-border/60 hover:bg-muted/30"
+                }`}
+                disabled={resettingPassword}
+              >
+                <p className="text-sm font-medium">Generate temporary password</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Create a strong password automatically and show it once.
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setResetMode("manual");
+                  setResetError(null);
+                }}
+                className={`w-full rounded-lg border px-3 py-3 text-left transition-colors ${
+                  resetMode === "manual"
+                    ? "border-primary bg-primary/5"
+                    : "border-border/60 hover:bg-muted/30"
+                }`}
+                disabled={resettingPassword}
+              >
+                <p className="text-sm font-medium">Set password manually</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Enter a password yourself (minimum 8 characters).
+                </p>
+              </button>
+            </div>
+
+            {resetMode === "manual" && (
+              <div className="space-y-2">
+                <Label htmlFor="reset-manual-password">New password</Label>
+                <div className="relative">
+                  <Input
+                    id="reset-manual-password"
+                    type={resetShowPassword ? "text" : "password"}
+                    value={resetManualPassword}
+                    onChange={(e) => setResetManualPassword(e.target.value)}
+                    placeholder="At least 8 characters"
+                    className="pr-10"
+                    disabled={resettingPassword}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setResetShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 hover:text-foreground transition-colors"
+                    aria-label={resetShowPassword ? "Hide password" : "Show password"}
+                  >
+                    {resetShowPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeResetDialog} disabled={resettingPassword}>
+              Cancel
+            </Button>
+            <Button onClick={handleResetPasswordConfirm} disabled={resettingPassword}>
+              {resettingPassword ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Resetting…
+                </>
+              ) : (
+                <>
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  Reset password
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -618,25 +790,29 @@ const AdminUsers = () => {
                 </Badge>
               </TableCell>
               <TableCell className="text-right space-x-1" onClick={(e) => e.stopPropagation()}>
-                {roleName !== "SUPER_ADMIN" && (
+                {roleName !== "SUPER_ADMIN" && !isCurrentUser && (
                   <>
-                    <Button variant="ghost" size="sm" onClick={() => openEditDialog(a)}>
-                      Edit
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-orange-700 hover:text-orange-800 hover:bg-orange-500/10"
+                      onClick={() => openResetDialog(a)}
+                    >
+                      <KeyRound className="h-3.5 w-3.5 mr-1" />
+                      Reset password
                     </Button>
-                    {!isCurrentUser && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={
-                          a.status === "ACTIVE"
-                            ? "text-destructive hover:text-destructive hover:bg-destructive/10"
-                            : "text-success hover:text-success hover:bg-success/10"
-                        }
-                        onClick={() => handleToggleStatus(a)}
-                      >
-                        {a.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={
+                        a.status === "ACTIVE"
+                          ? "text-destructive hover:text-destructive hover:bg-destructive/10"
+                          : "text-success hover:text-success hover:bg-success/10"
+                      }
+                      onClick={() => handleToggleStatus(a)}
+                    >
+                      {a.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                    </Button>
                   </>
                 )}
                 {roleName === "SUPER_ADMIN" && (
@@ -718,28 +894,32 @@ const AdminUsers = () => {
                 </div>
               </div>
 
-              {roleName !== "SUPER_ADMIN" && (
+              {roleName !== "SUPER_ADMIN" && !isCurrentUser && (
                 <div
-                  className="flex items-center justify-end gap-2 pt-2 border-t border-border/40"
+                  className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-border/40"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Button variant="ghost" size="sm" onClick={() => openEditDialog(a)}>
-                    Edit
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-orange-700 hover:text-orange-800"
+                    onClick={() => openResetDialog(a)}
+                  >
+                    <KeyRound className="h-3.5 w-3.5 mr-1" />
+                    Reset password
                   </Button>
-                  {!isCurrentUser && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={
-                        a.status === "ACTIVE"
-                          ? "text-destructive hover:text-destructive"
-                          : "text-success hover:text-success"
-                      }
-                      onClick={() => handleToggleStatus(a)}
-                    >
-                      {a.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                    </Button>
-                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={
+                      a.status === "ACTIVE"
+                        ? "text-destructive hover:text-destructive"
+                        : "text-success hover:text-success"
+                    }
+                    onClick={() => handleToggleStatus(a)}
+                  >
+                    {a.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                  </Button>
                 </div>
               )}
             </div>

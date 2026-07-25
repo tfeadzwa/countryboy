@@ -77,6 +77,12 @@ const CURRENCY_COLORS = {
 
 const todayIso = () => new Date().toISOString().split("T")[0];
 
+const greetingForHour = (hour: number) => {
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+};
+
 const daysAgoIso = (days: number) => {
   const d = new Date();
   d.setDate(d.getDate() - (days - 1));
@@ -262,6 +268,13 @@ const Dashboard = () => {
     return `${dateFrom} → ${dateTo}`;
   }, [preset, dateFrom, dateTo]);
 
+  const greetingTitle = useMemo(() => {
+    const greeting = greetingForHour(new Date().getHours());
+    const fullName = user?.full_name?.trim() || user?.username?.trim();
+    const firstName = fullName?.split(/\s+/)[0];
+    return firstName ? `${greeting}, ${firstName}` : greeting;
+  }, [user?.full_name, user?.username]);
+
   const chartData = timeseries.map((d) => ({
     date: d.date.slice(5),
     usd: d.usd,
@@ -317,7 +330,7 @@ const Dashboard = () => {
             Operations
           </p>
           <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-foreground">
-            Dashboard
+            {greetingTitle}
           </h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Live trips, devices, and period performance across the depot.
