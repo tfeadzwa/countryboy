@@ -328,6 +328,8 @@ export interface Ticket {
   updated_at: string;
   // Additional fields from backend
   is_voided: boolean;
+  printed?: boolean;
+  printed_at?: string | null;
   agent_name?: string;
   fleet_number?: string;
   route_label?: string;

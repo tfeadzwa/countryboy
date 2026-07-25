@@ -1,29 +1,140 @@
 import prisma from '../utils/prisma';
 import { Prisma } from '@prisma/client';
+import { isDeviceOnline, isRecentlyActive } from '../constants/presence';
+
+const depotFilter = (depotId?: string) =>
+  depotId ? { depot_id: depotId } : {};
 
 export const getOverview = async (depotId?: string) => {
-  const where: any = {};
-  if (depotId) where.depot_id = depotId;
-
-  // revenue today/week/month, ticket counts, active agents/devices etc.
+  const where = depotFilter(depotId);
   const today = new Date();
   const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-  const revenueToday = await prisma.tblTickets.aggregate({
-    where: { ...where, issued_at: { gte: startOfDay } },
-    _sum: { amount: true }
+  const [
+    todayTickets,
+    activeTripsCount,
+    activeAgents,
+    devices,
+    openSessions,
+    unprintedCount,
+    activeTripRows,
+  ] = await Promise.all([
+    prisma.tblTickets.findMany({
+      where: { ...where, issued_at: { gte: startOfDay } },
+      include: { voids: { select: { id: true } } },
+    }),
+    prisma.tblTrips.count({ where: { ...where, status: 'ACTIVE' } }),
+    prisma.tblAgents.count({ where: { ...where, status: 'ACTIVE' } }),
+    prisma.tblDevices.findMany({
+      where,
+      select: {
+        id: true,
+        paired: true,
+        last_seen: true,
+      },
+    }),
+    prisma.tblAgentDeviceSessions.findMany({
+      where: {
+        ended_at: null,
+        ...where,
+      },
+      include: {
+        device: {
+          select: { id: true, paired: true, last_seen: true },
+        },
+        agent: { select: { id: true, full_name: true } },
+      },
+    }),
+    prisma.tblTickets.count({
+      where: {
+        ...where,
+        printed: false,
+        voids: { none: {} },
+      },
+    }),
+    prisma.tblTrips.findMany({
+      where: { ...where, status: 'ACTIVE' },
+      orderBy: { started_at: 'desc' },
+      take: 8,
+      include: {
+        agent: { select: { full_name: true, agent_code: true } },
+        fleet: { select: { number: true, registration_number: true } },
+        driver: { select: { full_name: true } },
+        device: { select: { paired: true, last_seen: true } },
+        tickets: {
+          select: {
+            id: true,
+            voids: { select: { id: true } },
+          },
+        },
+      },
+    }),
+  ]);
+
+  const validToday = todayTickets.filter((t) => t.voids.length === 0);
+  const revenueByCurrency = { usd: 0, zwl: 0, zar: 0 };
+  for (const t of validToday) {
+    const key = t.currency.toLowerCase() as keyof typeof revenueByCurrency;
+    if (key in revenueByCurrency) {
+      revenueByCurrency[key] += Number(t.amount);
+    }
+  }
+  const revenueToday =
+    revenueByCurrency.usd + revenueByCurrency.zwl + revenueByCurrency.zar;
+
+  const devicesPaired = devices.filter((d) => d.paired).length;
+  const devicesOnline = devices.filter((d) =>
+    isRecentlyActive(d.last_seen) && d.paired,
+  ).length;
+  const devicesUnpaired = devices.filter((d) => !d.paired).length;
+
+  const conductorsOnline = openSessions.filter((s) =>
+    isDeviceOnline({
+      paired: Boolean(s.device?.paired),
+      lastSeen: s.device?.last_seen ?? null,
+      hasOpenSession: true,
+    }),
+  ).length;
+  const conductorsSignedIn = openSessions.length;
+
+  const activeTrips = activeTripRows.map((trip) => {
+    const validTickets = trip.tickets.filter((t) => t.voids.length === 0);
+    const origin = trip.origin?.trim() || '—';
+    const destination = trip.destination?.trim() || '—';
+    return {
+      id: trip.id,
+      origin,
+      destination,
+      route_label: `${origin} → ${destination}`,
+      agent_name: trip.agent?.full_name ?? null,
+      agent_code: trip.agent?.agent_code ?? null,
+      fleet_number: trip.fleet?.number ?? null,
+      fleet_registration_number: trip.fleet?.registration_number ?? null,
+      driver_name: trip.driver?.full_name ?? null,
+      started_at: trip.started_at.toISOString(),
+      started_offline: trip.started_offline,
+      ticket_count: validTickets.length,
+      device_online: Boolean(
+        trip.device &&
+          isRecentlyActive(trip.device.last_seen) &&
+          trip.device.paired,
+      ),
+    };
   });
 
-  const ticketCountToday = await prisma.tblTickets.count({ where: { ...where, issued_at: { gte: startOfDay } } });
-
-  const activeTrips = await prisma.tblTrips.count({ where: { ...where, ended_at: null } });
-  const activeAgents = await prisma.tblAgents.count({ where: { ...where, status: 'ACTIVE' } });
-
   return {
-    revenueToday: revenueToday._sum.amount || 0,
-    ticketCountToday,
-    activeTrips,
-    activeAgents
+    revenueToday,
+    revenueTodayByCurrency: revenueByCurrency,
+    ticketCountToday: validToday.length,
+    activeTrips: activeTripsCount,
+    activeAgents,
+    devicesPaired,
+    devicesOnline,
+    devicesUnpaired,
+    conductorsOnline,
+    conductorsSignedIn,
+    unprintedTickets: unprintedCount,
+    activeTripList: activeTrips,
   };
 };
 
