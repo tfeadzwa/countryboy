@@ -479,6 +479,15 @@ const Agents = () => {
             : null
         }
         isNewAgent={false}
+        onResetPin={
+          canManage && selectedAgent
+            ? () => {
+                const agent = selectedAgent;
+                setSelectedAgent(null);
+                handleResetPinClick(agent);
+              }
+            : undefined
+        }
       />
 
       <Dialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
