@@ -177,3 +177,151 @@
   .stat-card-teal  { @apply stat-card-red;  }
   .stat-card-amber { @apply stat-card-gold; }
 }
+
+/* Print: hide chrome; reveal either cashier batch or 58mm ticket receipt */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  #ticket-batch-print,
+  #ticket-batch-print *,
+  #ticket-receipt-print,
+  #ticket-receipt-print * {
+    visibility: visible !important;
+  }
+
+  #ticket-batch-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 16px;
+  }
+
+  #ticket-receipt-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 58mm;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+    color: #000;
+  }
+}
+
+/* On-screen + print 58mm ticket (matches mobile ESC/POS layout) */
+.ticket-receipt-58mm {
+  width: 48mm;
+  margin: 0 auto;
+  padding: 2mm 0 4mm;
+  font-family: "Courier New", Courier, ui-monospace, monospace;
+  font-size: 10px;
+  line-height: 1.35;
+  color: #000;
+  background: #fff;
+  text-align: center;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.ticket-receipt-logo {
+  display: block;
+  width: 42mm;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto 2mm;
+  object-fit: contain;
+}
+
+.ticket-receipt-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.ticket-receipt-category {
+  margin: 1mm 0 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ticket-receipt-hr {
+  border: 0;
+  border-top: 1px dashed #000;
+  margin: 2mm 0;
+}
+
+.ticket-receipt-route {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ticket-receipt-amount {
+  margin: 1mm 0 0;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.ticket-receipt-split {
+  margin: 1mm 0 0;
+  font-size: 9px;
+}
+
+.ticket-receipt-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 2mm;
+  text-align: left;
+  font-size: 10px;
+  margin: 0.6mm 0;
+}
+
+.ticket-receipt-kv-label {
+  flex: 0 0 34%;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.ticket-receipt-kv-value {
+  flex: 1;
+  text-align: right;
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.ticket-receipt-qr {
+  display: flex;
+  justify-content: center;
+  margin: 1mm 0;
+}
+
+.ticket-receipt-qr svg {
+  width: 28mm !important;
+  height: 28mm !important;
+}
+
+.ticket-receipt-verify {
+  margin: 1mm 0 0;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ticket-receipt-footer {
+  margin: 0;
+  font-size: 9px;
+}
+
+.ticket-receipt-brand {
+  margin: 1mm 0 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}

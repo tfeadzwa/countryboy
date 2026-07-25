@@ -62,6 +62,12 @@ const normalizeTripRecord = (raw: Record<string, unknown>, depotId: string) => {
   };
 };
 
+const cleanOptionalString = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
 const normalizeTicketRecord = (raw: Record<string, unknown>, depotId: string) => ({
   id: raw.id as string,
   depot_id: depotId,
@@ -83,6 +89,12 @@ const normalizeTicketRecord = (raw: Record<string, unknown>, depotId: string) =>
   linked_passenger_ticket_id:
     (raw.linked_passenger_ticket_id as string | undefined) ?? null,
   issued_at: parseSyncDateTime(raw.issued_at, 'issued_at'),
+  printed: Boolean(raw.printed),
+  printed_at:
+    raw.printed_at != null ? parseSyncDateTime(raw.printed_at, 'printed_at') : null,
+  printer_name: cleanOptionalString(raw.printer_name),
+  printer_mac: cleanOptionalString(raw.printer_mac),
+  printer_serial: cleanOptionalString(raw.printer_serial),
 });
 
 export const pushData = async (
@@ -116,8 +128,20 @@ export const pushData = async (
         });
         data.route_id = parent.id;
 
-        // Offline sync may legitimately replace a stale server-side active trip.
-        if (data.status === 'ACTIVE') {
+        const existing = await prismaTx.tblTrips.findUnique({
+          where: { id: data.id },
+          select: { id: true, status: true, ended_at: true },
+        });
+
+        // Never let a stale mobile push reopen a cashier/admin-ended trip.
+        const existingTerminal =
+          existing &&
+          (existing.status === 'ENDED' || existing.status === 'COMPLETED');
+        if (existingTerminal) {
+          data.status = existing.status;
+          data.ended_at = existing.ended_at;
+        } else if (data.status === 'ACTIVE') {
+          // Offline sync may legitimately replace a stale server-side active trip.
           await prismaTx.tblTrips.updateMany({
             where: {
               agent_id: data.agent_id,
@@ -160,15 +184,49 @@ export const pushData = async (
             origin: true,
             destination: true,
             route_id: true,
+            status: true,
           },
         });
-        if (trip) {
-          await linkTicketSegmentToTrip(
-            trip,
-            data.departure,
-            data.destination,
-            { client: prismaTx },
+        if (!trip) {
+          throw new Error(`Trip not found for ticket ${data.id}`);
+        }
+        if (trip.status !== 'ACTIVE') {
+          throw new Error(
+            'Cannot sync ticket: trip is closed. Ask the depot to start a new trip.',
           );
+        }
+        await linkTicketSegmentToTrip(
+          trip,
+          data.departure,
+          data.destination,
+          { client: prismaTx },
+        );
+
+        const existingTicket = await prismaTx.tblTickets.findUnique({
+          where: { id: data.id },
+          select: {
+            printed: true,
+            printed_at: true,
+            printer_name: true,
+            printer_mac: true,
+            printer_serial: true,
+          },
+        });
+
+        // Once printed on a device, never clear that flag from a stale push.
+        // Fill printer identity if an older print sync lacked it.
+        if (existingTicket?.printed) {
+          data.printed = true;
+          data.printed_at = existingTicket.printed_at;
+          data.printer_name = existingTicket.printer_name ?? data.printer_name;
+          data.printer_mac = existingTicket.printer_mac ?? data.printer_mac;
+          data.printer_serial =
+            existingTicket.printer_serial ?? data.printer_serial;
+        } else if (!data.printed) {
+          data.printed_at = null;
+          data.printer_name = null;
+          data.printer_mac = null;
+          data.printer_serial = null;
         }
 
         const upserted = await prismaTx.tblTickets.upsert({
@@ -186,6 +244,24 @@ export const pushData = async (
         }
         results.tickets.push(upserted);
         ticketCount++;
+
+        // Keep the phone's "current printer" in sync when print payloads include it.
+        if (
+          context.deviceId &&
+          data.printed &&
+          (data.printer_name || data.printer_mac || data.printer_serial)
+        ) {
+          await prismaTx.tblDevices.update({
+            where: { id: context.deviceId },
+            data: {
+              ...(data.printer_name ? { printer_name: data.printer_name } : {}),
+              ...(data.printer_mac ? { printer_mac: data.printer_mac } : {}),
+              ...(data.printer_serial
+                ? { printer_serial: data.printer_serial }
+                : {}),
+            },
+          });
+        }
       }
     }
   });
@@ -230,7 +306,6 @@ const buildReferenceSnapshot = async (depotId: string) => {
       .map((d) => ({
         id: d.id,
         full_name: d.full_name,
-        employee_code: d.employee_code,
         status: d.status,
       })),
     routes,

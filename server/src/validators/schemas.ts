@@ -88,6 +88,13 @@ const expiryDateField = z
 export const fleetSchema = z.object({
   body: z.object({
     number: z.string().min(1, 'Fleet number is required'),
+    registration_number: z
+      .string()
+      .trim()
+      .min(1, 'Registration number is required')
+      .max(40)
+      .optional()
+      .nullable(),
     status: z.enum(['ACTIVE', 'MAINTENANCE', 'OUT_OF_SERVICE', 'RETIRED']).optional(),
     capacity: z.coerce.number().int().min(0).optional(),
     licence_disc_expiry: expiryDateField,
@@ -101,6 +108,13 @@ export const fleetSchema = z.object({
 export const fleetUpdateSchema = z.object({
   body: z.object({
     number: z.string().min(1).optional(),
+    registration_number: z
+      .string()
+      .trim()
+      .min(1, 'Registration number is required')
+      .max(40)
+      .optional()
+      .nullable(),
     status: z.enum(['ACTIVE', 'MAINTENANCE', 'OUT_OF_SERVICE', 'RETIRED']).optional(),
     capacity: z.coerce.number().int().min(0).optional(),
     licence_disc_expiry: expiryDateField,
@@ -114,7 +128,6 @@ export const fleetUpdateSchema = z.object({
 export const driverSchema = z.object({
   body: z.object({
     full_name: z.string().trim().min(2, 'Full name is required'),
-    employee_code: z.string().trim().min(1).max(40).optional().nullable(),
     phone: z.string().trim().min(7).max(30).optional().nullable(),
     licence_number: z.string().trim().min(1).max(60).optional().nullable(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional().default('ACTIVE'),
@@ -124,7 +137,6 @@ export const driverSchema = z.object({
 export const driverUpdateSchema = z.object({
   body: z.object({
     full_name: z.string().trim().min(2).optional(),
-    employee_code: z.string().trim().min(1).max(40).optional().nullable(),
     phone: z.string().trim().min(7).max(30).optional().nullable(),
     licence_number: z.string().trim().min(1).max(60).optional().nullable(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),

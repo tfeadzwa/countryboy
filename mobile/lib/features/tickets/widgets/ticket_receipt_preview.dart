@@ -19,6 +19,7 @@ class TicketReceiptPreview extends StatelessWidget {
     required this.fleetNumber,
     required this.currency,
     required this.amount,
+    this.fleetRegistrationNumber,
     this.passengerAmount,
     this.luggageAmount,
     this.origin,
@@ -26,6 +27,12 @@ class TicketReceiptPreview extends StatelessWidget {
     this.luggageDescription,
     this.ticketNumber,
     this.issuedAt,
+    this.depotName,
+    this.agentName,
+    this.deviceSerial,
+    this.printerName,
+    this.printerMac,
+    this.printerSerial,
     this.syncPending = false,
     this.verifyUrl,
   });
@@ -41,6 +48,7 @@ class TicketReceiptPreview extends StatelessWidget {
       origin: draft.departure,
       destination: draft.destination,
       fleetNumber: draft.trip.fleetNumber ?? '-',
+      fleetRegistrationNumber: draft.trip.fleetRegistrationNumber,
       currency: draft.currency,
       amount: draft.amount ?? 0,
       passengerAmount: draft.passengerAmount,
@@ -58,12 +66,19 @@ class TicketReceiptPreview extends StatelessWidget {
       origin: receipt.ticket.departure ?? receipt.trip.routeOrigin,
       destination: receipt.ticket.destination ?? receipt.trip.routeDestination,
       fleetNumber: receipt.trip.fleetNumber ?? '-',
+      fleetRegistrationNumber: receipt.trip.fleetRegistrationNumber,
       currency: receipt.ticket.currency,
       amount: receipt.ticket.amount,
       luggageAmount: receipt.ticket.luggageAmount,
       luggageDescription: receipt.ticket.luggageDescription,
       ticketNumber: receipt.ticket.displayNumber,
       issuedAt: receipt.ticket.issuedAt,
+      depotName: receipt.depotName,
+      agentName: receipt.agentName,
+      deviceSerial: receipt.deviceSerial,
+      printerName: receipt.printerName,
+      printerMac: receipt.printerMac,
+      printerSerial: receipt.printerSerial,
       syncPending: receipt.ticket.syncStatus != 'synced',
       verifyUrl: receipt.verifyUrl,
     );
@@ -73,6 +88,7 @@ class TicketReceiptPreview extends StatelessWidget {
   final String categoryLabel;
   final String routeLabel;
   final String fleetNumber;
+  final String? fleetRegistrationNumber;
   final String currency;
   final double amount;
   final double? passengerAmount;
@@ -82,6 +98,12 @@ class TicketReceiptPreview extends StatelessWidget {
   final String? luggageDescription;
   final String? ticketNumber;
   final DateTime? issuedAt;
+  final String? depotName;
+  final String? agentName;
+  final String? deviceSerial;
+  final String? printerName;
+  final String? printerMac;
+  final String? printerSerial;
   final bool syncPending;
   final String? verifyUrl;
 
@@ -170,10 +192,23 @@ class TicketReceiptPreview extends StatelessWidget {
             ],
             const Divider(height: AppSpacing.lg),
             _row(context, 'Ticket', ticketNumber ?? '-'),
-            _row(context, 'Bus', fleetNumber),
+            _row(context, 'Fleet', fleetNumber),
+            if (fleetRegistrationNumber != null &&
+                fleetRegistrationNumber!.trim().isNotEmpty)
+              _row(context, 'Plate No', fleetRegistrationNumber!.trim()),
             if (luggageDescription != null && luggageDescription!.isNotEmpty)
               _row(context, 'Luggage', luggageDescription!),
             _row(context, 'Issued', issuedLabel),
+            if (depotName != null && depotName!.trim().isNotEmpty)
+              _row(context, 'Depot', depotName!),
+            if (agentName != null && agentName!.trim().isNotEmpty)
+              _row(context, 'Conductor', agentName!),
+            if (deviceSerial != null && deviceSerial!.trim().isNotEmpty)
+              _row(context, 'Device', deviceSerial!),
+            if (printerName != null && printerName!.trim().isNotEmpty)
+              _row(context, 'Printer', printerName!),
+            // if (printerMac != null && printerMac!.trim().isNotEmpty)
+            //   _row(context, 'Mac', printerMac!),
             if (syncPending)
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.sm),

@@ -33,12 +33,17 @@ async function main() {
     update: {},
     create: { name: 'MANAGER' },
   });
-  const viewerRole = await prisma.tblRoles.upsert({
+  await prisma.tblRoles.upsert({
     where: { name: 'VIEWER' },
     update: {},
     create: { name: 'VIEWER' },
   });
-  console.log(`✅ Created 4 roles`);
+  await prisma.tblRoles.upsert({
+    where: { name: 'CASHIER' },
+    update: {},
+    create: { name: 'CASHIER' },
+  });
+  console.log(`✅ Created roles (incl. CASHIER)`);
 
   // 2. DEPOTS
   console.log('\n🏢 Creating depots...');

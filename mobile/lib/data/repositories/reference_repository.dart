@@ -69,6 +69,15 @@ class ReferenceRepository {
             .toList(),
       );
     }
+
+    final drivers = data['drivers'] as List<dynamic>?;
+    if (drivers != null && drivers.isNotEmpty) {
+      await _cacheDrivers(
+        drivers
+            .map((e) => DriverModel.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+    }
   }
 
   Future<void> _cacheFleets(List<FleetModel> fleets) async {
@@ -78,7 +87,23 @@ class ReferenceRepository {
             (f) => CachedFleetsCompanion.insert(
               id: f.id,
               number: f.number,
+              registrationNumber: Value(f.registrationNumber),
               status: Value(f.status ?? 'ACTIVE'),
+              cachedAt: DateTime.now(),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  Future<void> _cacheDrivers(List<DriverModel> drivers) async {
+    await _db.cacheDrivers(
+      drivers
+          .map(
+            (d) => CachedDriversCompanion.insert(
+              id: d.id,
+              fullName: d.fullName,
+              status: Value(d.status ?? 'ACTIVE'),
               cachedAt: DateTime.now(),
             ),
           )
@@ -163,8 +188,46 @@ class ReferenceRepository {
       );
     }
     return cached
-        .map((f) => FleetModel(id: f.id, number: f.number, status: f.status))
+        .map(
+          (f) => FleetModel(
+            id: f.id,
+            number: f.number,
+            registrationNumber: f.registrationNumber,
+            status: f.status,
+          ),
+        )
         .toList();
+  }
+
+  Future<List<DriverModel>> getDrivers() async {
+    try {
+      if (await _canFetchFromApi()) {
+        final drivers = await _api.getDrivers();
+        await _cacheDrivers(drivers);
+        return drivers;
+      }
+    } catch (_) {
+      // Fall through to cache.
+    }
+    final cached = await _db.getCachedDrivers();
+    final active = cached
+        .where((d) => d.status == 'ACTIVE')
+        .map(
+          (d) => DriverModel(
+            id: d.id,
+            fullName: d.fullName,
+            status: d.status,
+          ),
+        )
+        .toList();
+    if (active.isEmpty) {
+      throw ApiError(
+        message: await _storage.hasOnlineAuth()
+            ? 'No drivers available. Ask admin to add drivers for your depot.'
+            : 'No drivers available offline. Sign in online after drivers are added.',
+      );
+    }
+    return active;
   }
 
   List<String> _decodeIdList(String? raw) {

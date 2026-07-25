@@ -1,6 +1,11 @@
 import apiClient from './axios';
 
-export type AdminUserRole = 'SUPER_ADMIN' | 'DEPOT_ADMIN' | 'MANAGER' | 'VIEWER';
+export type AdminUserRole =
+  | 'SUPER_ADMIN'
+  | 'DEPOT_ADMIN'
+  | 'CASHIER'
+  | 'MANAGER'
+  | 'VIEWER';
 export type AdminUserStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface AdminUserListItem {
@@ -11,6 +16,8 @@ export interface AdminUserListItem {
   depot_id: string | null;
   status: AdminUserStatus;
   created_at: string;
+  last_seen_at?: string | null;
+  is_online?: boolean;
   depot: { id: string; name: string; merchant_code: string } | null;
   roles: { role: { id: string; name: string } }[];
 }

@@ -61,6 +61,7 @@ model tblAdminUsers {
   full_name    String?
   depot_id     String?  // null for super admins
   status       String   @default("ACTIVE")
+  last_seen_at DateTime?
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
   created_by   String?
@@ -107,6 +108,10 @@ model tblDevices {
   depot_id      String
   device_name   String?                    // Device brand and model (e.g., "Samsung SM A556E")
   device_model  String?                    // Device model (e.g., "SM A556E")
+  /// Current Bluetooth thermal printer attached to this phone (best-effort).
+  printer_name   String?
+  printer_mac    String?
+  printer_serial String?
   last_seen     DateTime?
   app_version   String?
   sync_errors   Int      @default(0)
@@ -147,6 +152,7 @@ model tblAgentDeviceSessions {
 model tblFleets {
   id                           String      @id @default(uuid())
   number                       String
+  registration_number          String?
   depot_id                     String
   status                       FleetStatus @default(ACTIVE)
   capacity                     Int         @default(0)
@@ -164,6 +170,7 @@ model tblFleets {
   trips       tblTrips[]
 
   @@unique([depot_id, number])
+  @@unique([depot_id, registration_number])
 }
 
 enum FleetStatus {
@@ -298,6 +305,12 @@ model tblTickets {
   passenger_name            String?
   passenger_phone           String?
   luggage_description       String?
+  printed                   Boolean  @default(false)
+  printed_at                DateTime?
+  /// Snapshot of Bluetooth printer used when the ticket was printed.
+  printer_name              String?
+  printer_mac               String?
+  printer_serial            String?
   linked_passenger_ticket_id String?
   issued_at                 DateTime
   created_at                DateTime @default(now())

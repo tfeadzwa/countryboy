@@ -6,10 +6,12 @@ import 'package:go_router/go_router.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/config/app_spacing.dart';
 import '../../core/config/fare_currency.dart';
+import '../../core/connectivity/online_sync_lifecycle.dart';
 import '../../core/network/api_error.dart';
 import '../../data/repositories/trip_repository.dart';
 import '../../domain/models/models.dart';
 import '../../domain/models/ticket_issue_draft.dart';
+import '../../features/home/home_screen.dart';
 import '../../shared/widgets/searchable_picker.dart';
 import '../../shared/widgets/widgets.dart';
 import 'widgets/issue_flow_step_header.dart';
@@ -57,6 +59,7 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
 
   bool _loading = true;
   String? _error;
+  int? _seenTripRevision;
 
   @override
   void initState() {
@@ -74,11 +77,33 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
     super.dispose();
   }
 
+  @override
+  Widget build(BuildContext context) {
+    // When the device comes back online, trip may have been closed by cashier.
+    ref.listen<int>(tripSessionRevisionProvider, (previous, next) {
+      if (_seenTripRevision == next) return;
+      _seenTripRevision = next;
+      _load();
+    });
+
+    // Keep the original build body below — need to find the existing build method.
+    return _buildBody(context);
+  }
+
   Future<void> _load() async {
     try {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
       final trip = await ref.read(tripRepositoryProvider).getActiveTrip();
+      if (!mounted) return;
       if (trip == null) {
-        setState(() => _error = 'No active trip. Start a trip first.');
+        setState(() {
+          _trip = null;
+          _error =
+              'No active trip. This trip may have been closed by the depot.';
+        });
         return;
       }
 
@@ -222,14 +247,25 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
+  void _leaveIssueFlow() {
+    // After "Issue another ticket" we land via go(), so there may be nothing to pop.
+    // Always return to home — that is the entry point for issuing.
+    ref.invalidate(homeDashboardProvider);
+    context.go('/home');
+  }
+
+  Widget _buildBody(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _leaveIssueFlow();
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Issue Ticket'),
-        leading: BackButton(onPressed: () => context.pop()),
+        leading: BackButton(onPressed: _leaveIssueFlow),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -276,8 +312,7 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
                             ),
                             const SizedBox(height: AppSpacing.xs),
                             Text(
-                              'Enter this passenger’s origin and destination. '
-                              'They can differ from the trip corridor.',
+                              'Enter this passenger’s origin and destination.',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: AppColors.textSecondary,
                               ),
@@ -317,19 +352,11 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
                               label: 'Currency',
                               hint: 'Select currency',
                               valueText: currencyLabel(_currency),
-                              subtitle: currencyHelperText(_currency),
                               leadingIcon: Icons.payments_outlined,
                               onTap: _pickCurrency,
                             ),
                             const SizedBox(height: AppSpacing.xl),
                             Text('Fare', style: theme.textTheme.labelLarge),
-                            const SizedBox(height: AppSpacing.xs),
-                            Text(
-                              currencyHelperText(_currency),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
                             const SizedBox(height: AppSpacing.md),
                             if (_mode.hasPassengerFare) ...[
                               _AmountField(
@@ -410,6 +437,7 @@ class _IssueTicketFormScreenState extends ConsumerState<IssueTicketFormScreen> {
                     ),
                   ],
                 ),
+      ),
     );
   }
 
@@ -564,7 +592,6 @@ class _AmountField extends StatelessWidget {
         labelText: label,
         hintText: currency == 'ZAR' ? '20' : '0',
         prefixText: '$currency ',
-        helperText: currencyHelperText(currency),
         errorText: controller.text.trim().isEmpty ? null : fieldError,
       ),
     );

@@ -54,15 +54,28 @@ class TicketIssueResult {
     required this.trip,
     this.single,
     this.pair,
+    this.draft,
   });
 
   final TripModel trip;
   final TicketModel? single;
   final PassengerLuggagePairResult? pair;
+  /// Original draft used to issue — enables "Same route again" on print.
+  final TicketIssueDraft? draft;
 
   List<TicketModel> get tickets {
     if (pair != null) return [pair!.passenger, pair!.luggage];
     if (single != null) return [single!];
     return [];
+  }
+
+  /// Passenger-only tickets can be re-issued with one tap from Print.
+  bool get canRepeatSameRoute {
+    final d = draft;
+    if (d == null || d.mode != 'PASSENGER') return false;
+    if (d.amount == null || d.amount! <= 0) return false;
+    if (d.departure == null || d.departure!.trim().isEmpty) return false;
+    if (d.destination == null || d.destination!.trim().isEmpty) return false;
+    return true;
   }
 }

@@ -19,6 +19,7 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 @DriftDatabase(
   tables: [
     CachedFleets,
+    CachedDrivers,
     CachedRoutes,
     CachedFares,
     LocalTrips,
@@ -31,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -57,6 +58,23 @@ class AppDatabase extends _$AppDatabase {
             await m.deleteTable('local_trips');
             await m.createTable(localTrips);
           }
+          if (from < 8) {
+            await m.createTable(cachedDrivers);
+            await m.addColumn(localTrips, localTrips.driverId);
+            await m.addColumn(localTrips, localTrips.driverName);
+          }
+          if (from < 9) {
+            await m.deleteTable('cached_drivers');
+            await m.createTable(cachedDrivers);
+          }
+          if (from < 10) {
+            await m.addColumn(localTickets, localTickets.printed);
+            await m.addColumn(localTickets, localTickets.printedAt);
+          }
+          if (from < 11) {
+            await m.addColumn(cachedFleets, cachedFleets.registrationNumber);
+            await m.addColumn(localTrips, localTrips.fleetRegistrationNumber);
+          }
         },
       );
 
@@ -73,6 +91,19 @@ class AppDatabase extends _$AppDatabase {
 
   Future<List<CachedFleet>> getCachedFleets() =>
       (select(cachedFleets)..orderBy([(t) => OrderingTerm.asc(t.number)])).get();
+
+  Future<void> cacheDrivers(List<CachedDriversCompanion> items) async {
+    await transaction(() async {
+      await delete(cachedDrivers).go();
+      if (items.isNotEmpty) {
+        await batch((b) => b.insertAll(cachedDrivers, items));
+      }
+    });
+  }
+
+  Future<List<CachedDriver>> getCachedDrivers() => (select(cachedDrivers)
+        ..orderBy([(t) => OrderingTerm.asc(t.fullName)]))
+      .get();
 
   Future<void> cacheRoutes(List<CachedRoutesCompanion> items) async {
     await transaction(() async {
@@ -137,6 +168,38 @@ class AppDatabase extends _$AppDatabase {
         ),
       );
 
+  /// Marks a trip as ended locally (cashier/admin close, or pull reconcile).
+  Future<void> markTripEnded(
+    String id, {
+    String status = 'ENDED',
+    DateTime? endedAt,
+  }) =>
+      (update(localTrips)..where((t) => t.id.equals(id))).write(
+        LocalTripsCompanion(
+          status: Value(status),
+          endedAt: Value(endedAt ?? DateTime.now()),
+          syncStatus: const Value('synced'),
+        ),
+      );
+
+  /// Ends every local ACTIVE trip for an agent (server has none / trip closed).
+  Future<void> markAgentActiveTripsEnded(
+    String agentId, {
+    String status = 'ENDED',
+    DateTime? endedAt,
+  }) =>
+      (update(localTrips)
+            ..where(
+              (t) => t.agentId.equals(agentId) & t.status.equals('ACTIVE'),
+            ))
+          .write(
+        LocalTripsCompanion(
+          status: Value(status),
+          endedAt: Value(endedAt ?? DateTime.now()),
+          syncStatus: const Value('synced'),
+        ),
+      );
+
   // ── Tickets ──────────────────────────────────────────────────────
 
   Future<void> insertTicket(LocalTicketsCompanion ticket) =>
@@ -190,6 +253,20 @@ class AppDatabase extends _$AppDatabase {
       ),
     );
   }
+
+  Future<void> markTicketsPrinted(List<String> ids, {DateTime? printedAt}) {
+    if (ids.isEmpty) return Future.value();
+    final when = printedAt ?? DateTime.now();
+    return (update(localTickets)..where((t) => t.id.isIn(ids))).write(
+      LocalTicketsCompanion(
+        printed: const Value(true),
+        printedAt: Value(when),
+      ),
+    );
+  }
+
+  Future<LocalTicket?> getTicketById(String id) =>
+      (select(localTickets)..where((t) => t.id.equals(id))).getSingleOrNull();
 
   // ── Sync queue ───────────────────────────────────────────────────
 

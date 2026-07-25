@@ -30,11 +30,18 @@ export const issueTicket = async (args: IssueArgs) => {
         origin: true,
         destination: true,
         route_id: true,
+        status: true,
       },
     });
 
     if (!trip) {
       throw new Error('Trip not found');
+    }
+
+    if (trip.status !== 'ACTIVE') {
+      throw new Error(
+        'Trip is closed. Tickets can no longer be issued on this trip.',
+      );
     }
 
     // Ticket OD becomes a normal route; link as child under the trip's main corridor.

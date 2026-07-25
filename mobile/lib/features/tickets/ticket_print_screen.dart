@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../core/config/app_colors.dart';
 import '../../core/config/app_spacing.dart';
+import '../../core/network/api_error.dart';
+import '../../data/repositories/ticket_repository.dart';
 import '../../domain/models/ticket_issue_draft.dart';
 import '../../domain/models/ticket_receipt_data.dart';
 import '../../features/home/home_screen.dart';
@@ -27,8 +30,9 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
   List<TicketReceiptData>? _receipts;
   bool _loading = true;
   bool _printing = false;
-  bool _printed = false;
+  late bool _printed;
   bool _connecting = false;
+  bool _issuingSimilar = false;
   String? _error;
   String? _printerLabel;
   bool _printerConnected = false;
@@ -36,6 +40,8 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
   @override
   void initState() {
     super.initState();
+    _printed = widget.result.tickets.isNotEmpty &&
+        widget.result.tickets.every((t) => t.printed);
     _loadReceipts();
     _restorePrinter();
   }
@@ -157,6 +163,13 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
       if (!await _ensurePrinter()) return;
       await ref.read(ticketPrintServiceProvider).printReceipts(receipts);
       if (!mounted) return;
+      final ticketIds = widget.result.tickets.map((t) => t.id).toList();
+      try {
+        await ref.read(ticketRepositoryProvider).markTicketsPrinted(ticketIds);
+      } catch (_) {
+        // Print succeeded — local mark is best-effort; list will refresh on sync.
+      }
+      if (!mounted) return;
       setState(() => _printed = true);
     } on PrinterException catch (e) {
       if (mounted) setState(() => _error = e.message);
@@ -171,10 +184,84 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
     }
   }
 
+  Future<void> _sameRouteAgain() async {
+    final draft = widget.result.draft;
+    if (!widget.result.canRepeatSameRoute ||
+        draft == null ||
+        _issuingSimilar ||
+        _printing) {
+      return;
+    }
+
+    final amount = draft.amount!;
+    final amountLabel = amount == amount.roundToDouble()
+        ? amount.toStringAsFixed(0)
+        : amount.toStringAsFixed(2);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Same route again?'),
+        content: Text(
+          'Issue another ${draft.departure} → ${draft.destination} · '
+          '${draft.currency} $amountLabel?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Issue'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _issuingSimilar = true;
+      _error = null;
+    });
+
+    try {
+      final ticket = await ref.read(ticketRepositoryProvider).issueTicket(
+            tripId: draft.trip.id,
+            ticketCategory: draft.mode,
+            currency: draft.currency,
+            amount: amount,
+            departure: draft.departure!,
+            destination: draft.destination!,
+            idempotencyKey: const Uuid().v4(),
+          );
+      final result = TicketIssueResult(
+        trip: draft.trip,
+        single: ticket,
+        draft: draft,
+      );
+
+      ref.invalidate(homeDashboardProvider);
+
+      if (!mounted) return;
+      context.pushReplacement('/tickets/issue/print', extra: result);
+    } on ApiError catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Could not issue ticket. Try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _issuingSimilar = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final tickets = widget.result.tickets;
     final isPair = tickets.length > 1;
+    final canRepeat = widget.result.canRepeatSameRoute;
+    final busy = _printing || _issuingSimilar;
 
     return Scaffold(
       appBar: AppBar(
@@ -210,7 +297,9 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
                     label: _printerLabel,
                     connected: _printerConnected,
                     connecting: _connecting,
-                    onTap: (_printing || _printed) ? null : _changePrinter,
+                    onTap: (_printing || _printed || _issuingSimilar)
+                        ? null
+                        : _changePrinter,
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   if (_receipts != null)
@@ -236,25 +325,37 @@ class _TicketPrintScreenState extends ConsumerState<TicketPrintScreen> {
                           ? (isPair ? 'Tickets printed' : 'Ticket printed')
                           : (isPair ? 'Print all tickets' : 'Print ticket'),
                       loading: _printing,
-                      onPressed: _printed ? null : _printAll,
+                      onPressed: (_printed || _issuingSimilar) ? null : _printAll,
                       icon: _printed ? Icons.check_circle_outline : Icons.print,
                     ),
                   ),
+                  if (canRepeat) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    AppButton(
+                      label: 'Same route again',
+                      loading: _issuingSimilar,
+                      onPressed: busy ? null : _sameRouteAgain,
+                      icon: Icons.repeat,
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.md),
                   AppButton(
                     label: 'Issue another ticket',
                     outlined: true,
-                    onPressed: () => context.go('/tickets/issue'),
+                    onPressed:
+                        _issuingSimilar ? null : () => context.go('/tickets/issue'),
                     icon: Icons.add,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   AppButton(
                     label: 'Done',
                     outlined: true,
-                    onPressed: () {
-                      ref.invalidate(homeDashboardProvider);
-                      context.go('/home');
-                    },
+                    onPressed: _issuingSimilar
+                        ? null
+                        : () {
+                            ref.invalidate(homeDashboardProvider);
+                            context.go('/home');
+                          },
                   ),
                 ],
               ),

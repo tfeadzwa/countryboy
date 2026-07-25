@@ -46,9 +46,23 @@ export const start = async (req: AuthenticatedRequest, res: Response) => {
 export const end = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const tripId = req.params.id;
-    const updated = await tripService.endTrip(tripId);
-    res.json(updated);
+    const updated = await tripService.endTrip(tripId, req.depotId);
+    const totals = await tripService.getTripTotals(tripId);
+    res.json({
+      ...updated,
+      ticket_count: totals.ticketCount,
+      total_revenue: totals.total,
+      message: 'Trip ended successfully',
+    });
   } catch (err) {
+    if (err instanceof Error) {
+      if (err.message === 'Trip not found' || err.message === 'Trip not found in this depot') {
+        return res.status(404).json({ error: err.message });
+      }
+      if (err.message === 'Trip is already ended') {
+        return res.status(400).json({ error: err.message });
+      }
+    }
     const friendly = formatPrismaError(err);
     if (friendly) {
       return res.status(friendly.status).json({ error: friendly.message });
@@ -69,7 +83,7 @@ export const listActive = async (req: AuthenticatedRequest, res: Response) => {
 export const getOne = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const id = req.params.id;
-    const trip = await tripService.getTrip(id);
+    const trip = await tripService.getTrip(id, req.depotId);
     if (!trip) return res.status(404).json({ error: 'Trip not found' });
     res.json(trip);
   } catch (err) {
@@ -119,7 +133,7 @@ export const list = async (req: AuthenticatedRequest, res: Response) => {
         origin: t.origin,
         destination: t.destination,
         route_label: `${t.origin} → ${t.destination}`,
-        status: t.status,
+        status: t.status === 'COMPLETED' ? 'ENDED' : t.status,
         started_at: t.started_at,
         ended_at: t.ended_at,
         started_offline: t.started_offline,

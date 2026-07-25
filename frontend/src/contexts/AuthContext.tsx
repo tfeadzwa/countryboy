@@ -30,6 +30,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkAuth();
   }, []);
 
+  // Keep admin presence online while the portal session is active.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const beat = () => {
+      void authService.heartbeat().catch(() => {
+        // Ignore transient network errors; offline threshold handles stale presence.
+      });
+    };
+
+    beat();
+    const id = window.setInterval(beat, 30_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") beat();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [isAuthenticated]);
+
   const checkAuth = () => {
     try {
       const isAuth = authService.isAuthenticated();

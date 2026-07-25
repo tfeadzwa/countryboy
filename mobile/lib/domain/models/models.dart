@@ -125,20 +125,50 @@ class PairDeviceResult extends Equatable {
 }
 
 class FleetModel extends Equatable {
-  const FleetModel({required this.id, required this.number, this.status});
+  const FleetModel({
+    required this.id,
+    required this.number,
+    this.registrationNumber,
+    this.status,
+  });
 
   factory FleetModel.fromJson(Map<String, dynamic> json) => FleetModel(
         id: json['id'] as String,
         number: json['number'] as String,
+        registrationNumber: json['registration_number'] as String?,
         status: json['status'] as String?,
       );
 
   final String id;
   final String number;
+  final String? registrationNumber;
   final String? status;
 
   @override
-  List<Object?> get props => [id, number, status];
+  List<Object?> get props => [id, number, registrationNumber, status];
+}
+
+class DriverModel extends Equatable {
+  const DriverModel({
+    required this.id,
+    required this.fullName,
+    this.status,
+  });
+
+  factory DriverModel.fromJson(Map<String, dynamic> json) => DriverModel(
+        id: json['id'] as String,
+        fullName: json['full_name'] as String,
+        status: json['status'] as String?,
+      );
+
+  final String id;
+  final String fullName;
+  final String? status;
+
+  String get displayLabel => fullName;
+
+  @override
+  List<Object?> get props => [id, fullName, status];
 }
 
 class RouteModel extends Equatable {
@@ -260,6 +290,9 @@ class TripModel extends Equatable {
     this.routeId,
     this.deviceId,
     this.fleetNumber,
+    this.fleetRegistrationNumber,
+    this.driverId,
+    this.driverName,
     this.routeOrigin,
     this.routeDestination,
     this.ticketsCount = 0,
@@ -275,6 +308,9 @@ class TripModel extends Equatable {
   final String status;
   final DateTime startedAt;
   final String? fleetNumber;
+  final String? fleetRegistrationNumber;
+  final String? driverId;
+  final String? driverName;
   final String? routeOrigin;
   final String? routeDestination;
   final int ticketsCount;
@@ -297,6 +333,7 @@ class TripModel extends Equatable {
     int? ticketsCount,
     double? totalRevenue,
     String? syncStatus,
+    String? fleetRegistrationNumber,
   }) =>
       TripModel(
         id: id,
@@ -307,6 +344,10 @@ class TripModel extends Equatable {
         status: status,
         startedAt: startedAt,
         fleetNumber: fleetNumber,
+        fleetRegistrationNumber:
+            fleetRegistrationNumber ?? this.fleetRegistrationNumber,
+        driverId: driverId,
+        driverName: driverName,
         routeOrigin: routeOrigin,
         routeDestination: routeDestination,
         ticketsCount: ticketsCount ?? this.ticketsCount,
@@ -333,6 +374,8 @@ class TicketModel extends Equatable {
     this.luggageAmount,
     this.luggageDescription,
     this.serialNumber,
+    this.printed = false,
+    this.printedAt,
     this.syncStatus = 'pending',
     this.lastError,
     this.retryCount = 0,
@@ -351,6 +394,8 @@ class TicketModel extends Equatable {
   final String? luggageDescription;
   final int? serialNumber;
   final DateTime issuedAt;
+  final bool printed;
+  final DateTime? printedAt;
   final String syncStatus;
   final String? lastError;
   final int retryCount;
@@ -374,6 +419,34 @@ class TicketModel extends Equatable {
     return '-';
   }
 
+  TicketModel copyWith({
+    bool? printed,
+    DateTime? printedAt,
+    String? syncStatus,
+    int? serialNumber,
+  }) {
+    return TicketModel(
+      id: id,
+      tripId: tripId,
+      ticketCategory: ticketCategory,
+      currency: currency,
+      amount: amount,
+      issuedAt: issuedAt,
+      departure: departure,
+      destination: destination,
+      passengerName: passengerName,
+      passengerPhone: passengerPhone,
+      luggageAmount: luggageAmount,
+      luggageDescription: luggageDescription,
+      serialNumber: serialNumber ?? this.serialNumber,
+      printed: printed ?? this.printed,
+      printedAt: printedAt ?? this.printedAt,
+      syncStatus: syncStatus ?? this.syncStatus,
+      lastError: lastError,
+      retryCount: retryCount,
+    );
+  }
+
   @override
   List<Object?> get props => [
         id,
@@ -383,6 +456,8 @@ class TicketModel extends Equatable {
         syncStatus,
         luggageAmount,
         luggageDescription,
+        printed,
+        printedAt,
       ];
 }
 

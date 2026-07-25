@@ -12,16 +12,22 @@ import '../core/config/env.dart';
 import '../core/storage/secure_storage_service.dart';
 import '../core/utils/receipt_text.dart';
 import '../domain/models/ticket_receipt_data.dart';
+import 'printer_identity_probe.dart';
 
 final ticketPrintServiceProvider = Provider<TicketPrintService>((ref) {
   return TicketPrintService(ref.read(secureStorageServiceProvider));
 });
 
 class SavedPrinter {
-  const SavedPrinter({required this.name, required this.mac});
+  const SavedPrinter({
+    required this.name,
+    required this.mac,
+    this.serial,
+  });
 
   final String name;
   final String mac;
+  final String? serial;
 }
 
 class PrinterException implements Exception {
@@ -63,14 +69,23 @@ class TicketPrintService {
     final mac = await _storage.getPrinterMac();
     if (mac == null || mac.isEmpty) return null;
     final name = await _storage.getPrinterName() ?? 'Printer';
-    return SavedPrinter(name: name, mac: mac);
+    final serial = await _storage.getPrinterSerial();
+    return SavedPrinter(name: name, mac: mac, serial: serial);
   }
 
   Future<bool> isConnected() => PrintBluetoothThermal.connectionStatus;
 
   /// Connects to [device] and remembers it for next print.
+  ///
+  /// Probes ESC/POS identity (option 3) on a temporary socket before the
+  /// print plugin connects — many printers return nothing; name/MAC still save.
   Future<bool> connectAndSave(BluetoothInfo device) async {
     await ensureReady();
+    if (await isConnected()) {
+      await PrintBluetoothThermal.disconnect;
+    }
+
+    final serial = await _probeSerialBestEffort(device.macAdress);
     final ok = await PrintBluetoothThermal.connect(
       macPrinterAddress: device.macAdress,
     );
@@ -78,6 +93,7 @@ class TicketPrintService {
       await _storage.savePrinter(
         mac: device.macAdress,
         name: device.name.isEmpty ? 'Printer' : device.name,
+        serial: serial,
       );
     }
     return ok;
@@ -90,6 +106,11 @@ class TicketPrintService {
     await ensureReady();
     if (await isConnected()) return true;
     return PrintBluetoothThermal.connect(macPrinterAddress: saved.mac);
+  }
+
+  Future<String?> _probeSerialBestEffort(String mac) async {
+    final result = await PrinterIdentityProbe.probe(mac);
+    return result.hasSerial ? result.serial : null;
   }
 
   Future<void> disconnect() async {
@@ -183,6 +204,8 @@ class TicketPrintService {
         luggageAmt > 0 &&
         receipt.ticket.ticketCategory == 'PASSENGER_WITH_LUGGAGE') {
       final passengerAmt = receipt.ticket.amount - luggageAmt;
+      // ESC J: feed a few dots (less than a full line).
+      bytes.addAll(const [0x1B, 0x4A, 8]);
       bytes.addAll(
         generator.text(
           'Pax ${receipt.ticket.currency} ${passengerAmt.toStringAsFixed(2)}'
@@ -195,7 +218,11 @@ class TicketPrintService {
 
     // Ticket number sits with the other detail rows (normal size).
     bytes.addAll(_kv(generator, 'Ticket', ticketNo));
-    bytes.addAll(_kv(generator, 'Bus', receipt.trip.fleetNumber ?? '-'));
+    bytes.addAll(_kv(generator, 'Fleet', receipt.trip.fleetNumber ?? '-'));
+    final registration = receipt.trip.fleetRegistrationNumber?.trim();
+    if (registration != null && registration.isNotEmpty) {
+      bytes.addAll(_kv(generator, 'Plate No', registration));
+    }
     if (receipt.ticket.luggageDescription != null &&
         receipt.ticket.luggageDescription!.isNotEmpty) {
       bytes.addAll(
@@ -205,10 +232,17 @@ class TicketPrintService {
     bytes.addAll(_kv(generator, 'Issued', issued));
     bytes.addAll(_kv(generator, 'Depot', receipt.depotName));
     bytes.addAll(_kv(generator, 'Conductor', receipt.agentName));
-    if (receipt.deviceSerial != null) {
+    if (receipt.deviceSerial != null && receipt.deviceSerial!.trim().isNotEmpty) {
       bytes.addAll(_kv(generator, 'Device', receipt.deviceSerial!));
     }
-
+    final printerName = receipt.printerName?.trim();
+    if (printerName != null && printerName.isNotEmpty) {
+      bytes.addAll(_kv(generator, 'Printer', printerName));
+    }
+    // final printerMac = receipt.printerMac?.trim();
+    // if (printerMac != null && printerMac.isNotEmpty) {
+    //   bytes.addAll(_kv(generator, 'Mac', printerMac));
+    // }
     if (receipt.ticket.syncStatus != 'synced') {
       bytes.addAll(generator.feed(1));
       bytes.addAll(
@@ -227,6 +261,8 @@ class TicketPrintService {
         cor: QRCorrection.M,
       ),
     );
+    // ESC J: small gap under QR before verify label.
+    bytes.addAll(const [0x1B, 0x4A, 8]);
     bytes.addAll(
       generator.text(
         'Scan to verify ticket',

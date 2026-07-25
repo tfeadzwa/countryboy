@@ -42,6 +42,9 @@ export const issue = async (req: AuthenticatedRequest, res: Response) => {
     });
     res.status(201).json(ticket);
   } catch (err) {
+    if (err instanceof Error && err.message.includes('Trip is closed')) {
+      return res.status(400).json({ error: err.message });
+    }
     const friendly = formatPrismaError(err, { trip_id, agent_id, ticket_category });
     if (friendly) {
       return res.status(friendly.status).json({ error: friendly.message });

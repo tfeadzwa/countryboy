@@ -35,6 +35,7 @@ export const create = async (req: AuthenticatedRequest, res: Response) => {
   const depotId = req.depotId as string;
   const {
     number: fleetNumber,
+    registration_number,
     status,
     capacity,
     licence_disc_expiry,
@@ -55,6 +56,7 @@ export const create = async (req: AuthenticatedRequest, res: Response) => {
       depotId,
       {
         number: fleetNumber,
+        registration_number,
         status,
         capacity,
         licence_disc_expiry,
@@ -67,7 +69,10 @@ export const create = async (req: AuthenticatedRequest, res: Response) => {
     );
     res.status(201).json(fleetService.formatFleetResponse(fleet));
   } catch (err) {
-    const friendly = formatPrismaError(err, { number: fleetNumber });
+    const friendly = formatPrismaError(err, {
+      number: fleetNumber,
+      registration_number,
+    });
     if (friendly) {
       return res.status(friendly.status).json({ error: friendly.message });
     }

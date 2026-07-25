@@ -2,10 +2,15 @@
 export type TicketCategory = "PASSENGER" | "LUGGAGE";
 export type PaymentNature = "CASH" | "MOBILE" | "CARD";
 export type Currency = "USD" | "ZWL" | "ZAR";
-export type TripStatus = "ACTIVE" | "ENDED" | "CANCELLED";
+export type TripStatus = "ACTIVE" | "ENDED" | "COMPLETED" | "CANCELLED";
 export type AgentStatus = "ACTIVE" | "SUSPENDED" | "INACTIVE";
 export type DeviceStatus = "REGISTERED" | "BLOCKED";
-export type AdminRole = "SUPER_ADMIN" | "DEPOT_ADMIN" | "MANAGER" | "VIEWER";
+export type AdminRole =
+  | "SUPER_ADMIN"
+  | "DEPOT_ADMIN"
+  | "CASHIER"
+  | "MANAGER"
+  | "VIEWER";
 
 // ---- ENTITIES ----
 export interface AdminUser {
@@ -38,6 +43,62 @@ export interface Agent {
   status: AgentStatus;
   created_at: string;
   pin: string;
+  is_online?: boolean;
+  conductor_status?: "online" | "offline" | null;
+  last_seen?: string | null;
+  active_session?: {
+    id: string;
+    device_id: string;
+    device_serial?: string | null;
+    started_at: string;
+    login_type: string;
+  } | null;
+  active_trip?: AgentActiveTrip | null;
+}
+
+export interface AgentActiveTrip {
+  id: string;
+  origin: string;
+  destination: string;
+  fleet_id?: string;
+  fleet_number?: string | null;
+  driver_id?: string | null;
+  driver_name?: string | null;
+  route_id?: string | null;
+  route_origin?: string | null;
+  route_destination?: string | null;
+  started_at: string;
+  started_offline?: boolean;
+}
+
+export type DriverStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
+export type DriverDutyStatus = "on_trip" | "available" | "off_duty";
+
+export interface DriverActiveTrip {
+  id: string;
+  origin: string;
+  destination: string;
+  fleet_number?: string | null;
+  agent_id?: string | null;
+  agent_name?: string | null;
+  agent_code?: string | null;
+  started_at: string;
+}
+
+export interface Driver {
+  id: string;
+  full_name: string;
+  employee_code?: string | null;
+  phone?: string | null;
+  licence_number?: string | null;
+  depot_id: string;
+  depot_name?: string | null;
+  status: DriverStatus;
+  duty_status?: DriverDutyStatus;
+  on_trip?: boolean;
+  active_trip?: DriverActiveTrip | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export type ComplianceSeverity = 'ok' | 'info' | 'warning' | 'urgent' | 'expired';
@@ -64,6 +125,7 @@ export interface FleetComplianceItem {
 export interface Fleet {
   id: string;
   number: string;
+  registration_number?: string | null;
   depot_id: string;
   depot_name?: string | null;
   status: 'ACTIVE' | 'MAINTENANCE' | 'OUT_OF_SERVICE' | 'RETIRED';
@@ -173,6 +235,8 @@ export interface Trip {
   fleet_id: string;
   fleet_number?: string;
   route_id?: string;
+  origin?: string;
+  destination?: string;
   route_label?: string;
   status: TripStatus;
   started_at: string;
@@ -182,6 +246,68 @@ export interface Trip {
   total_revenue?: number;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface TripDetailTicket {
+  id: string;
+  serial_number?: number | null;
+  ticket_category: string;
+  currency: string;
+  amount: number;
+  luggage_amount?: number | null;
+  departure?: string | null;
+  destination?: string | null;
+  passenger_name?: string | null;
+  passenger_phone?: string | null;
+  luggage_description?: string | null;
+  printed?: boolean;
+  printed_at?: string | null;
+  printer_name?: string | null;
+  printer_mac?: string | null;
+  printer_serial?: string | null;
+  issued_at: string;
+  is_voided: boolean;
+  voids?: Array<{
+    id: string;
+    reason: string;
+    created_at: string;
+    agent_id?: string | null;
+    device_id?: string | null;
+    admin_user_id?: string | null;
+  }>;
+}
+
+export interface TripDetail extends Trip {
+  depot_merchant_code?: string | null;
+  agent_code?: string | null;
+  agent_username?: string | null;
+  agent_status?: string | null;
+  conductor_presence?: "online" | "offline" | "signed_out" | null;
+  conductor_is_online?: boolean;
+  driver_id?: string | null;
+  driver_name?: string | null;
+  driver_phone?: string | null;
+  driver_licence?: string | null;
+  driver_employee_code?: string | null;
+  driver_status?: string | null;
+  driver_duty_status?: "on_trip" | "available" | "off_duty" | null;
+  fleet_registration_number?: string | null;
+  fleet_capacity?: number | null;
+  fleet_status?: string | null;
+  device_id?: string | null;
+  device_serial?: string | null;
+  device_name?: string | null;
+  device_model?: string | null;
+  device_paired?: boolean | null;
+  device_last_seen?: string | null;
+  device_presence?: "online" | "offline" | "unpaired" | null;
+  route_origin?: string | null;
+  route_destination?: string | null;
+  duration_ms?: number;
+  voided_ticket_count?: number;
+  revenue_by_currency?: Record<string, number>;
+  category_counts?: Record<string, number>;
+  tickets?: TripDetailTicket[];
 }
 
 export interface Ticket {
@@ -254,11 +380,18 @@ export interface Device {
   depot_name?: string;
   device_name?: string;
   device_model?: string;
+  printer_name?: string | null;
+  printer_mac?: string | null;
+  printer_serial?: string | null;
   last_seen?: string;
   last_agent_id?: string | null;
   last_agent_login_at?: string | null;
   last_agent?: DeviceAgentSummary | null;
   active_session?: DeviceActiveSession | null;
+  /** True when open session + recent heartbeat (last_seen within ~90s). */
+  is_online?: boolean;
+  /** online | offline when a conductor session is open; null otherwise. */
+  conductor_status?: "online" | "offline" | null;
   app_version?: string;
   sync_errors: number;
   created_at: string;

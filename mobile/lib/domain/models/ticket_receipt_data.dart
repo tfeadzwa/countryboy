@@ -11,6 +11,9 @@ class TicketReceiptData {
     required this.agentName,
     required this.agentCode,
     this.deviceSerial,
+    this.printerName,
+    this.printerMac,
+    this.printerSerial,
   });
 
   final TicketModel ticket;
@@ -20,6 +23,9 @@ class TicketReceiptData {
   final String agentName;
   final String agentCode;
   final String? deviceSerial;
+  final String? printerName;
+  final String? printerMac;
+  final String? printerSerial;
 
   String get categoryLabel => switch (ticket.ticketCategory) {
         'PASSENGER' => 'PASSENGER',

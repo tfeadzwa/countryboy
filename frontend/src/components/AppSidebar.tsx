@@ -1,26 +1,40 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Building2, Users, Bus, MapPin, Ticket, Route, Smartphone, UserCog,
-  LogOut, ChevronsLeft, ChevronsRight, Shield, ShieldCheck, X
+  LogOut, ChevronsLeft, ChevronsRight, Shield, ShieldCheck, X, UserRound
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { canManageDepots, getPrimaryRole, getRoleDisplayName } from "@/lib/permissions";
+import {
+  canManageDepots,
+  getPrimaryRole,
+  getRoleDisplayName,
+  isCashierOnly,
+} from "@/lib/permissions";
 import BrandLogo from "@/components/BrandLogo";
 import cboyIcon from "@/assets/cboy-icon.svg";
 
-const mainLinks = [
+type NavLinkDef = {
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  superOnly?: boolean;
+  hideForCashier?: boolean;
+};
+
+const mainLinks: NavLinkDef[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/depots", label: "Depots", icon: Building2, superOnly: true },
   { to: "/admin-users", label: "Admin Users", icon: UserCog, superOnly: true },
-  { to: "/agents", label: "Agents", icon: Users },
-  { to: "/fleets", label: "Fleets", icon: Bus },
-  { to: "/routes", label: "Routes", icon: MapPin },
+  { to: "/agents", label: "Conductors", icon: Users, hideForCashier: true },
+  { to: "/drivers", label: "Drivers", icon: UserRound, hideForCashier: true },
+  { to: "/fleets", label: "Fleets", icon: Bus, hideForCashier: true },
+  { to: "/routes", label: "Routes", icon: MapPin, hideForCashier: true },
 ];
 
-const operationLinks = [
+const operationLinks: NavLinkDef[] = [
   { to: "/trips", label: "Trips", icon: Route },
   { to: "/tickets", label: "Tickets", icon: Ticket },
-  { to: "/devices", label: "Devices", icon: Smartphone },
+  { to: "/devices", label: "Devices", icon: Smartphone, hideForCashier: true },
 ];
 
 const AppSidebar = ({ open = true, onToggle, onClose }: { open?: boolean; onToggle?: () => void; onClose?: () => void }) => {
@@ -28,14 +42,16 @@ const AppSidebar = ({ open = true, onToggle, onClose }: { open?: boolean; onTogg
   const { user, logout } = useAuth();
   const userRoles = user?.roles || [];
   const isSuperAdmin = canManageDepots(userRoles);
+  const cashierOnly = isCashierOnly(userRoles);
   const isMobileSheet = !!onClose;
   const primaryRole = getPrimaryRole(userRoles);
   const roleDisplay = primaryRole ? getRoleDisplayName(primaryRole) : 'User';
 
   if (!user) return null;
 
-  const renderLink = (link: typeof mainLinks[0]) => {
-    if ('superOnly' in link && link.superOnly && !isSuperAdmin) return null;
+  const renderLink = (link: NavLinkDef) => {
+    if (link.superOnly && !isSuperAdmin) return null;
+    if (link.hideForCashier && cashierOnly) return null;
     const isActive = location.pathname === link.to;
     return (
       <NavLink

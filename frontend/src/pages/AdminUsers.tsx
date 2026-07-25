@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import PageHeader from "@/components/PageHeader";
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -26,6 +26,7 @@ import {
   Mail,
   User,
   KeyRound,
+  Clock,
 } from "lucide-react";
 import { adminUsersService, AdminUserListItem, getPrimaryRoleName } from "@/lib/api/adminUsers.service";
 import { depotService } from "@/lib/api/depot.service";
@@ -34,8 +35,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import type { AdminUserRole } from "@/lib/api/adminUsers.service";
 
+const PRESENCE_POLL_MS = 30_000;
+
 const ROLE_OPTIONS: { value: Exclude<AdminUserRole, "SUPER_ADMIN">; label: string; description: string }[] = [
   { value: "DEPOT_ADMIN", label: "Depot Admin", description: "Full access to one depot" },
+  { value: "CASHIER", label: "Cashier", description: "End trips, view sales, and print ticket batches" },
   { value: "MANAGER", label: "Manager", description: "View and manage depot operations" },
   { value: "VIEWER", label: "Viewer", description: "Read-only access" },
 ];
@@ -43,13 +47,19 @@ const ROLE_OPTIONS: { value: Exclude<AdminUserRole, "SUPER_ADMIN">; label: strin
 const roleConfig: Record<string, { class: string; icon: typeof Shield }> = {
   SUPER_ADMIN: { class: "bg-warning/10 text-warning border border-warning/20", icon: ShieldCheck },
   DEPOT_ADMIN: { class: "bg-primary/10 text-primary border border-primary/20", icon: Shield },
+  CASHIER: { class: "bg-success/10 text-success border border-success/20", icon: Shield },
   MANAGER: { class: "bg-accent/10 text-accent border border-accent/20", icon: Shield },
   VIEWER: { class: "bg-muted text-muted-foreground", icon: Shield },
 };
 
-const statusConfig = {
+const accountStatusConfig = {
   ACTIVE: "bg-success/10 text-success border border-success/20",
   INACTIVE: "bg-destructive/10 text-destructive border border-destructive/20",
+};
+
+const presenceConfig = {
+  online: "bg-success/10 text-success border border-success/20 uppercase tracking-wide",
+  offline: "bg-muted text-muted-foreground border border-border uppercase tracking-wide",
 };
 
 const columns = [
@@ -57,7 +67,9 @@ const columns = [
   { header: "Username" },
   { header: "Role" },
   { header: "Depot" },
-  { header: "Status" },
+  { header: "Presence" },
+  { header: "Last Seen" },
+  { header: "Account" },
   { header: "Actions", className: "text-right" },
 ];
 
@@ -68,6 +80,13 @@ const emptyForm = {
   role: "" as Exclude<AdminUserRole, "SUPER_ADMIN"> | "",
   depot_id: "",
   password: "",
+};
+
+const formatLastSeen = (value?: string | null) => {
+  if (!value) return "Never";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Never";
+  return date.toLocaleString();
 };
 
 const AdminUsers = () => {
@@ -89,9 +108,9 @@ const AdminUsers = () => {
   const [credsDialog, setCredsDialog] = useState<{ username: string; password: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async (opts?: { silent?: boolean }) => {
     try {
-      setLoading(true);
+      if (!opts?.silent) setLoading(true);
       setError(null);
       const [adminData, depotData] = await Promise.all([
         adminUsersService.getAll(),
@@ -104,11 +123,13 @@ const AdminUsers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    void fetchData();
+    const id = window.setInterval(() => void fetchData({ silent: true }), PRESENCE_POLL_MS);
+    return () => window.clearInterval(id);
+  }, [fetchData]);
 
   const openCreateDialog = () => {
     setEditingAdmin(null);
@@ -146,6 +167,12 @@ const AdminUsers = () => {
     if (!form.full_name.trim()) return setFormError("Full name is required");
     if (!form.role) return setFormError("Role is required");
     if (!editingAdmin && !form.username.trim()) return setFormError("Username is required");
+    if (
+      (form.role === "DEPOT_ADMIN" || form.role === "CASHIER" || form.role === "MANAGER" || form.role === "VIEWER") &&
+      !form.depot_id
+    ) {
+      return setFormError("Depot is required for this role");
+    }
 
     setSaving(true);
     try {
@@ -553,7 +580,18 @@ const AdminUsers = () => {
                 )}
               </TableCell>
               <TableCell>
-                <Badge className={`text-xs gap-1.5 ${statusConfig[a.status]}`}>
+                <Badge className={`text-xs ${a.is_online ? presenceConfig.online : presenceConfig.offline}`}>
+                  {a.is_online ? "Online" : "Offline"}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5 shrink-0" />
+                  {formatLastSeen(a.last_seen_at)}
+                </span>
+              </TableCell>
+              <TableCell>
+                <Badge className={`text-xs gap-1.5 ${accountStatusConfig[a.status]}`}>
                   <span
                     className={`h-1.5 w-1.5 rounded-full ${
                       a.status === "ACTIVE" ? "bg-success" : "bg-destructive"
@@ -622,14 +660,19 @@ const AdminUsers = () => {
                     <p className="text-xs text-muted-foreground font-mono">{a.username}</p>
                   </div>
                 </div>
-                <Badge className={`text-xs gap-1.5 ${statusConfig[a.status]}`}>
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      a.status === "ACTIVE" ? "bg-success" : "bg-destructive"
-                    }`}
-                  />
-                  {a.status}
-                </Badge>
+                <div className="flex flex-col items-end gap-1">
+                  <Badge className={`text-xs ${a.is_online ? presenceConfig.online : presenceConfig.offline}`}>
+                    {a.is_online ? "Online" : "Offline"}
+                  </Badge>
+                  <Badge className={`text-xs gap-1.5 ${accountStatusConfig[a.status]}`}>
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        a.status === "ACTIVE" ? "bg-success" : "bg-destructive"
+                      }`}
+                    />
+                    {a.status}
+                  </Badge>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-sm">
@@ -645,6 +688,13 @@ const AdminUsers = () => {
                     ) : (
                       <span className="text-muted-foreground/50 italic text-xs">All depots</span>
                     )}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-muted-foreground text-xs">Last seen</p>
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    {formatLastSeen(a.last_seen_at)}
                   </p>
                 </div>
               </div>

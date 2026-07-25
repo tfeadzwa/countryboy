@@ -100,7 +100,7 @@ const TopNavbar = ({ onMenuClick }: { onMenuClick?: () => void }) => {
             <Menu className="h-5 w-5" />
           </Button>
         )}
-        <div className="relative flex-1">
+        <div className="relative hidden flex-1 sm:block">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
           <input
             type="text"
@@ -149,7 +149,7 @@ const TopNavbar = ({ onMenuClick }: { onMenuClick?: () => void }) => {
         <Button
           variant="ghost"
           size="icon"
-          className="text-muted-foreground hover:text-foreground hidden sm:inline-flex"
+          className="hidden text-muted-foreground hover:text-foreground sm:inline-flex"
           onClick={() => navigate("/settings")}
         >
           <Settings className="h-4 w-4" />

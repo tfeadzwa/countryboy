@@ -1,5 +1,5 @@
 import apiClient from './axios';
-import { Trip } from '@/types';
+import { Trip, TripDetail } from '@/types';
 
 export interface TripFilters {
   status?: string;
@@ -27,10 +27,10 @@ class TripService {
   }
 
   /**
-   * Get a single trip by ID
+   * Get a single trip by ID with full detail payload
    */
-  async getOne(id: string): Promise<Trip> {
-    const response = await apiClient.get<Trip>(`/trips/${id}`);
+  async getOne(id: string): Promise<TripDetail> {
+    const response = await apiClient.get<TripDetail>(`/trips/${id}`);
     return response.data;
   }
 
@@ -57,10 +57,12 @@ class TripService {
   }
 
   /**
-   * End a trip (requires DEPOT_ADMIN role)
+   * End a trip (requires SUPER_ADMIN or CASHIER).
+   * @param depotId - Required for SUPER_ADMIN (use the trip's depot_id).
    */
-  async end(id: string): Promise<Trip> {
-    const response = await apiClient.post<Trip>(`/trips/${id}/end`);
+  async end(id: string, depotId?: string): Promise<Trip> {
+    const config = depotId ? { headers: { 'x-depot-id': depotId } } : {};
+    const response = await apiClient.post<Trip>(`/trips/${id}/end`, undefined, config);
     return response.data;
   }
 }

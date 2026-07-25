@@ -3,8 +3,19 @@ import 'package:drift/drift.dart';
 class CachedFleets extends Table {
   TextColumn get id => text()();
   TextColumn get number => text()();
+  TextColumn get registrationNumber => text().nullable()();
   TextColumn get status => text().withDefault(const Constant('ACTIVE'))();
   IntColumn get capacity => integer().withDefault(const Constant(0))();
+  DateTimeColumn get cachedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+class CachedDrivers extends Table {
+  TextColumn get id => text()();
+  TextColumn get fullName => text()();
+  TextColumn get status => text().withDefault(const Constant('ACTIVE'))();
   DateTimeColumn get cachedAt => dateTime()();
 
   @override
@@ -51,6 +62,9 @@ class LocalTrips extends Table {
   DateTimeColumn get startedAt => dateTime()();
   DateTimeColumn get endedAt => dateTime().nullable()();
   TextColumn get fleetNumber => text().nullable()();
+  TextColumn get fleetRegistrationNumber => text().nullable()();
+  TextColumn get driverId => text().nullable()();
+  TextColumn get driverName => text().nullable()();
   TextColumn get routeOrigin => text().nullable()();
   TextColumn get routeDestination => text().nullable()();
   TextColumn get syncStatus =>
@@ -77,6 +91,8 @@ class LocalTickets extends Table {
   TextColumn get luggageDescription => text().nullable()();
   IntColumn get serialNumber => integer().nullable()();
   DateTimeColumn get issuedAt => dateTime()();
+  BoolColumn get printed => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get printedAt => dateTime().nullable()();
   TextColumn get syncStatus =>
       text().withDefault(const Constant('pending'))();
   TextColumn get idempotencyKey => text()();

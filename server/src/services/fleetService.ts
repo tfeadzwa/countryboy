@@ -93,6 +93,11 @@ function toComplianceDbFields(data: FleetCompliancePayload) {
   return out;
 }
 
+const normalizeRegistration = (value?: string | null) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed.toUpperCase() : null;
+};
+
 export const listFleets = async (
   depotId?: string,
   pagination?: { skip: number; limit: number }
@@ -136,15 +141,18 @@ export const createFleet = async (
   depotId: string,
   data: {
     number: string;
+    registration_number?: string | null;
     status?: FleetStatus;
     capacity?: number;
   } & FleetCompliancePayload,
   createdBy?: string
 ): Promise<FleetWithDepot> => {
-  const { number, status, capacity, ...compliance } = data;
+  const { number, registration_number, status, capacity, ...compliance } = data;
+  const registration = normalizeRegistration(registration_number);
   return prisma.tblFleets.create({
     data: {
       number,
+      registration_number: registration,
       status,
       capacity,
       depot_id: depotId,
@@ -159,18 +167,22 @@ export const updateFleet = async (
   id: string,
   data: Partial<{
     number: string;
+    registration_number?: string | null;
     status?: FleetStatus;
     capacity?: number;
   } & FleetCompliancePayload>,
   updatedBy?: string
 ): Promise<FleetWithDepot> => {
-  const { number, status, capacity, ...rest } = data;
+  const { number, registration_number, status, capacity, ...rest } = data;
   const compliance = toComplianceDbFields(rest);
 
   return prisma.tblFleets.update({
     where: { id },
     data: {
       ...(number !== undefined ? { number } : {}),
+      ...(registration_number !== undefined
+        ? { registration_number: normalizeRegistration(registration_number) }
+        : {}),
       ...(status !== undefined ? { status } : {}),
       ...(capacity !== undefined ? { capacity } : {}),
       ...compliance,

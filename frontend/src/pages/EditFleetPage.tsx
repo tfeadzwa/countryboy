@@ -55,6 +55,7 @@ const EditFleetPage = () => {
   const [depots, setDepots] = useState<Depot[]>([]);
 
   const [fleetNumber, setFleetNumber] = useState("");
+  const [registrationNumber, setRegistrationNumber] = useState("");
   const [status, setStatus] = useState<Fleet["status"]>("ACTIVE");
   const [capacity, setCapacity] = useState("0");
   const [selectedDepotId, setSelectedDepotId] = useState("");
@@ -81,6 +82,7 @@ const EditFleetPage = () => {
         setFleet(fleetData);
         setDepots(depotData);
         setFleetNumber(fleetData.number);
+        setRegistrationNumber(fleetData.registration_number ?? "");
         setStatus(fleetData.status);
         setCapacity(String(fleetData.capacity ?? 0));
         setSelectedDepotId(fleetData.depot_id);
@@ -118,6 +120,11 @@ const EditFleetPage = () => {
       return;
     }
 
+    if (!registrationNumber.trim()) {
+      setSaveError("Registration number is required");
+      return;
+    }
+
     if (isSuperAdminUser && !selectedDepotId) {
       setSaveError("Please select a depot");
       return;
@@ -135,6 +142,7 @@ const EditFleetPage = () => {
         id,
         {
           number: fleetNumber.trim(),
+          registration_number: registrationNumber.trim(),
           status,
           capacity: parseInt(capacity, 10) || 0,
           licence_disc_expiry: compliance.licence_disc_expiry || null,
@@ -153,7 +161,12 @@ const EditFleetPage = () => {
       navigate("/fleets");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to update fleet";
-      if (message.includes("duplicate") || message.includes("already exists")) {
+      if (
+        message.toLowerCase().includes("registration") &&
+        (message.includes("duplicate") || message.includes("already exists"))
+      ) {
+        setSaveError("A fleet with this registration number already exists in this depot.");
+      } else if (message.includes("duplicate") || message.includes("already exists")) {
         setSaveError("A fleet with this number already exists in this depot.");
       } else {
         setSaveError(message);
@@ -213,7 +226,9 @@ const EditFleetPage = () => {
                 </Badge>
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Update vehicle details and compliance document expiry dates.
+                {registrationNumber.trim()
+                  ? `Reg ${registrationNumber.trim().toUpperCase()} · Update vehicle details and compliance document expiry dates.`
+                  : "Update vehicle details and compliance document expiry dates."}
               </p>
             </div>
           </div>
@@ -255,6 +270,20 @@ const EditFleetPage = () => {
                 />
               </div>
               <div className="space-y-1.5">
+                <Label htmlFor="edit-registration-number">Registration number</Label>
+                <Input
+                  id="edit-registration-number"
+                  placeholder="e.g. ABC1234"
+                  value={registrationNumber}
+                  onChange={(e) => setRegistrationNumber(e.target.value)}
+                  disabled={saving}
+                  className="font-mono uppercase"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
                 <Label htmlFor="edit-capacity">Capacity</Label>
                 <Input
                   id="edit-capacity"
@@ -265,9 +294,6 @@ const EditFleetPage = () => {
                   disabled={saving}
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="edit-status">Status</Label>
                 <Select
@@ -286,29 +312,30 @@ const EditFleetPage = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1.5">
-                <Label>Depot</Label>
-                {isSuperAdminUser ? (
-                  <Select
-                    value={selectedDepotId || undefined}
-                    onValueChange={setSelectedDepotId}
-                    disabled={saving}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select depot" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {depots.map((depot) => (
-                        <SelectItem key={depot.id} value={depot.id}>
-                          {depot.name} — {depot.location}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input value={fleet.depot_name ?? "N/A"} disabled />
-                )}
-              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Depot</Label>
+              {isSuperAdminUser ? (
+                <Select
+                  value={selectedDepotId || undefined}
+                  onValueChange={setSelectedDepotId}
+                  disabled={saving}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select depot" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {depots.map((depot) => (
+                      <SelectItem key={depot.id} value={depot.id}>
+                        {depot.name} — {depot.location}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input value={fleet.depot_name ?? "N/A"} disabled />
+              )}
             </div>
           </CardContent>
         </Card>

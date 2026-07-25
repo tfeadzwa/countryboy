@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/config/app_colors.dart';
@@ -7,6 +8,7 @@ import '../../core/config/app_spacing.dart';
 import '../../data/repositories/ticket_repository.dart';
 import '../../data/repositories/trip_repository.dart';
 import '../../domain/models/models.dart';
+import '../../domain/models/ticket_issue_draft.dart';
 import '../../shared/widgets/widgets.dart';
 
 enum _TicketScope { trip, today, all, pending }
@@ -253,6 +255,7 @@ class _IssuedTicketsScreenState extends ConsumerState<IssuedTicketsScreen> {
                                       child: _TripSalesSection(
                                         group: group,
                                         expanded: expanded,
+                                        onPrinted: _reload,
                                         onToggle: () {
                                           setState(() {
                                             if (expanded) {
@@ -706,11 +709,13 @@ class _TripSalesSection extends StatelessWidget {
     required this.group,
     required this.expanded,
     required this.onToggle,
+    required this.onPrinted,
   });
 
   final _TripTicketGroup group;
   final bool expanded;
   final VoidCallback onToggle;
+  final VoidCallback onPrinted;
 
   @override
   Widget build(BuildContext context) {
@@ -897,7 +902,10 @@ class _TripSalesSection extends StatelessWidget {
                 children: [
                   for (var i = 0; i < group.tickets.length; i++) ...[
                     if (i > 0) const SizedBox(height: AppSpacing.sm),
-                    _TicketTile(ticket: group.tickets[i]),
+                    _TicketTile(
+                      ticket: group.tickets[i],
+                      onPrinted: onPrinted,
+                    ),
                   ],
                 ],
               ),
@@ -954,13 +962,34 @@ class _TripStatBox extends StatelessWidget {
   }
 }
 
-class _TicketTile extends StatelessWidget {
-  const _TicketTile({required this.ticket});
+class _TicketTile extends ConsumerWidget {
+  const _TicketTile({
+    required this.ticket,
+    required this.onPrinted,
+  });
 
   final TicketModel ticket;
+  final VoidCallback onPrinted;
+
+  Future<void> _openPrint(BuildContext context, WidgetRef ref) async {
+    final trip = await ref.read(tripRepositoryProvider).getTripById(ticket.tripId);
+    if (!context.mounted) return;
+    if (trip == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Trip details not found for this ticket.')),
+      );
+      return;
+    }
+
+    await context.push(
+      '/tickets/issue/print',
+      extra: TicketIssueResult(trip: trip, single: ticket),
+    );
+    onPrinted();
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final details = [
       if (ticket.passengerName != null &&
@@ -977,7 +1006,11 @@ class _TicketTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(
+          color: ticket.printed
+              ? AppColors.border
+              : AppColors.brandGold.withValues(alpha: 0.45),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1012,7 +1045,32 @@ class _TicketTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                SyncStatusBadge(status: ticket.syncStatus),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    SyncStatusBadge(status: ticket.syncStatus),
+                    if (!ticket.printed)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.brandGold.withValues(alpha: 0.15),
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusSm),
+                        ),
+                        child: Text(
+                          'Not printed',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.brandGold,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -1028,11 +1086,24 @@ class _TicketTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.xs),
-              Icon(
-                Icons.confirmation_number_outlined,
-                size: 22,
-                color: AppColors.textSecondary.withValues(alpha: 0.55),
-              ),
+              if (!ticket.printed)
+                TextButton.icon(
+                  onPressed: () => _openPrint(context, ref),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.brandRed,
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 32),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  icon: const Icon(Icons.print_outlined, size: 18),
+                  label: const Text('Print'),
+                )
+              else
+                Icon(
+                  Icons.check_circle_outline,
+                  size: 22,
+                  color: AppColors.success.withValues(alpha: 0.85),
+                ),
             ],
           ),
         ],

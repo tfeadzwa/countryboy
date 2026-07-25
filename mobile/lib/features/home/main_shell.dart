@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/connectivity/connectivity_service.dart';
+import '../../core/connectivity/online_sync_lifecycle.dart';
+import '../../core/network/heartbeat_service.dart';
 import '../../shared/widgets/widgets.dart';
 
 class MainShell extends ConsumerWidget {
@@ -12,6 +14,11 @@ class MainShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Keep presence heartbeat running while the conductor is in the app shell.
+    ref.watch(heartbeatLifecycleProvider);
+    // Auto sync + clear cashier-ended trips when back online / app resumed.
+    ref.watch(onlineSyncLifecycleActiveProvider);
+
     final connectivity = ref.watch(connectivityStatusProvider);
     final location = GoRouterState.of(context).matchedLocation;
 

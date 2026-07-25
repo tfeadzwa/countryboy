@@ -48,6 +48,14 @@ class SyncService {
 
   bool _running = false;
 
+  /// Lightweight probe used before issuing tickets while online.
+  Future<void> reconcileActiveTrip() async {
+    final reachable = await _connectivity.checkReachability();
+    if (!reachable) return;
+    if (!await _storage.hasOnlineAuth()) return;
+    await _reconcileActiveTripFromServer();
+  }
+
   Future<void> syncIfOnline({bool force = false}) async {
     if (_running && !force) return;
     final reachable = await _connectivity.checkReachability();
@@ -74,8 +82,102 @@ class SyncService {
       final since = await _db.getSyncMeta('last_sync_at');
       final data = await _syncApi.pull(since: since);
       await _referenceRepository.cacheFromPullSnapshot(data);
+      await _applyPulledTripUpdates(data['trips'] as List<dynamic>?);
+      await _applyPulledTicketPrintState(data['tickets'] as List<dynamic>?);
+      await _reconcileActiveTripFromServer();
     } catch (_) {
       // Reference pull is best-effort; direct fetches still work when authenticated.
+    }
+  }
+
+  /// Apply cashier/admin trip status changes from sync pull onto matching local rows.
+  Future<void> _applyPulledTripUpdates(List<dynamic>? trips) async {
+    if (trips == null || trips.isEmpty) return;
+
+    final agent = await _storage.getAgentProfile();
+    final agentId = agent?['id']?.toString();
+    if (agentId == null || agentId.isEmpty) return;
+
+    for (final raw in trips) {
+      if (raw is! Map) continue;
+      final json = Map<String, dynamic>.from(raw);
+      if (json['agent_id']?.toString() != agentId) continue;
+
+      final tripId = json['id']?.toString();
+      if (tripId == null || tripId.isEmpty) continue;
+
+      final local = await _db.getTripById(tripId);
+      if (local == null) continue;
+
+      final status = (json['status'] as String?) ?? local.status;
+      if (status == 'ACTIVE') continue;
+
+      DateTime? endedAt;
+      final endedRaw = json['ended_at'];
+      if (endedRaw is String && endedRaw.isNotEmpty) {
+        endedAt = DateTime.tryParse(endedRaw);
+      }
+
+      await _db.markTripEnded(
+        tripId,
+        status: status == 'COMPLETED' ? 'COMPLETED' : 'ENDED',
+        endedAt: endedAt,
+      );
+    }
+  }
+
+  Future<void> _applyPulledTicketPrintState(List<dynamic>? tickets) async {
+    if (tickets == null || tickets.isEmpty) return;
+
+    final printedIds = <String>[];
+    DateTime? latestPrintedAt;
+
+    for (final raw in tickets) {
+      if (raw is! Map) continue;
+      final json = Map<String, dynamic>.from(raw);
+      if (json['printed'] != true) continue;
+      final id = json['id']?.toString();
+      if (id == null || id.isEmpty) continue;
+      final local = await _db.getTicketById(id);
+      if (local == null || local.printed) continue;
+      printedIds.add(id);
+      final rawAt = json['printed_at'];
+      if (rawAt is String && rawAt.isNotEmpty) {
+        latestPrintedAt = DateTime.tryParse(rawAt) ?? latestPrintedAt;
+      }
+    }
+
+    if (printedIds.isNotEmpty) {
+      await _db.markTicketsPrinted(printedIds, printedAt: latestPrintedAt);
+    }
+  }
+
+  /// If the server has no ACTIVE trip for this agent, clear local ACTIVE rows.
+  Future<void> _reconcileActiveTripFromServer() async {
+    final agent = await _storage.getAgentProfile();
+    final agentId = agent?['id']?.toString();
+    if (agentId == null || agentId.isEmpty) return;
+
+    try {
+      final remote = await _tripApi.getActiveTrip();
+      if (remote == null) {
+        await _db.markAgentActiveTripsEnded(agentId);
+        return;
+      }
+
+      final remoteStatus = (remote['status'] as String?) ?? 'ACTIVE';
+      final remoteId = remote['id']?.toString();
+      if (remoteStatus != 'ACTIVE' || remoteId == null) {
+        await _db.markAgentActiveTripsEnded(agentId);
+        return;
+      }
+
+      final localActive = await _db.getActiveTrip(agentId);
+      if (localActive != null && localActive.id != remoteId) {
+        await _db.markTripEnded(localActive.id);
+      }
+    } catch (_) {
+      // Keep local state if active-trip probe fails.
     }
   }
 
@@ -94,9 +196,13 @@ class SyncService {
           case 'CREATE_TRIP':
             await _syncCreateTrip(item, payload);
           case 'END_TRIP':
-            await _tripApi.endTrip(item.entityId);
-            await _db.updateTripSyncStatus(item.entityId, 'synced');
-            await _db.updateSyncItem(item.id, status: 'synced');
+            await _db.updateSyncItem(
+              item.id,
+              status: 'failed',
+              error:
+                  'Conductors cannot end trips. A cashier must close the trip in the admin console.',
+              retryCount: item.retryCount + 1,
+            );
           default:
             break;
         }
@@ -141,6 +247,7 @@ class SyncService {
         origin: origin,
         destination: destination,
         routeId: payload['route_id'] as String? ?? localTrip?.routeId,
+        driverId: payload['driver_id'] as String? ?? localTrip?.driverId,
         deviceId: payload['device_id'] as String? ?? localTrip?.deviceId,
         startedOffline: payload['started_offline'] as bool? ?? true,
       );
@@ -211,8 +318,11 @@ class SyncService {
 
   Future<void> _processTicketQueue() async {
     final items = await _db.getPendingSyncItems();
-    final ticketItems =
-        items.where((item) => item.operation == 'CREATE_TICKET');
+    final ticketItems = items.where(
+      (item) =>
+          item.operation == 'CREATE_TICKET' ||
+          item.operation == 'MARK_TICKET_PRINTED',
+    );
 
     for (final item in ticketItems) {
       if (item.retryCount >= 5) continue;
@@ -232,12 +342,35 @@ class SyncService {
           'synced',
           serialNumber: synced['serial_number'] as int?,
         );
+        if (item.operation == 'MARK_TICKET_PRINTED' ||
+            synced['printed'] == true) {
+          final printedAtRaw = synced['printed_at'] as String?;
+          await _db.markTicketsPrinted(
+            [payload['id'] as String],
+            printedAt: printedAtRaw != null
+                ? DateTime.tryParse(printedAtRaw)
+                : null,
+          );
+        }
         await _db.updateSyncItem(item.id, status: 'synced');
       } catch (e) {
+        final message = e is ApiError ? e.message : 'Sync failed';
+        final closedTrip = message.toLowerCase().contains('trip is closed') ||
+            message.toLowerCase().contains('trip was closed');
+        if (closedTrip) {
+          try {
+            final payload =
+                jsonDecode(item.payloadJson) as Map<String, dynamic>;
+            final tripId = payload['trip_id'] as String?;
+            if (tripId != null) {
+              await _db.markTripEnded(tripId);
+            }
+          } catch (_) {}
+        }
         await _db.updateSyncItem(
           item.id,
           status: 'failed',
-          error: e is ApiError ? e.message : 'Sync failed',
+          error: message,
           retryCount: item.retryCount + 1,
         );
       }
@@ -310,6 +443,7 @@ class SyncService {
       'agent_id': trip.agentId,
       'fleet_id': trip.fleetId,
       if (trip.routeId != null) 'route_id': trip.routeId,
+      if (trip.driverId != null) 'driver_id': trip.driverId,
       'origin': origin,
       'destination': destination,
       'device_id': trip.deviceId,

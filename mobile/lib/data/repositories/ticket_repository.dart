@@ -79,6 +79,42 @@ class TicketRepository {
       throw ApiError(message: 'Session expired. Please sign in again.');
     }
 
+    final trip = await _db.getTripById(tripId);
+    if (trip == null) {
+      throw ApiError(message: 'Trip not found on this device.');
+    }
+    if (trip.status != 'ACTIVE') {
+      throw ApiError(
+        message:
+            'This trip is closed. Ask the cashier if you need a new trip started.',
+      );
+    }
+
+    // Online: re-check server so cashier-ended trips cannot keep issuing.
+    if (await _connectivity.checkReachability() &&
+        await _storage.hasOnlineAuth()) {
+      try {
+        await _sync.reconcileActiveTrip();
+      } catch (_) {}
+      final refreshed = await _db.getTripById(tripId);
+      if (refreshed == null || refreshed.status != 'ACTIVE') {
+        throw ApiError(
+          message:
+              'This trip was closed by the depot. Start a new trip to sell tickets.',
+        );
+      }
+      final agentId = agentJson['id']?.toString();
+      if (agentId != null) {
+        final active = await _db.getActiveTrip(agentId);
+        if (active == null || active.id != tripId) {
+          throw ApiError(
+            message:
+                'This trip was closed by the depot. Start a new trip to sell tickets.',
+          );
+        }
+      }
+    }
+
     final phone = passengerPhone?.trim().isEmpty == true
         ? null
         : passengerPhone?.trim();
@@ -368,8 +404,73 @@ class TicketRepository {
         luggageDescription: t.luggageDescription,
         serialNumber: t.serialNumber,
         issuedAt: t.issuedAt,
+        printed: t.printed,
+        printedAt: t.printedAt,
         syncStatus: t.syncStatus,
         lastError: t.lastError,
         retryCount: t.retryCount,
       );
+
+  /// Marks tickets as successfully printed on the thermal printer.
+  Future<void> markTicketsPrinted(List<String> ticketIds) async {
+    final ids = ticketIds.where((id) => id.isNotEmpty).toSet().toList();
+    if (ids.isEmpty) return;
+
+    final printedAt = DateTime.now();
+    await _db.markTicketsPrinted(ids, printedAt: printedAt);
+
+    final printerName = await _storage.getPrinterName();
+    final printerMac = await _storage.getPrinterMac();
+    final printerSerial = await _storage.getPrinterSerial();
+
+    for (final id in ids) {
+      final ticket = await _db.getTicketById(id);
+      if (ticket == null) continue;
+      await _db.enqueueSync(
+        SyncQueueItemsCompanion.insert(
+          entityType: 'ticket',
+          entityId: id,
+          operation: 'MARK_TICKET_PRINTED',
+          payloadJson: jsonEncode({
+            'id': id,
+            'depot_id': ticket.depotId,
+            'trip_id': ticket.tripId,
+            'agent_id': ticket.agentId,
+            'device_id': ticket.deviceId,
+            'ticket_category': ticket.ticketCategory,
+            'currency': ticket.currency,
+            'amount': ticket.amount,
+            'departure': ticket.departure,
+            'destination': ticket.destination,
+            'issued_at': ticket.issuedAt.toUtc().toIso8601String(),
+            if (ticket.serialNumber != null)
+              'serial_number': ticket.serialNumber,
+            if (ticket.passengerPhone != null)
+              'passenger_phone': ticket.passengerPhone,
+            if (ticket.luggageAmount != null)
+              'luggage_amount': ticket.luggageAmount,
+            if (ticket.luggageDescription != null)
+              'luggage_description': ticket.luggageDescription,
+            'printed': true,
+            'printed_at': printedAt.toUtc().toIso8601String(),
+            if (printerName != null && printerName.isNotEmpty)
+              'printer_name': printerName,
+            if (printerMac != null && printerMac.isNotEmpty)
+              'printer_mac': printerMac,
+            if (printerSerial != null && printerSerial.isNotEmpty)
+              'printer_serial': printerSerial,
+          }),
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+    }
+
+    _sync.syncIfOnline();
+  }
+
+  Future<TicketModel?> getTicketById(String id) async {
+    final row = await _db.getTicketById(id);
+    return row == null ? null : _mapLocal(row);
+  }
 }

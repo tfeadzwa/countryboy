@@ -6,6 +6,8 @@ import { validate } from '../middleware/validate';
 import { forgotPasswordSchema, loginSchema, resetPasswordSchema } from '../validators/schemas';
 import { sendPasswordResetEmail } from '../utils/mailer';
 import logger, { authLoginLogger } from '../utils/logger';
+import { authMiddleware, AuthenticatedRequest } from '../middleware/auth';
+import { isAdminOnline } from '../constants/presence';
 
 const router = Router();
 
@@ -207,6 +209,12 @@ router.post('/login', validate(loginSchema), async (req: Request, res: Response)
       ip,
     });
 
+    // Mark presence immediately on successful portal login.
+    await prisma.tblAdminUsers.update({
+      where: { id: user.id },
+      data: { last_seen_at: new Date() },
+    });
+
     res.json({ token, user: { id: user.id, username: user.username, email: (user as { email?: string | null }).email ?? null, full_name: user.full_name, depot_id: user.depot_id, roles: roleNames } });
   } catch (err: any) {
     logLoginFailure('INTERNAL_ERROR', {
@@ -222,6 +230,37 @@ router.post('/login', validate(loginSchema), async (req: Request, res: Response)
       stack: err?.stack,
     });
     return res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+/**
+ * Presence heartbeat for admin portal users.
+ * POST /api/auth/heartbeat
+ */
+router.post('/heartbeat', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'Admin authentication required' });
+    }
+
+    const now = new Date();
+    const updated = await prisma.tblAdminUsers.update({
+      where: { id: req.user.id },
+      data: { last_seen_at: now },
+      select: { id: true, last_seen_at: true, status: true },
+    });
+
+    res.json({
+      ok: true,
+      last_seen_at: updated.last_seen_at?.toISOString() ?? now.toISOString(),
+      is_online: isAdminOnline({
+        status: updated.status,
+        lastSeenAt: updated.last_seen_at ?? now,
+      }),
+    });
+  } catch (err) {
+    logger.error('Admin heartbeat failed', { err });
+    res.status(500).json({ error: 'Heartbeat failed' });
   }
 });
 

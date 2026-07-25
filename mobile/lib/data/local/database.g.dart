@@ -27,6 +27,17 @@ class $CachedFleetsTable extends CachedFleets
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _registrationNumberMeta =
+      const VerificationMeta('registrationNumber');
+  @override
+  late final GeneratedColumn<String> registrationNumber =
+      GeneratedColumn<String>(
+        'registration_number',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumn<String> status = GeneratedColumn<String>(
@@ -64,6 +75,7 @@ class $CachedFleetsTable extends CachedFleets
   List<GeneratedColumn> get $columns => [
     id,
     number,
+    registrationNumber,
     status,
     capacity,
     cachedAt,
@@ -92,6 +104,15 @@ class $CachedFleetsTable extends CachedFleets
       );
     } else if (isInserting) {
       context.missing(_numberMeta);
+    }
+    if (data.containsKey('registration_number')) {
+      context.handle(
+        _registrationNumberMeta,
+        registrationNumber.isAcceptableOrUnknown(
+          data['registration_number']!,
+          _registrationNumberMeta,
+        ),
+      );
     }
     if (data.containsKey('status')) {
       context.handle(
@@ -130,6 +151,10 @@ class $CachedFleetsTable extends CachedFleets
         DriftSqlType.string,
         data['${effectivePrefix}number'],
       )!,
+      registrationNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}registration_number'],
+      ),
       status: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}status'],
@@ -154,12 +179,14 @@ class $CachedFleetsTable extends CachedFleets
 class CachedFleet extends DataClass implements Insertable<CachedFleet> {
   final String id;
   final String number;
+  final String? registrationNumber;
   final String status;
   final int capacity;
   final DateTime cachedAt;
   const CachedFleet({
     required this.id,
     required this.number,
+    this.registrationNumber,
     required this.status,
     required this.capacity,
     required this.cachedAt,
@@ -169,6 +196,9 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['number'] = Variable<String>(number);
+    if (!nullToAbsent || registrationNumber != null) {
+      map['registration_number'] = Variable<String>(registrationNumber);
+    }
     map['status'] = Variable<String>(status);
     map['capacity'] = Variable<int>(capacity);
     map['cached_at'] = Variable<DateTime>(cachedAt);
@@ -179,6 +209,9 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
     return CachedFleetsCompanion(
       id: Value(id),
       number: Value(number),
+      registrationNumber: registrationNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(registrationNumber),
       status: Value(status),
       capacity: Value(capacity),
       cachedAt: Value(cachedAt),
@@ -193,6 +226,9 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
     return CachedFleet(
       id: serializer.fromJson<String>(json['id']),
       number: serializer.fromJson<String>(json['number']),
+      registrationNumber: serializer.fromJson<String?>(
+        json['registrationNumber'],
+      ),
       status: serializer.fromJson<String>(json['status']),
       capacity: serializer.fromJson<int>(json['capacity']),
       cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
@@ -204,6 +240,7 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'number': serializer.toJson<String>(number),
+      'registrationNumber': serializer.toJson<String?>(registrationNumber),
       'status': serializer.toJson<String>(status),
       'capacity': serializer.toJson<int>(capacity),
       'cachedAt': serializer.toJson<DateTime>(cachedAt),
@@ -213,12 +250,16 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
   CachedFleet copyWith({
     String? id,
     String? number,
+    Value<String?> registrationNumber = const Value.absent(),
     String? status,
     int? capacity,
     DateTime? cachedAt,
   }) => CachedFleet(
     id: id ?? this.id,
     number: number ?? this.number,
+    registrationNumber: registrationNumber.present
+        ? registrationNumber.value
+        : this.registrationNumber,
     status: status ?? this.status,
     capacity: capacity ?? this.capacity,
     cachedAt: cachedAt ?? this.cachedAt,
@@ -227,6 +268,9 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
     return CachedFleet(
       id: data.id.present ? data.id.value : this.id,
       number: data.number.present ? data.number.value : this.number,
+      registrationNumber: data.registrationNumber.present
+          ? data.registrationNumber.value
+          : this.registrationNumber,
       status: data.status.present ? data.status.value : this.status,
       capacity: data.capacity.present ? data.capacity.value : this.capacity,
       cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
@@ -238,6 +282,7 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
     return (StringBuffer('CachedFleet(')
           ..write('id: $id, ')
           ..write('number: $number, ')
+          ..write('registrationNumber: $registrationNumber, ')
           ..write('status: $status, ')
           ..write('capacity: $capacity, ')
           ..write('cachedAt: $cachedAt')
@@ -246,13 +291,15 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
   }
 
   @override
-  int get hashCode => Object.hash(id, number, status, capacity, cachedAt);
+  int get hashCode =>
+      Object.hash(id, number, registrationNumber, status, capacity, cachedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is CachedFleet &&
           other.id == this.id &&
           other.number == this.number &&
+          other.registrationNumber == this.registrationNumber &&
           other.status == this.status &&
           other.capacity == this.capacity &&
           other.cachedAt == this.cachedAt);
@@ -261,6 +308,7 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
 class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
   final Value<String> id;
   final Value<String> number;
+  final Value<String?> registrationNumber;
   final Value<String> status;
   final Value<int> capacity;
   final Value<DateTime> cachedAt;
@@ -268,6 +316,7 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
   const CachedFleetsCompanion({
     this.id = const Value.absent(),
     this.number = const Value.absent(),
+    this.registrationNumber = const Value.absent(),
     this.status = const Value.absent(),
     this.capacity = const Value.absent(),
     this.cachedAt = const Value.absent(),
@@ -276,6 +325,7 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
   CachedFleetsCompanion.insert({
     required String id,
     required String number,
+    this.registrationNumber = const Value.absent(),
     this.status = const Value.absent(),
     this.capacity = const Value.absent(),
     required DateTime cachedAt,
@@ -286,6 +336,7 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
   static Insertable<CachedFleet> custom({
     Expression<String>? id,
     Expression<String>? number,
+    Expression<String>? registrationNumber,
     Expression<String>? status,
     Expression<int>? capacity,
     Expression<DateTime>? cachedAt,
@@ -294,6 +345,7 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (number != null) 'number': number,
+      if (registrationNumber != null) 'registration_number': registrationNumber,
       if (status != null) 'status': status,
       if (capacity != null) 'capacity': capacity,
       if (cachedAt != null) 'cached_at': cachedAt,
@@ -304,6 +356,7 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
   CachedFleetsCompanion copyWith({
     Value<String>? id,
     Value<String>? number,
+    Value<String?>? registrationNumber,
     Value<String>? status,
     Value<int>? capacity,
     Value<DateTime>? cachedAt,
@@ -312,6 +365,7 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
     return CachedFleetsCompanion(
       id: id ?? this.id,
       number: number ?? this.number,
+      registrationNumber: registrationNumber ?? this.registrationNumber,
       status: status ?? this.status,
       capacity: capacity ?? this.capacity,
       cachedAt: cachedAt ?? this.cachedAt,
@@ -327,6 +381,9 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
     }
     if (number.present) {
       map['number'] = Variable<String>(number.value);
+    }
+    if (registrationNumber.present) {
+      map['registration_number'] = Variable<String>(registrationNumber.value);
     }
     if (status.present) {
       map['status'] = Variable<String>(status.value);
@@ -348,8 +405,315 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
     return (StringBuffer('CachedFleetsCompanion(')
           ..write('id: $id, ')
           ..write('number: $number, ')
+          ..write('registrationNumber: $registrationNumber, ')
           ..write('status: $status, ')
           ..write('capacity: $capacity, ')
+          ..write('cachedAt: $cachedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CachedDriversTable extends CachedDrivers
+    with TableInfo<$CachedDriversTable, CachedDriver> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CachedDriversTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fullNameMeta = const VerificationMeta(
+    'fullName',
+  );
+  @override
+  late final GeneratedColumn<String> fullName = GeneratedColumn<String>(
+    'full_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('ACTIVE'),
+  );
+  static const VerificationMeta _cachedAtMeta = const VerificationMeta(
+    'cachedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cachedAt = GeneratedColumn<DateTime>(
+    'cached_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, fullName, status, cachedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'cached_drivers';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CachedDriver> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('full_name')) {
+      context.handle(
+        _fullNameMeta,
+        fullName.isAcceptableOrUnknown(data['full_name']!, _fullNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fullNameMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('cached_at')) {
+      context.handle(
+        _cachedAtMeta,
+        cachedAt.isAcceptableOrUnknown(data['cached_at']!, _cachedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cachedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CachedDriver map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CachedDriver(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      fullName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}full_name'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      cachedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cached_at'],
+      )!,
+    );
+  }
+
+  @override
+  $CachedDriversTable createAlias(String alias) {
+    return $CachedDriversTable(attachedDatabase, alias);
+  }
+}
+
+class CachedDriver extends DataClass implements Insertable<CachedDriver> {
+  final String id;
+  final String fullName;
+  final String status;
+  final DateTime cachedAt;
+  const CachedDriver({
+    required this.id,
+    required this.fullName,
+    required this.status,
+    required this.cachedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['full_name'] = Variable<String>(fullName);
+    map['status'] = Variable<String>(status);
+    map['cached_at'] = Variable<DateTime>(cachedAt);
+    return map;
+  }
+
+  CachedDriversCompanion toCompanion(bool nullToAbsent) {
+    return CachedDriversCompanion(
+      id: Value(id),
+      fullName: Value(fullName),
+      status: Value(status),
+      cachedAt: Value(cachedAt),
+    );
+  }
+
+  factory CachedDriver.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CachedDriver(
+      id: serializer.fromJson<String>(json['id']),
+      fullName: serializer.fromJson<String>(json['fullName']),
+      status: serializer.fromJson<String>(json['status']),
+      cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'fullName': serializer.toJson<String>(fullName),
+      'status': serializer.toJson<String>(status),
+      'cachedAt': serializer.toJson<DateTime>(cachedAt),
+    };
+  }
+
+  CachedDriver copyWith({
+    String? id,
+    String? fullName,
+    String? status,
+    DateTime? cachedAt,
+  }) => CachedDriver(
+    id: id ?? this.id,
+    fullName: fullName ?? this.fullName,
+    status: status ?? this.status,
+    cachedAt: cachedAt ?? this.cachedAt,
+  );
+  CachedDriver copyWithCompanion(CachedDriversCompanion data) {
+    return CachedDriver(
+      id: data.id.present ? data.id.value : this.id,
+      fullName: data.fullName.present ? data.fullName.value : this.fullName,
+      status: data.status.present ? data.status.value : this.status,
+      cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CachedDriver(')
+          ..write('id: $id, ')
+          ..write('fullName: $fullName, ')
+          ..write('status: $status, ')
+          ..write('cachedAt: $cachedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, fullName, status, cachedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CachedDriver &&
+          other.id == this.id &&
+          other.fullName == this.fullName &&
+          other.status == this.status &&
+          other.cachedAt == this.cachedAt);
+}
+
+class CachedDriversCompanion extends UpdateCompanion<CachedDriver> {
+  final Value<String> id;
+  final Value<String> fullName;
+  final Value<String> status;
+  final Value<DateTime> cachedAt;
+  final Value<int> rowid;
+  const CachedDriversCompanion({
+    this.id = const Value.absent(),
+    this.fullName = const Value.absent(),
+    this.status = const Value.absent(),
+    this.cachedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CachedDriversCompanion.insert({
+    required String id,
+    required String fullName,
+    this.status = const Value.absent(),
+    required DateTime cachedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       fullName = Value(fullName),
+       cachedAt = Value(cachedAt);
+  static Insertable<CachedDriver> custom({
+    Expression<String>? id,
+    Expression<String>? fullName,
+    Expression<String>? status,
+    Expression<DateTime>? cachedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (fullName != null) 'full_name': fullName,
+      if (status != null) 'status': status,
+      if (cachedAt != null) 'cached_at': cachedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CachedDriversCompanion copyWith({
+    Value<String>? id,
+    Value<String>? fullName,
+    Value<String>? status,
+    Value<DateTime>? cachedAt,
+    Value<int>? rowid,
+  }) {
+    return CachedDriversCompanion(
+      id: id ?? this.id,
+      fullName: fullName ?? this.fullName,
+      status: status ?? this.status,
+      cachedAt: cachedAt ?? this.cachedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (fullName.present) {
+      map['full_name'] = Variable<String>(fullName.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (cachedAt.present) {
+      map['cached_at'] = Variable<DateTime>(cachedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CachedDriversCompanion(')
+          ..write('id: $id, ')
+          ..write('fullName: $fullName, ')
+          ..write('status: $status, ')
           ..write('cachedAt: $cachedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1378,6 +1742,39 @@ class $LocalTripsTable extends LocalTrips
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _fleetRegistrationNumberMeta =
+      const VerificationMeta('fleetRegistrationNumber');
+  @override
+  late final GeneratedColumn<String> fleetRegistrationNumber =
+      GeneratedColumn<String>(
+        'fleet_registration_number',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _driverIdMeta = const VerificationMeta(
+    'driverId',
+  );
+  @override
+  late final GeneratedColumn<String> driverId = GeneratedColumn<String>(
+    'driver_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _driverNameMeta = const VerificationMeta(
+    'driverName',
+  );
+  @override
+  late final GeneratedColumn<String> driverName = GeneratedColumn<String>(
+    'driver_name',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _routeOriginMeta = const VerificationMeta(
     'routeOrigin',
   );
@@ -1425,6 +1822,9 @@ class $LocalTripsTable extends LocalTrips
     startedAt,
     endedAt,
     fleetNumber,
+    fleetRegistrationNumber,
+    driverId,
+    driverName,
     routeOrigin,
     routeDestination,
     syncStatus,
@@ -1520,6 +1920,27 @@ class $LocalTripsTable extends LocalTrips
         ),
       );
     }
+    if (data.containsKey('fleet_registration_number')) {
+      context.handle(
+        _fleetRegistrationNumberMeta,
+        fleetRegistrationNumber.isAcceptableOrUnknown(
+          data['fleet_registration_number']!,
+          _fleetRegistrationNumberMeta,
+        ),
+      );
+    }
+    if (data.containsKey('driver_id')) {
+      context.handle(
+        _driverIdMeta,
+        driverId.isAcceptableOrUnknown(data['driver_id']!, _driverIdMeta),
+      );
+    }
+    if (data.containsKey('driver_name')) {
+      context.handle(
+        _driverNameMeta,
+        driverName.isAcceptableOrUnknown(data['driver_name']!, _driverNameMeta),
+      );
+    }
     if (data.containsKey('route_origin')) {
       context.handle(
         _routeOriginMeta,
@@ -1597,6 +2018,18 @@ class $LocalTripsTable extends LocalTrips
         DriftSqlType.string,
         data['${effectivePrefix}fleet_number'],
       ),
+      fleetRegistrationNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fleet_registration_number'],
+      ),
+      driverId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}driver_id'],
+      ),
+      driverName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}driver_name'],
+      ),
       routeOrigin: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}route_origin'],
@@ -1630,6 +2063,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
   final DateTime startedAt;
   final DateTime? endedAt;
   final String? fleetNumber;
+  final String? fleetRegistrationNumber;
+  final String? driverId;
+  final String? driverName;
   final String? routeOrigin;
   final String? routeDestination;
   final String syncStatus;
@@ -1645,6 +2081,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
     required this.startedAt,
     this.endedAt,
     this.fleetNumber,
+    this.fleetRegistrationNumber,
+    this.driverId,
+    this.driverName,
     this.routeOrigin,
     this.routeDestination,
     required this.syncStatus,
@@ -1670,6 +2109,17 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
     }
     if (!nullToAbsent || fleetNumber != null) {
       map['fleet_number'] = Variable<String>(fleetNumber);
+    }
+    if (!nullToAbsent || fleetRegistrationNumber != null) {
+      map['fleet_registration_number'] = Variable<String>(
+        fleetRegistrationNumber,
+      );
+    }
+    if (!nullToAbsent || driverId != null) {
+      map['driver_id'] = Variable<String>(driverId);
+    }
+    if (!nullToAbsent || driverName != null) {
+      map['driver_name'] = Variable<String>(driverName);
     }
     if (!nullToAbsent || routeOrigin != null) {
       map['route_origin'] = Variable<String>(routeOrigin);
@@ -1702,6 +2152,15 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
       fleetNumber: fleetNumber == null && nullToAbsent
           ? const Value.absent()
           : Value(fleetNumber),
+      fleetRegistrationNumber: fleetRegistrationNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fleetRegistrationNumber),
+      driverId: driverId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(driverId),
+      driverName: driverName == null && nullToAbsent
+          ? const Value.absent()
+          : Value(driverName),
       routeOrigin: routeOrigin == null && nullToAbsent
           ? const Value.absent()
           : Value(routeOrigin),
@@ -1729,6 +2188,11 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
       startedAt: serializer.fromJson<DateTime>(json['startedAt']),
       endedAt: serializer.fromJson<DateTime?>(json['endedAt']),
       fleetNumber: serializer.fromJson<String?>(json['fleetNumber']),
+      fleetRegistrationNumber: serializer.fromJson<String?>(
+        json['fleetRegistrationNumber'],
+      ),
+      driverId: serializer.fromJson<String?>(json['driverId']),
+      driverName: serializer.fromJson<String?>(json['driverName']),
       routeOrigin: serializer.fromJson<String?>(json['routeOrigin']),
       routeDestination: serializer.fromJson<String?>(json['routeDestination']),
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
@@ -1749,6 +2213,11 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
       'startedAt': serializer.toJson<DateTime>(startedAt),
       'endedAt': serializer.toJson<DateTime?>(endedAt),
       'fleetNumber': serializer.toJson<String?>(fleetNumber),
+      'fleetRegistrationNumber': serializer.toJson<String?>(
+        fleetRegistrationNumber,
+      ),
+      'driverId': serializer.toJson<String?>(driverId),
+      'driverName': serializer.toJson<String?>(driverName),
       'routeOrigin': serializer.toJson<String?>(routeOrigin),
       'routeDestination': serializer.toJson<String?>(routeDestination),
       'syncStatus': serializer.toJson<String>(syncStatus),
@@ -1767,6 +2236,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
     DateTime? startedAt,
     Value<DateTime?> endedAt = const Value.absent(),
     Value<String?> fleetNumber = const Value.absent(),
+    Value<String?> fleetRegistrationNumber = const Value.absent(),
+    Value<String?> driverId = const Value.absent(),
+    Value<String?> driverName = const Value.absent(),
     Value<String?> routeOrigin = const Value.absent(),
     Value<String?> routeDestination = const Value.absent(),
     String? syncStatus,
@@ -1782,6 +2254,11 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
     startedAt: startedAt ?? this.startedAt,
     endedAt: endedAt.present ? endedAt.value : this.endedAt,
     fleetNumber: fleetNumber.present ? fleetNumber.value : this.fleetNumber,
+    fleetRegistrationNumber: fleetRegistrationNumber.present
+        ? fleetRegistrationNumber.value
+        : this.fleetRegistrationNumber,
+    driverId: driverId.present ? driverId.value : this.driverId,
+    driverName: driverName.present ? driverName.value : this.driverName,
     routeOrigin: routeOrigin.present ? routeOrigin.value : this.routeOrigin,
     routeDestination: routeDestination.present
         ? routeDestination.value
@@ -1805,6 +2282,13 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
       fleetNumber: data.fleetNumber.present
           ? data.fleetNumber.value
           : this.fleetNumber,
+      fleetRegistrationNumber: data.fleetRegistrationNumber.present
+          ? data.fleetRegistrationNumber.value
+          : this.fleetRegistrationNumber,
+      driverId: data.driverId.present ? data.driverId.value : this.driverId,
+      driverName: data.driverName.present
+          ? data.driverName.value
+          : this.driverName,
       routeOrigin: data.routeOrigin.present
           ? data.routeOrigin.value
           : this.routeOrigin,
@@ -1831,6 +2315,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
           ..write('startedAt: $startedAt, ')
           ..write('endedAt: $endedAt, ')
           ..write('fleetNumber: $fleetNumber, ')
+          ..write('fleetRegistrationNumber: $fleetRegistrationNumber, ')
+          ..write('driverId: $driverId, ')
+          ..write('driverName: $driverName, ')
           ..write('routeOrigin: $routeOrigin, ')
           ..write('routeDestination: $routeDestination, ')
           ..write('syncStatus: $syncStatus')
@@ -1851,6 +2338,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
     startedAt,
     endedAt,
     fleetNumber,
+    fleetRegistrationNumber,
+    driverId,
+    driverName,
     routeOrigin,
     routeDestination,
     syncStatus,
@@ -1870,6 +2360,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
           other.startedAt == this.startedAt &&
           other.endedAt == this.endedAt &&
           other.fleetNumber == this.fleetNumber &&
+          other.fleetRegistrationNumber == this.fleetRegistrationNumber &&
+          other.driverId == this.driverId &&
+          other.driverName == this.driverName &&
           other.routeOrigin == this.routeOrigin &&
           other.routeDestination == this.routeDestination &&
           other.syncStatus == this.syncStatus);
@@ -1887,6 +2380,9 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
   final Value<DateTime> startedAt;
   final Value<DateTime?> endedAt;
   final Value<String?> fleetNumber;
+  final Value<String?> fleetRegistrationNumber;
+  final Value<String?> driverId;
+  final Value<String?> driverName;
   final Value<String?> routeOrigin;
   final Value<String?> routeDestination;
   final Value<String> syncStatus;
@@ -1903,6 +2399,9 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
     this.startedAt = const Value.absent(),
     this.endedAt = const Value.absent(),
     this.fleetNumber = const Value.absent(),
+    this.fleetRegistrationNumber = const Value.absent(),
+    this.driverId = const Value.absent(),
+    this.driverName = const Value.absent(),
     this.routeOrigin = const Value.absent(),
     this.routeDestination = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -1920,6 +2419,9 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
     required DateTime startedAt,
     this.endedAt = const Value.absent(),
     this.fleetNumber = const Value.absent(),
+    this.fleetRegistrationNumber = const Value.absent(),
+    this.driverId = const Value.absent(),
+    this.driverName = const Value.absent(),
     this.routeOrigin = const Value.absent(),
     this.routeDestination = const Value.absent(),
     this.syncStatus = const Value.absent(),
@@ -1941,6 +2443,9 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
     Expression<DateTime>? startedAt,
     Expression<DateTime>? endedAt,
     Expression<String>? fleetNumber,
+    Expression<String>? fleetRegistrationNumber,
+    Expression<String>? driverId,
+    Expression<String>? driverName,
     Expression<String>? routeOrigin,
     Expression<String>? routeDestination,
     Expression<String>? syncStatus,
@@ -1958,6 +2463,10 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
       if (startedAt != null) 'started_at': startedAt,
       if (endedAt != null) 'ended_at': endedAt,
       if (fleetNumber != null) 'fleet_number': fleetNumber,
+      if (fleetRegistrationNumber != null)
+        'fleet_registration_number': fleetRegistrationNumber,
+      if (driverId != null) 'driver_id': driverId,
+      if (driverName != null) 'driver_name': driverName,
       if (routeOrigin != null) 'route_origin': routeOrigin,
       if (routeDestination != null) 'route_destination': routeDestination,
       if (syncStatus != null) 'sync_status': syncStatus,
@@ -1977,6 +2486,9 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
     Value<DateTime>? startedAt,
     Value<DateTime?>? endedAt,
     Value<String?>? fleetNumber,
+    Value<String?>? fleetRegistrationNumber,
+    Value<String?>? driverId,
+    Value<String?>? driverName,
     Value<String?>? routeOrigin,
     Value<String?>? routeDestination,
     Value<String>? syncStatus,
@@ -1994,6 +2506,10 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
       startedAt: startedAt ?? this.startedAt,
       endedAt: endedAt ?? this.endedAt,
       fleetNumber: fleetNumber ?? this.fleetNumber,
+      fleetRegistrationNumber:
+          fleetRegistrationNumber ?? this.fleetRegistrationNumber,
+      driverId: driverId ?? this.driverId,
+      driverName: driverName ?? this.driverName,
       routeOrigin: routeOrigin ?? this.routeOrigin,
       routeDestination: routeDestination ?? this.routeDestination,
       syncStatus: syncStatus ?? this.syncStatus,
@@ -2037,6 +2553,17 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
     if (fleetNumber.present) {
       map['fleet_number'] = Variable<String>(fleetNumber.value);
     }
+    if (fleetRegistrationNumber.present) {
+      map['fleet_registration_number'] = Variable<String>(
+        fleetRegistrationNumber.value,
+      );
+    }
+    if (driverId.present) {
+      map['driver_id'] = Variable<String>(driverId.value);
+    }
+    if (driverName.present) {
+      map['driver_name'] = Variable<String>(driverName.value);
+    }
     if (routeOrigin.present) {
       map['route_origin'] = Variable<String>(routeOrigin.value);
     }
@@ -2066,6 +2593,9 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
           ..write('startedAt: $startedAt, ')
           ..write('endedAt: $endedAt, ')
           ..write('fleetNumber: $fleetNumber, ')
+          ..write('fleetRegistrationNumber: $fleetRegistrationNumber, ')
+          ..write('driverId: $driverId, ')
+          ..write('driverName: $driverName, ')
           ..write('routeOrigin: $routeOrigin, ')
           ..write('routeDestination: $routeDestination, ')
           ..write('syncStatus: $syncStatus, ')
@@ -2251,6 +2781,32 @@ class $LocalTicketsTable extends LocalTickets
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _printedMeta = const VerificationMeta(
+    'printed',
+  );
+  @override
+  late final GeneratedColumn<bool> printed = GeneratedColumn<bool>(
+    'printed',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("printed" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _printedAtMeta = const VerificationMeta(
+    'printedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> printedAt = GeneratedColumn<DateTime>(
+    'printed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _syncStatusMeta = const VerificationMeta(
     'syncStatus',
   );
@@ -2315,6 +2871,8 @@ class $LocalTicketsTable extends LocalTickets
     luggageDescription,
     serialNumber,
     issuedAt,
+    printed,
+    printedAt,
     syncStatus,
     idempotencyKey,
     lastError,
@@ -2462,6 +3020,18 @@ class $LocalTicketsTable extends LocalTickets
     } else if (isInserting) {
       context.missing(_issuedAtMeta);
     }
+    if (data.containsKey('printed')) {
+      context.handle(
+        _printedMeta,
+        printed.isAcceptableOrUnknown(data['printed']!, _printedMeta),
+      );
+    }
+    if (data.containsKey('printed_at')) {
+      context.handle(
+        _printedAtMeta,
+        printedAt.isAcceptableOrUnknown(data['printed_at']!, _printedAtMeta),
+      );
+    }
     if (data.containsKey('sync_status')) {
       context.handle(
         _syncStatusMeta,
@@ -2568,6 +3138,14 @@ class $LocalTicketsTable extends LocalTickets
         DriftSqlType.dateTime,
         data['${effectivePrefix}issued_at'],
       )!,
+      printed: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}printed'],
+      )!,
+      printedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}printed_at'],
+      ),
       syncStatus: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}sync_status'],
@@ -2610,6 +3188,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
   final String? luggageDescription;
   final int? serialNumber;
   final DateTime issuedAt;
+  final bool printed;
+  final DateTime? printedAt;
   final String syncStatus;
   final String idempotencyKey;
   final String? lastError;
@@ -2631,6 +3211,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
     this.luggageDescription,
     this.serialNumber,
     required this.issuedAt,
+    required this.printed,
+    this.printedAt,
     required this.syncStatus,
     required this.idempotencyKey,
     this.lastError,
@@ -2671,6 +3253,10 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
       map['serial_number'] = Variable<int>(serialNumber);
     }
     map['issued_at'] = Variable<DateTime>(issuedAt);
+    map['printed'] = Variable<bool>(printed);
+    if (!nullToAbsent || printedAt != null) {
+      map['printed_at'] = Variable<DateTime>(printedAt);
+    }
     map['sync_status'] = Variable<String>(syncStatus);
     map['idempotency_key'] = Variable<String>(idempotencyKey);
     if (!nullToAbsent || lastError != null) {
@@ -2714,6 +3300,10 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
           ? const Value.absent()
           : Value(serialNumber),
       issuedAt: Value(issuedAt),
+      printed: Value(printed),
+      printedAt: printedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(printedAt),
       syncStatus: Value(syncStatus),
       idempotencyKey: Value(idempotencyKey),
       lastError: lastError == null && nullToAbsent
@@ -2747,6 +3337,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
       ),
       serialNumber: serializer.fromJson<int?>(json['serialNumber']),
       issuedAt: serializer.fromJson<DateTime>(json['issuedAt']),
+      printed: serializer.fromJson<bool>(json['printed']),
+      printedAt: serializer.fromJson<DateTime?>(json['printedAt']),
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       idempotencyKey: serializer.fromJson<String>(json['idempotencyKey']),
       lastError: serializer.fromJson<String?>(json['lastError']),
@@ -2773,6 +3365,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
       'luggageDescription': serializer.toJson<String?>(luggageDescription),
       'serialNumber': serializer.toJson<int?>(serialNumber),
       'issuedAt': serializer.toJson<DateTime>(issuedAt),
+      'printed': serializer.toJson<bool>(printed),
+      'printedAt': serializer.toJson<DateTime?>(printedAt),
       'syncStatus': serializer.toJson<String>(syncStatus),
       'idempotencyKey': serializer.toJson<String>(idempotencyKey),
       'lastError': serializer.toJson<String?>(lastError),
@@ -2797,6 +3391,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
     Value<String?> luggageDescription = const Value.absent(),
     Value<int?> serialNumber = const Value.absent(),
     DateTime? issuedAt,
+    bool? printed,
+    Value<DateTime?> printedAt = const Value.absent(),
     String? syncStatus,
     String? idempotencyKey,
     Value<String?> lastError = const Value.absent(),
@@ -2826,6 +3422,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
         : this.luggageDescription,
     serialNumber: serialNumber.present ? serialNumber.value : this.serialNumber,
     issuedAt: issuedAt ?? this.issuedAt,
+    printed: printed ?? this.printed,
+    printedAt: printedAt.present ? printedAt.value : this.printedAt,
     syncStatus: syncStatus ?? this.syncStatus,
     idempotencyKey: idempotencyKey ?? this.idempotencyKey,
     lastError: lastError.present ? lastError.value : this.lastError,
@@ -2863,6 +3461,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
           ? data.serialNumber.value
           : this.serialNumber,
       issuedAt: data.issuedAt.present ? data.issuedAt.value : this.issuedAt,
+      printed: data.printed.present ? data.printed.value : this.printed,
+      printedAt: data.printedAt.present ? data.printedAt.value : this.printedAt,
       syncStatus: data.syncStatus.present
           ? data.syncStatus.value
           : this.syncStatus,
@@ -2895,6 +3495,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
           ..write('luggageDescription: $luggageDescription, ')
           ..write('serialNumber: $serialNumber, ')
           ..write('issuedAt: $issuedAt, ')
+          ..write('printed: $printed, ')
+          ..write('printedAt: $printedAt, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('idempotencyKey: $idempotencyKey, ')
           ..write('lastError: $lastError, ')
@@ -2904,7 +3506,7 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     tripId,
     agentId,
@@ -2921,11 +3523,13 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
     luggageDescription,
     serialNumber,
     issuedAt,
+    printed,
+    printedAt,
     syncStatus,
     idempotencyKey,
     lastError,
     retryCount,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2946,6 +3550,8 @@ class LocalTicket extends DataClass implements Insertable<LocalTicket> {
           other.luggageDescription == this.luggageDescription &&
           other.serialNumber == this.serialNumber &&
           other.issuedAt == this.issuedAt &&
+          other.printed == this.printed &&
+          other.printedAt == this.printedAt &&
           other.syncStatus == this.syncStatus &&
           other.idempotencyKey == this.idempotencyKey &&
           other.lastError == this.lastError &&
@@ -2969,6 +3575,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
   final Value<String?> luggageDescription;
   final Value<int?> serialNumber;
   final Value<DateTime> issuedAt;
+  final Value<bool> printed;
+  final Value<DateTime?> printedAt;
   final Value<String> syncStatus;
   final Value<String> idempotencyKey;
   final Value<String?> lastError;
@@ -2991,6 +3599,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
     this.luggageDescription = const Value.absent(),
     this.serialNumber = const Value.absent(),
     this.issuedAt = const Value.absent(),
+    this.printed = const Value.absent(),
+    this.printedAt = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.idempotencyKey = const Value.absent(),
     this.lastError = const Value.absent(),
@@ -3014,6 +3624,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
     this.luggageDescription = const Value.absent(),
     this.serialNumber = const Value.absent(),
     required DateTime issuedAt,
+    this.printed = const Value.absent(),
+    this.printedAt = const Value.absent(),
     this.syncStatus = const Value.absent(),
     required String idempotencyKey,
     this.lastError = const Value.absent(),
@@ -3045,6 +3657,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
     Expression<String>? luggageDescription,
     Expression<int>? serialNumber,
     Expression<DateTime>? issuedAt,
+    Expression<bool>? printed,
+    Expression<DateTime>? printedAt,
     Expression<String>? syncStatus,
     Expression<String>? idempotencyKey,
     Expression<String>? lastError,
@@ -3068,6 +3682,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
       if (luggageDescription != null) 'luggage_description': luggageDescription,
       if (serialNumber != null) 'serial_number': serialNumber,
       if (issuedAt != null) 'issued_at': issuedAt,
+      if (printed != null) 'printed': printed,
+      if (printedAt != null) 'printed_at': printedAt,
       if (syncStatus != null) 'sync_status': syncStatus,
       if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
       if (lastError != null) 'last_error': lastError,
@@ -3093,6 +3709,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
     Value<String?>? luggageDescription,
     Value<int?>? serialNumber,
     Value<DateTime>? issuedAt,
+    Value<bool>? printed,
+    Value<DateTime?>? printedAt,
     Value<String>? syncStatus,
     Value<String>? idempotencyKey,
     Value<String?>? lastError,
@@ -3116,6 +3734,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
       luggageDescription: luggageDescription ?? this.luggageDescription,
       serialNumber: serialNumber ?? this.serialNumber,
       issuedAt: issuedAt ?? this.issuedAt,
+      printed: printed ?? this.printed,
+      printedAt: printedAt ?? this.printedAt,
       syncStatus: syncStatus ?? this.syncStatus,
       idempotencyKey: idempotencyKey ?? this.idempotencyKey,
       lastError: lastError ?? this.lastError,
@@ -3175,6 +3795,12 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
     if (issuedAt.present) {
       map['issued_at'] = Variable<DateTime>(issuedAt.value);
     }
+    if (printed.present) {
+      map['printed'] = Variable<bool>(printed.value);
+    }
+    if (printedAt.present) {
+      map['printed_at'] = Variable<DateTime>(printedAt.value);
+    }
     if (syncStatus.present) {
       map['sync_status'] = Variable<String>(syncStatus.value);
     }
@@ -3212,6 +3838,8 @@ class LocalTicketsCompanion extends UpdateCompanion<LocalTicket> {
           ..write('luggageDescription: $luggageDescription, ')
           ..write('serialNumber: $serialNumber, ')
           ..write('issuedAt: $issuedAt, ')
+          ..write('printed: $printed, ')
+          ..write('printedAt: $printedAt, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('idempotencyKey: $idempotencyKey, ')
           ..write('lastError: $lastError, ')
@@ -4037,6 +4665,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $CachedFleetsTable cachedFleets = $CachedFleetsTable(this);
+  late final $CachedDriversTable cachedDrivers = $CachedDriversTable(this);
   late final $CachedRoutesTable cachedRoutes = $CachedRoutesTable(this);
   late final $CachedFaresTable cachedFares = $CachedFaresTable(this);
   late final $LocalTripsTable localTrips = $LocalTripsTable(this);
@@ -4049,6 +4678,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   @override
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     cachedFleets,
+    cachedDrivers,
     cachedRoutes,
     cachedFares,
     localTrips,
@@ -4062,6 +4692,7 @@ typedef $$CachedFleetsTableCreateCompanionBuilder =
     CachedFleetsCompanion Function({
       required String id,
       required String number,
+      Value<String?> registrationNumber,
       Value<String> status,
       Value<int> capacity,
       required DateTime cachedAt,
@@ -4071,6 +4702,7 @@ typedef $$CachedFleetsTableUpdateCompanionBuilder =
     CachedFleetsCompanion Function({
       Value<String> id,
       Value<String> number,
+      Value<String?> registrationNumber,
       Value<String> status,
       Value<int> capacity,
       Value<DateTime> cachedAt,
@@ -4093,6 +4725,11 @@ class $$CachedFleetsTableFilterComposer
 
   ColumnFilters<String> get number => $composableBuilder(
     column: $table.number,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get registrationNumber => $composableBuilder(
+    column: $table.registrationNumber,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4131,6 +4768,11 @@ class $$CachedFleetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get registrationNumber => $composableBuilder(
+    column: $table.registrationNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get status => $composableBuilder(
     column: $table.status,
     builder: (column) => ColumnOrderings(column),
@@ -4161,6 +4803,11 @@ class $$CachedFleetsTableAnnotationComposer
 
   GeneratedColumn<String> get number =>
       $composableBuilder(column: $table.number, builder: (column) => column);
+
+  GeneratedColumn<String> get registrationNumber => $composableBuilder(
+    column: $table.registrationNumber,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
@@ -4205,6 +4852,7 @@ class $$CachedFleetsTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> number = const Value.absent(),
+                Value<String?> registrationNumber = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int> capacity = const Value.absent(),
                 Value<DateTime> cachedAt = const Value.absent(),
@@ -4212,6 +4860,7 @@ class $$CachedFleetsTableTableManager
               }) => CachedFleetsCompanion(
                 id: id,
                 number: number,
+                registrationNumber: registrationNumber,
                 status: status,
                 capacity: capacity,
                 cachedAt: cachedAt,
@@ -4221,6 +4870,7 @@ class $$CachedFleetsTableTableManager
               ({
                 required String id,
                 required String number,
+                Value<String?> registrationNumber = const Value.absent(),
                 Value<String> status = const Value.absent(),
                 Value<int> capacity = const Value.absent(),
                 required DateTime cachedAt,
@@ -4228,6 +4878,7 @@ class $$CachedFleetsTableTableManager
               }) => CachedFleetsCompanion.insert(
                 id: id,
                 number: number,
+                registrationNumber: registrationNumber,
                 status: status,
                 capacity: capacity,
                 cachedAt: cachedAt,
@@ -4256,6 +4907,187 @@ typedef $$CachedFleetsTableProcessedTableManager =
         BaseReferences<_$AppDatabase, $CachedFleetsTable, CachedFleet>,
       ),
       CachedFleet,
+      PrefetchHooks Function()
+    >;
+typedef $$CachedDriversTableCreateCompanionBuilder =
+    CachedDriversCompanion Function({
+      required String id,
+      required String fullName,
+      Value<String> status,
+      required DateTime cachedAt,
+      Value<int> rowid,
+    });
+typedef $$CachedDriversTableUpdateCompanionBuilder =
+    CachedDriversCompanion Function({
+      Value<String> id,
+      Value<String> fullName,
+      Value<String> status,
+      Value<DateTime> cachedAt,
+      Value<int> rowid,
+    });
+
+class $$CachedDriversTableFilterComposer
+    extends Composer<_$AppDatabase, $CachedDriversTable> {
+  $$CachedDriversTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fullName => $composableBuilder(
+    column: $table.fullName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CachedDriversTableOrderingComposer
+    extends Composer<_$AppDatabase, $CachedDriversTable> {
+  $$CachedDriversTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fullName => $composableBuilder(
+    column: $table.fullName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
+    column: $table.cachedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CachedDriversTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CachedDriversTable> {
+  $$CachedDriversTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get fullName =>
+      $composableBuilder(column: $table.fullName, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get cachedAt =>
+      $composableBuilder(column: $table.cachedAt, builder: (column) => column);
+}
+
+class $$CachedDriversTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CachedDriversTable,
+          CachedDriver,
+          $$CachedDriversTableFilterComposer,
+          $$CachedDriversTableOrderingComposer,
+          $$CachedDriversTableAnnotationComposer,
+          $$CachedDriversTableCreateCompanionBuilder,
+          $$CachedDriversTableUpdateCompanionBuilder,
+          (
+            CachedDriver,
+            BaseReferences<_$AppDatabase, $CachedDriversTable, CachedDriver>,
+          ),
+          CachedDriver,
+          PrefetchHooks Function()
+        > {
+  $$CachedDriversTableTableManager(_$AppDatabase db, $CachedDriversTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CachedDriversTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CachedDriversTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CachedDriversTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> fullName = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<DateTime> cachedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CachedDriversCompanion(
+                id: id,
+                fullName: fullName,
+                status: status,
+                cachedAt: cachedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String fullName,
+                Value<String> status = const Value.absent(),
+                required DateTime cachedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => CachedDriversCompanion.insert(
+                id: id,
+                fullName: fullName,
+                status: status,
+                cachedAt: cachedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CachedDriversTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CachedDriversTable,
+      CachedDriver,
+      $$CachedDriversTableFilterComposer,
+      $$CachedDriversTableOrderingComposer,
+      $$CachedDriversTableAnnotationComposer,
+      $$CachedDriversTableCreateCompanionBuilder,
+      $$CachedDriversTableUpdateCompanionBuilder,
+      (
+        CachedDriver,
+        BaseReferences<_$AppDatabase, $CachedDriversTable, CachedDriver>,
+      ),
+      CachedDriver,
       PrefetchHooks Function()
     >;
 typedef $$CachedRoutesTableCreateCompanionBuilder =
@@ -4736,6 +5568,9 @@ typedef $$LocalTripsTableCreateCompanionBuilder =
       required DateTime startedAt,
       Value<DateTime?> endedAt,
       Value<String?> fleetNumber,
+      Value<String?> fleetRegistrationNumber,
+      Value<String?> driverId,
+      Value<String?> driverName,
       Value<String?> routeOrigin,
       Value<String?> routeDestination,
       Value<String> syncStatus,
@@ -4754,6 +5589,9 @@ typedef $$LocalTripsTableUpdateCompanionBuilder =
       Value<DateTime> startedAt,
       Value<DateTime?> endedAt,
       Value<String?> fleetNumber,
+      Value<String?> fleetRegistrationNumber,
+      Value<String?> driverId,
+      Value<String?> driverName,
       Value<String?> routeOrigin,
       Value<String?> routeDestination,
       Value<String> syncStatus,
@@ -4821,6 +5659,21 @@ class $$LocalTripsTableFilterComposer
 
   ColumnFilters<String> get fleetNumber => $composableBuilder(
     column: $table.fleetNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fleetRegistrationNumber => $composableBuilder(
+    column: $table.fleetRegistrationNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get driverId => $composableBuilder(
+    column: $table.driverId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get driverName => $composableBuilder(
+    column: $table.driverName,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4904,6 +5757,21 @@ class $$LocalTripsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get fleetRegistrationNumber => $composableBuilder(
+    column: $table.fleetRegistrationNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get driverId => $composableBuilder(
+    column: $table.driverId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get driverName => $composableBuilder(
+    column: $table.driverName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get routeOrigin => $composableBuilder(
     column: $table.routeOrigin,
     builder: (column) => ColumnOrderings(column),
@@ -4966,6 +5834,19 @@ class $$LocalTripsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get fleetRegistrationNumber => $composableBuilder(
+    column: $table.fleetRegistrationNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get driverId =>
+      $composableBuilder(column: $table.driverId, builder: (column) => column);
+
+  GeneratedColumn<String> get driverName => $composableBuilder(
+    column: $table.driverName,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get routeOrigin => $composableBuilder(
     column: $table.routeOrigin,
     builder: (column) => column,
@@ -5024,6 +5905,9 @@ class $$LocalTripsTableTableManager
                 Value<DateTime> startedAt = const Value.absent(),
                 Value<DateTime?> endedAt = const Value.absent(),
                 Value<String?> fleetNumber = const Value.absent(),
+                Value<String?> fleetRegistrationNumber = const Value.absent(),
+                Value<String?> driverId = const Value.absent(),
+                Value<String?> driverName = const Value.absent(),
                 Value<String?> routeOrigin = const Value.absent(),
                 Value<String?> routeDestination = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
@@ -5040,6 +5924,9 @@ class $$LocalTripsTableTableManager
                 startedAt: startedAt,
                 endedAt: endedAt,
                 fleetNumber: fleetNumber,
+                fleetRegistrationNumber: fleetRegistrationNumber,
+                driverId: driverId,
+                driverName: driverName,
                 routeOrigin: routeOrigin,
                 routeDestination: routeDestination,
                 syncStatus: syncStatus,
@@ -5058,6 +5945,9 @@ class $$LocalTripsTableTableManager
                 required DateTime startedAt,
                 Value<DateTime?> endedAt = const Value.absent(),
                 Value<String?> fleetNumber = const Value.absent(),
+                Value<String?> fleetRegistrationNumber = const Value.absent(),
+                Value<String?> driverId = const Value.absent(),
+                Value<String?> driverName = const Value.absent(),
                 Value<String?> routeOrigin = const Value.absent(),
                 Value<String?> routeDestination = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
@@ -5074,6 +5964,9 @@ class $$LocalTripsTableTableManager
                 startedAt: startedAt,
                 endedAt: endedAt,
                 fleetNumber: fleetNumber,
+                fleetRegistrationNumber: fleetRegistrationNumber,
+                driverId: driverId,
+                driverName: driverName,
                 routeOrigin: routeOrigin,
                 routeDestination: routeDestination,
                 syncStatus: syncStatus,
@@ -5119,6 +6012,8 @@ typedef $$LocalTicketsTableCreateCompanionBuilder =
       Value<String?> luggageDescription,
       Value<int?> serialNumber,
       required DateTime issuedAt,
+      Value<bool> printed,
+      Value<DateTime?> printedAt,
       Value<String> syncStatus,
       required String idempotencyKey,
       Value<String?> lastError,
@@ -5143,6 +6038,8 @@ typedef $$LocalTicketsTableUpdateCompanionBuilder =
       Value<String?> luggageDescription,
       Value<int?> serialNumber,
       Value<DateTime> issuedAt,
+      Value<bool> printed,
+      Value<DateTime?> printedAt,
       Value<String> syncStatus,
       Value<String> idempotencyKey,
       Value<String?> lastError,
@@ -5236,6 +6133,16 @@ class $$LocalTicketsTableFilterComposer
 
   ColumnFilters<DateTime> get issuedAt => $composableBuilder(
     column: $table.issuedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get printed => $composableBuilder(
+    column: $table.printed,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get printedAt => $composableBuilder(
+    column: $table.printedAt,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5349,6 +6256,16 @@ class $$LocalTicketsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get printed => $composableBuilder(
+    column: $table.printed,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get printedAt => $composableBuilder(
+    column: $table.printedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get syncStatus => $composableBuilder(
     column: $table.syncStatus,
     builder: (column) => ColumnOrderings(column),
@@ -5441,6 +6358,12 @@ class $$LocalTicketsTableAnnotationComposer
   GeneratedColumn<DateTime> get issuedAt =>
       $composableBuilder(column: $table.issuedAt, builder: (column) => column);
 
+  GeneratedColumn<bool> get printed =>
+      $composableBuilder(column: $table.printed, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get printedAt =>
+      $composableBuilder(column: $table.printedAt, builder: (column) => column);
+
   GeneratedColumn<String> get syncStatus => $composableBuilder(
     column: $table.syncStatus,
     builder: (column) => column,
@@ -5507,6 +6430,8 @@ class $$LocalTicketsTableTableManager
                 Value<String?> luggageDescription = const Value.absent(),
                 Value<int?> serialNumber = const Value.absent(),
                 Value<DateTime> issuedAt = const Value.absent(),
+                Value<bool> printed = const Value.absent(),
+                Value<DateTime?> printedAt = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 Value<String> idempotencyKey = const Value.absent(),
                 Value<String?> lastError = const Value.absent(),
@@ -5529,6 +6454,8 @@ class $$LocalTicketsTableTableManager
                 luggageDescription: luggageDescription,
                 serialNumber: serialNumber,
                 issuedAt: issuedAt,
+                printed: printed,
+                printedAt: printedAt,
                 syncStatus: syncStatus,
                 idempotencyKey: idempotencyKey,
                 lastError: lastError,
@@ -5553,6 +6480,8 @@ class $$LocalTicketsTableTableManager
                 Value<String?> luggageDescription = const Value.absent(),
                 Value<int?> serialNumber = const Value.absent(),
                 required DateTime issuedAt,
+                Value<bool> printed = const Value.absent(),
+                Value<DateTime?> printedAt = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 required String idempotencyKey,
                 Value<String?> lastError = const Value.absent(),
@@ -5575,6 +6504,8 @@ class $$LocalTicketsTableTableManager
                 luggageDescription: luggageDescription,
                 serialNumber: serialNumber,
                 issuedAt: issuedAt,
+                printed: printed,
+                printedAt: printedAt,
                 syncStatus: syncStatus,
                 idempotencyKey: idempotencyKey,
                 lastError: lastError,
@@ -6048,6 +6979,8 @@ class $AppDatabaseManager {
   $AppDatabaseManager(this._db);
   $$CachedFleetsTableTableManager get cachedFleets =>
       $$CachedFleetsTableTableManager(_db, _db.cachedFleets);
+  $$CachedDriversTableTableManager get cachedDrivers =>
+      $$CachedDriversTableTableManager(_db, _db.cachedDrivers);
   $$CachedRoutesTableTableManager get cachedRoutes =>
       $$CachedRoutesTableTableManager(_db, _db.cachedRoutes);
   $$CachedFaresTableTableManager get cachedFares =>

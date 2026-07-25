@@ -18,7 +18,8 @@ INSERT INTO "tblRoles" (id, name) VALUES
 ('role-superadmin-001', 'SUPER_ADMIN'),
 ('role-depotadmin-001', 'DEPOT_ADMIN'),
 ('role-manager-001', 'MANAGER'),
-('role-viewer-001', 'VIEWER');
+('role-viewer-001', 'VIEWER'),
+('role-cashier-001', 'CASHIER');
 
 -- =========================================
 -- 2. DEPOTS (Bus Stations/Terminals)

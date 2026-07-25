@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
 
 import '../../../core/config/app_colors.dart';
 import '../../../core/config/app_spacing.dart';
+import '../../../core/network/heartbeat_service.dart';
 import '../../../services/ticket_print_service.dart';
 import '../../../shared/widgets/widgets.dart';
 
@@ -89,6 +92,8 @@ class _PrinterPickerSheetState extends ConsumerState<_PrinterPickerSheet> {
           await ref.read(ticketPrintServiceProvider).connectAndSave(device);
       if (!mounted) return;
       if (ok) {
+        // Persist printer identity to the server when online.
+        unawaited(ref.read(heartbeatServiceProvider).pushNow());
         Navigator.of(context).pop(device);
       } else {
         setState(() {

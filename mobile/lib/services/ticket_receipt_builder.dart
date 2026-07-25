@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/storage/secure_storage_service.dart';
 import '../data/repositories/auth_repository.dart';
+import '../data/repositories/reference_repository.dart';
 import '../data/repositories/trip_repository.dart';
 import '../domain/models/models.dart';
 import '../domain/models/ticket_issue_draft.dart';
@@ -49,9 +50,30 @@ Future<TicketReceiptData> _buildReceipt(
   _ReceiptContext? context,
 }) async {
   final ctx = context ?? await _loadReceiptContext(ref);
-  final resolvedTrip = trip ??
+  var resolvedTrip = trip ??
       await ref.read(tripRepositoryProvider).getTripById(ticket.tripId) ??
       _fallbackTripForTicket(ticket);
+
+  if (resolvedTrip.fleetRegistrationNumber == null ||
+      resolvedTrip.fleetRegistrationNumber!.trim().isEmpty) {
+    try {
+      final fleets = await ref.read(referenceRepositoryProvider).getFleets();
+      FleetModel? fleet;
+      for (final candidate in fleets) {
+        if (candidate.id == resolvedTrip.fleetId) {
+          fleet = candidate;
+          break;
+        }
+      }
+      final reg = fleet?.registrationNumber?.trim();
+      if (reg != null && reg.isNotEmpty) {
+        resolvedTrip =
+            resolvedTrip.copyWith(fleetRegistrationNumber: reg);
+      }
+    } catch (_) {
+      // Keep trip as-is when fleet cache is unavailable.
+    }
+  }
 
   return TicketReceiptData(
     ticket: ticket,
@@ -61,6 +83,9 @@ Future<TicketReceiptData> _buildReceipt(
     agentName: ctx.agentName,
     agentCode: ctx.agentCode,
     deviceSerial: ctx.deviceSerial,
+    printerName: ctx.printerName,
+    printerMac: ctx.printerMac,
+    printerSerial: ctx.printerSerial,
   );
 }
 
@@ -77,6 +102,9 @@ Future<_ReceiptContext> _loadReceiptContext(WidgetRef ref) async {
         ? '${agent.firstName} ${agent.lastName}'.trim()
         : 'Conductor',
     deviceSerial: await storage.getSerialNumber(),
+    printerName: await storage.getPrinterName(),
+    printerMac: await storage.getPrinterMac(),
+    printerSerial: await storage.getPrinterSerial(),
   );
 }
 
@@ -98,6 +126,9 @@ class _ReceiptContext {
     required this.agentName,
     required this.agentCode,
     this.deviceSerial,
+    this.printerName,
+    this.printerMac,
+    this.printerSerial,
   });
 
   final String merchantCode;
@@ -105,4 +136,7 @@ class _ReceiptContext {
   final String agentName;
   final String agentCode;
   final String? deviceSerial;
+  final String? printerName;
+  final String? printerMac;
+  final String? printerSerial;
 }

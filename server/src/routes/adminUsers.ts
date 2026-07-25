@@ -6,6 +6,7 @@ import { authMiddleware, AuthenticatedRequest } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import logger, { authLoginLogger } from '../utils/logger';
+import { isAdminOnline } from '../constants/presence';
 
 const router = Router();
 
@@ -26,8 +27,10 @@ const createAdminUserSchema = z.object({
       .regex(/^[a-z0-9._-]+$/, 'Username may only contain lowercase letters, numbers, dots, hyphens and underscores'),
     full_name: z.string().min(2, 'Full name is required').max(100),
     email: z.string().email('Invalid email address').optional(),
-    role: z.enum(['DEPOT_ADMIN', 'MANAGER', 'VIEWER'], {
-      errorMap: () => ({ message: 'Role must be DEPOT_ADMIN, MANAGER or VIEWER' }),
+    role: z.enum(['DEPOT_ADMIN', 'CASHIER', 'MANAGER', 'VIEWER'], {
+      errorMap: () => ({
+        message: 'Role must be DEPOT_ADMIN, CASHIER, MANAGER or VIEWER',
+      }),
     }),
     depot_id: z.string().optional(),
     password: z.string().min(8, 'Password must be at least 8 characters').optional(),
@@ -39,7 +42,7 @@ const updateAdminUserSchema = z.object({
   body: z.object({
     full_name: z.string().min(2).max(100).optional(),
     email: z.string().email('Invalid email address').optional().nullable(),
-    role: z.enum(['DEPOT_ADMIN', 'MANAGER', 'VIEWER']).optional(),
+    role: z.enum(['DEPOT_ADMIN', 'CASHIER', 'MANAGER', 'VIEWER']).optional(),
     depot_id: z.string().optional().nullable(),
     status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
   }),
@@ -71,26 +74,49 @@ const generateTempPassword = (): string => {
     .join('');
 };
 
+const adminUserSelect = {
+  id: true,
+  username: true,
+  full_name: true,
+  email: true,
+  depot_id: true,
+  status: true,
+  last_seen_at: true,
+  created_at: true,
+  depot: { select: { id: true, name: true, merchant_code: true } },
+  roles: { include: { role: { select: { id: true, name: true } } } },
+} as const;
+
+const mapAdminUser = (user: {
+  id: string;
+  username: string;
+  full_name: string | null;
+  email: string | null;
+  depot_id: string | null;
+  status: string;
+  last_seen_at: Date | null;
+  created_at: Date;
+  depot: { id: string; name: string; merchant_code: string } | null;
+  roles: { role: { id: string; name: string } }[];
+}) => ({
+  ...user,
+  last_seen_at: user.last_seen_at ? user.last_seen_at.toISOString() : null,
+  is_online: isAdminOnline({
+    status: user.status,
+    lastSeenAt: user.last_seen_at,
+  }),
+});
+
 // ---------------------------------------------------------------------------
 // GET /api/admin-users — list all admin users
 // ---------------------------------------------------------------------------
 router.get('/', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const users = await prisma.tblAdminUsers.findMany({
-      select: {
-        id: true,
-        username: true,
-        full_name: true,
-        email: true,
-        depot_id: true,
-        status: true,
-        created_at: true,
-        depot: { select: { id: true, name: true, merchant_code: true } },
-        roles: { include: { role: { select: { id: true, name: true } } } },
-      },
+      select: adminUserSelect,
       orderBy: { created_at: 'asc' },
     });
-    res.json(users);
+    res.json(users.map(mapAdminUser));
   } catch (err) {
     logger.error('Failed to list admin users', { err });
     res.status(500).json({ error: 'Failed to load admin users' });
@@ -147,17 +173,7 @@ router.post('/', validate(createAdminUserSchema), async (req: AuthenticatedReque
           create: { role: { connect: { id: roleRecord.id } } },
         },
       },
-      select: {
-        id: true,
-        username: true,
-        full_name: true,
-        email: true,
-        depot_id: true,
-        status: true,
-        created_at: true,
-        depot: { select: { id: true, name: true, merchant_code: true } },
-        roles: { include: { role: { select: { id: true, name: true } } } },
-      },
+      select: adminUserSelect,
     });
 
     authLoginLogger.info('ADMIN_USER_CREATED', {
@@ -169,7 +185,7 @@ router.post('/', validate(createAdminUserSchema), async (req: AuthenticatedReque
 
     // Return the temporary password only when it was auto-generated (never stored in plain text after this)
     res.status(201).json({
-      ...newUser,
+      ...mapAdminUser(newUser),
       ...(password === undefined ? { temporaryPassword: tempPassword } : {}),
     });
   } catch (err) {
@@ -227,17 +243,7 @@ router.put('/:id', validate(updateAdminUserSchema), async (req: AuthenticatedReq
     const updated = await prisma.tblAdminUsers.update({
       where: { id },
       data: updateData,
-      select: {
-        id: true,
-        username: true,
-        full_name: true,
-        email: true,
-        depot_id: true,
-        status: true,
-        created_at: true,
-        depot: { select: { id: true, name: true, merchant_code: true } },
-        roles: { include: { role: { select: { id: true, name: true } } } },
-      },
+      select: adminUserSelect,
     });
 
     authLoginLogger.info('ADMIN_USER_UPDATED', {
@@ -246,7 +252,7 @@ router.put('/:id', validate(updateAdminUserSchema), async (req: AuthenticatedReq
       changes: { full_name, email, role, depot_id, status },
     });
 
-    res.json(updated);
+    res.json(mapAdminUser(updated));
   } catch (err) {
     logger.error('Failed to update admin user', { err });
     res.status(500).json({ error: 'Failed to update admin user' });

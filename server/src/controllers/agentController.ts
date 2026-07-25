@@ -8,6 +8,7 @@ import {
   endAgentDeviceSession,
   startAgentDeviceSession,
   listAgentSessions,
+  recordAgentHeartbeat,
 } from '../services/agentSessionService';
 import { buildPaginatedResult, parsePagination, wantsPagination } from '../utils/pagination';
 
@@ -165,6 +166,55 @@ export const logout = async (req: AuthenticatedRequest, res: Response) => {
     res.json({ message: 'Logged out successfully' });
   } catch (err) {
     res.status(500).json({ error: 'Logout failed', details: err });
+  }
+};
+
+/**
+ * Presence heartbeat from the mobile app while a conductor is signed in online.
+ * Refreshes device last_seen so admin can show Online vs Offline.
+ */
+export const heartbeat = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const deviceToken = req.headers['x-device-token'] as string | undefined;
+    if (!req.agentId) {
+      return res.status(401).json({ error: 'Agent authentication required' });
+    }
+    if (!deviceToken?.trim()) {
+      return res.status(400).json({ error: 'Device token required' });
+    }
+
+    const device = await resolveDeviceFromToken(deviceToken);
+    if (!device) {
+      return res.status(401).json({
+        error: 'Device is unpaired or token is invalid. Pair this device again.',
+      });
+    }
+    if (req.depotId && device.depot_id !== req.depotId) {
+      return res.status(403).json({ error: 'Device not allowed for this depot' });
+    }
+
+    const result = await recordAgentHeartbeat({
+      deviceId: device.id,
+      agentId: req.agentId,
+      printerName: req.body?.printer_name,
+      printerMac: req.body?.printer_mac,
+      printerSerial: req.body?.printer_serial,
+    });
+
+    if (!result.ok) {
+      return res.status(409).json({
+        error: 'No active conductor session on this device',
+        reason: result.reason,
+      });
+    }
+
+    res.json({
+      ok: true,
+      last_seen: result.last_seen,
+      session_id: result.session_id,
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Heartbeat failed', details: err });
   }
 };
 
@@ -402,27 +452,14 @@ export const endTrip = async (req: AuthenticatedRequest, res: Response) => {
       });
     }
 
-    // End the trip (service will verify agent owns this trip)
-    const result = await agentService.endAgentTrip(agentId, tripId);
-
-    res.json({
-      message: 'Trip ended successfully',
-      trip: result
+    // Conductors start trips; cashiers end them from the admin console.
+    return res.status(403).json({
+      error:
+        'Conductors cannot end trips. Ask the depot cashier to close this trip from the admin console.',
+      trip_id: tripId,
     });
 
   } catch (err: any) {
-    if (err.message === 'Trip not found') {
-      return res.status(404).json({ error: 'Trip not found' });
-    }
-    if (err.message === 'Trip does not belong to this agent') {
-      return res.status(403).json({ 
-        error: 'You can only end your own trips' 
-      });
-    }
-    if (err.message === 'Trip is already completed') {
-      return res.status(400).json({ error: 'Trip is already completed' });
-    }
-
     res.status(500).json({ 
       error: 'Failed to end trip', 
       details: err.message 

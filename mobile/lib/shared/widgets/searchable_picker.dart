@@ -216,6 +216,32 @@ Future<FleetModel?> showFleetPickerSheet({
   );
 }
 
+Future<DriverModel?> showDriverPickerSheet({
+  required BuildContext context,
+  required List<DriverModel> drivers,
+  DriverModel? selected,
+  String title = 'Select driver',
+  String? subtitle,
+  String searchHint = 'Search driver name',
+}) {
+  return showSearchablePickerSheet<DriverModel>(
+    context: context,
+    items: drivers,
+    selected: selected,
+    title: title,
+    subtitle: subtitle,
+    searchHint: searchHint,
+    itemNoun: 'drivers',
+    emptyHint: 'Try a different driver name.',
+    itemIcon: Icons.person_rounded,
+    labelOf: (d) => d.fullName,
+    secondaryLabelOf: (d) =>
+        d.status == null || d.status!.isEmpty ? null : d.status,
+    isSelected: (item, selected) => selected?.id == item.id,
+    matchesQuery: (d, q) => d.fullName.toLowerCase().contains(q),
+  );
+}
+
 Future<String?> showCurrencyPickerSheet({
   required BuildContext context,
   required List<String> currencies,

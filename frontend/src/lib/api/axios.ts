@@ -10,13 +10,25 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token (+ depot scope for SUPER_ADMIN mutations)
 apiClient.interceptors.request.use(
   (config) => {
     const token = sessionStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Super admins must send depot context on POST/PUT/PATCH/DELETE.
+    // Prefer an explicit header from the caller; otherwise use navbar selection.
+    const method = (config.method || 'get').toUpperCase();
+    const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+    if (isMutating && !config.headers['x-depot-id']) {
+      const selectedDepotId = sessionStorage.getItem('selected_depot_id');
+      if (selectedDepotId) {
+        config.headers['x-depot-id'] = selectedDepotId;
+      }
+    }
+
     return config;
   },
   (error) => {

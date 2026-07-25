@@ -15,6 +15,9 @@ router.post('/login', agentController.login);
 // this endpoint exists so the mobile app receives a clean 200 rather than a 404.
 router.post('/logout', authMiddleware, agentController.logout);
 
+// Presence heartbeat while conductor is signed in (must be before /:id routes).
+router.post('/heartbeat', authMiddleware, agentController.heartbeat);
+
 // Agent management endpoints (admin only)
 // anyone authenticated can list, super and depot admins can manage
 router.get('/', authMiddleware, depotScopeMiddleware, agentController.list);

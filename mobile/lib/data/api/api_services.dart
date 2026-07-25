@@ -108,6 +108,14 @@ class ReferenceApi {
         .toList();
   }
 
+  Future<List<DriverModel>> getDrivers() async {
+    final response = await _dio.get<List<dynamic>>('/drivers');
+    return (response.data ?? [])
+        .map((e) => DriverModel.fromJson(e as Map<String, dynamic>))
+        .where((d) => (d.status ?? 'ACTIVE') == 'ACTIVE')
+        .toList();
+  }
+
   Future<List<RouteModel>> getRoutes() async {
     final response = await _dio.get<List<dynamic>>('/routes');
     return (response.data ?? [])
@@ -138,6 +146,7 @@ class TripApi {
     String? tripId,
     String? deviceId,
     String? routeId,
+    String? driverId,
     bool startedOffline = false,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
@@ -148,6 +157,7 @@ class TripApi {
         'origin': origin,
         'destination': destination,
         if (routeId != null) 'route_id': routeId,
+        if (driverId != null) 'driver_id': driverId,
         if (deviceId != null) 'device_id': deviceId,
         'started_offline': startedOffline,
       },

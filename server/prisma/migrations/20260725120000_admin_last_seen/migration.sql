@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "tblAdminUsers" ADD COLUMN IF NOT EXISTS "last_seen_at" TIMESTAMP(3);

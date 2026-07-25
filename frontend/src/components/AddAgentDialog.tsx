@@ -89,7 +89,7 @@ const AddAgentDialog = ({ open, onOpenChange, onSuccess, agent }: AddAgentDialog
 
     // SUPER_ADMIN must select a depot
     if (isSuperAdminUser && !selectedDepotId) {
-      setError("Please select a depot for this agent");
+      setError("Please select a depot for this conductor");
       return;
     }
 
@@ -164,14 +164,14 @@ const AddAgentDialog = ({ open, onOpenChange, onSuccess, agent }: AddAgentDialog
       }
     } catch (err) {
       // Translate backend errors to user-friendly messages
-      let errorMessage = `Failed to ${isEditMode ? 'update' : 'create'} agent`;
+      let errorMessage = `Failed to ${isEditMode ? 'update' : 'create'} conductor`;
       if (err instanceof Error) {
         if (err.message.includes('Depot context required')) {
           errorMessage = 'Unable to process request. Please try again or contact support.';
         } else if (err.message.includes('403') || err.message.includes('Forbidden')) {
           errorMessage = 'You do not have permission to perform this action.';
         } else if (err.message.includes('duplicate') || err.message.includes('already exists')) {
-          errorMessage = 'An agent with this information already exists.';
+          errorMessage = 'A conductor with this information already exists.';
         } else {
           errorMessage = err.message;
         }
@@ -191,11 +191,11 @@ const AddAgentDialog = ({ open, onOpenChange, onSuccess, agent }: AddAgentDialog
               <UserPlus className="h-6 w-6 text-primary" />
             </div>
             <DialogTitle className="text-center">
-              {isEditMode ? 'Edit Agent' : 'Add New Agent'}
+              {isEditMode ? 'Edit Conductor' : 'Add New Conductor'}
             </DialogTitle>
             <DialogDescription className="text-center">
               {isEditMode 
-                ? 'Update agent information below.'
+                ? 'Update conductor information below.'
                 : 'Create a new conductor account. Username, agent code, and PIN will be auto-generated.'}
             </DialogDescription>
           </DialogHeader>
@@ -226,7 +226,7 @@ const AddAgentDialog = ({ open, onOpenChange, onSuccess, agent }: AddAgentDialog
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  {isEditMode ? "Change agent's depot assignment" : "Agent will be assigned to this depot"}
+                  {isEditMode ? "Change conductor's depot assignment" : "Conductor will be assigned to this depot"}
                 </p>
               </div>
             )}
@@ -276,7 +276,7 @@ const AddAgentDialog = ({ open, onOpenChange, onSuccess, agent }: AddAgentDialog
                     {isEditMode ? 'Updating…' : 'Creating…'}
                   </>
                 ) : (
-                  isEditMode ? 'Update Agent' : 'Create Agent'
+                  isEditMode ? 'Update Conductor' : 'Create Conductor'
                 )}
               </Button>
             </DialogFooter>

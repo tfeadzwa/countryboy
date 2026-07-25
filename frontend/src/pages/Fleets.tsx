@@ -30,6 +30,7 @@ import type { Fleet, FleetComplianceItem } from "@/types";
 
 const columns = [
   { header: "Fleet Number" },
+  { header: "Registration" },
   { header: "Depot" },
   { header: "Status" },
   { header: "Capacity" },
@@ -243,6 +244,9 @@ const Fleets = () => {
                         <span className="font-mono font-medium">{f.number}</span>
                       </div>
                     </TableCell>
+                    <TableCell className="font-mono text-sm text-muted-foreground">
+                      {f.registration_number || "—"}
+                    </TableCell>
                     <TableCell className="text-muted-foreground text-sm">{f.depot_name || "N/A"}</TableCell>
                     <TableCell>
                       <Badge
@@ -308,7 +312,11 @@ const Fleets = () => {
                         </div>
                         <div>
                           <p className="font-mono font-medium text-sm">{f.number}</p>
-                          <p className="text-xs text-muted-foreground">{f.depot_name || "N/A"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {f.registration_number
+                              ? `${f.registration_number} · ${f.depot_name || "N/A"}`
+                              : f.depot_name || "N/A"}
+                          </p>
                         </div>
                       </div>
                       <Badge

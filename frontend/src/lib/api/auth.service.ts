@@ -114,6 +114,13 @@ class AuthService {
   }
 
   /**
+   * Presence heartbeat for admin portal (keeps last_seen_at fresh).
+   */
+  async heartbeat(): Promise<void> {
+    await apiClient.post('/auth/heartbeat');
+  }
+
+  /**
    * Decode JWT token to get user info
    */
   decodeToken(token: string): DecodedToken | null {

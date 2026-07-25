@@ -24,10 +24,15 @@ import {
   Search,
   X,
   Banknote,
+  Printer,
 } from "lucide-react";
 import ErrorAlert from "@/components/ErrorAlert";
+import TripBatchPrintDialog from "@/components/TripBatchPrintDialog";
 import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
-import type { Ticket } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { canPrintTicketBatches } from "@/lib/permissions";
+import type { Ticket, Trip } from "@/types";
+import { tripService } from "@/lib/api/trip.service";
 
 const columns = [
   { header: "Serial" },
@@ -53,12 +58,17 @@ const categoryLabel = (category: string) => {
 };
 
 const Tickets = () => {
+  const { user } = useAuth();
+  const canPrint = canPrintTicketBatches(user?.roles || []);
   const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [printTrip, setPrintTrip] = useState<Trip | null>(null);
 
   const [search, setSearch] = useState("");
   const [agentFilter, setAgentFilter] = useState("all");
+  const [tripFilter, setTripFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [currencyFilter, setCurrencyFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
@@ -72,8 +82,12 @@ const Tickets = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await ticketService.getAll();
-      setTickets(data);
+      const [ticketData, tripData] = await Promise.all([
+        ticketService.getAll(),
+        tripService.getAll().catch(() => [] as Trip[]),
+      ]);
+      setTickets(ticketData);
+      setTrips(tripData);
     } catch (err) {
       console.error("Failed to load tickets:", err);
       setError(err instanceof Error ? err.message : "Failed to load tickets");
@@ -100,6 +114,7 @@ const Tickets = () => {
 
     return tickets.filter((t) => {
       if (agentFilter !== "all" && t.agent_id !== agentFilter) return false;
+      if (tripFilter !== "all" && t.trip_id !== tripFilter) return false;
       if (categoryFilter !== "all" && t.ticket_category !== categoryFilter)
         return false;
       if (currencyFilter !== "all" && t.currency !== currencyFilter)
@@ -145,6 +160,7 @@ const Tickets = () => {
     tickets,
     search,
     agentFilter,
+    tripFilter,
     categoryFilter,
     currencyFilter,
     dateFilter,
@@ -171,13 +187,14 @@ const Tickets = () => {
   const hasActiveFilters =
     search.trim() !== "" ||
     agentFilter !== "all" ||
+    tripFilter !== "all" ||
     categoryFilter !== "all" ||
     currencyFilter !== "all" ||
     dateFilter !== "";
 
   useEffect(() => {
     setPage(1);
-  }, [search, agentFilter, categoryFilter, currencyFilter, dateFilter]);
+  }, [search, agentFilter, tripFilter, categoryFilter, currencyFilter, dateFilter]);
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -186,6 +203,7 @@ const Tickets = () => {
   const clearFilters = () => {
     setSearch("");
     setAgentFilter("all");
+    setTripFilter("all");
     setCategoryFilter("all");
     setCurrencyFilter("all");
     setDateFilter("");
@@ -206,6 +224,27 @@ const Tickets = () => {
       <PageHeader
         title="Tickets"
         description="Search and browse issued tickets across your depot"
+      >
+        {canPrint && tripFilter !== "all" && (
+          <Button
+            size="sm"
+            className="gap-2 shadow-sm"
+            onClick={() => {
+              const trip = trips.find((t) => t.id === tripFilter) ?? null;
+              if (trip) setPrintTrip(trip);
+            }}
+          >
+            <Printer className="h-4 w-4" /> Print trip batch
+          </Button>
+        )}
+      </PageHeader>
+
+      <TripBatchPrintDialog
+        open={!!printTrip}
+        onOpenChange={(open) => {
+          if (!open) setPrintTrip(null);
+        }}
+        trip={printTrip}
       />
 
       {error && (
@@ -262,13 +301,26 @@ const Tickets = () => {
                   />
                   <Select value={agentFilter} onValueChange={setAgentFilter}>
                     <SelectTrigger className="h-9 w-full sm:w-44">
-                      <SelectValue placeholder="All Agents" />
+                      <SelectValue placeholder="All Conductors" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Agents</SelectItem>
+                      <SelectItem value="all">All Conductors</SelectItem>
                       {uniqueAgents.map((a) => (
                         <SelectItem key={a.id} value={a.id}>
                           {a.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={tripFilter} onValueChange={setTripFilter}>
+                    <SelectTrigger className="h-9 w-full sm:w-52">
+                      <SelectValue placeholder="All Trips" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Trips</SelectItem>
+                      {trips.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {(t.fleet_number || "Bus")} · {t.route_label || t.id.slice(0, 8)}
                         </SelectItem>
                       ))}
                     </SelectContent>

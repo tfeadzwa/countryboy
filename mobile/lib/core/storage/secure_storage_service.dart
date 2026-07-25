@@ -32,6 +32,7 @@ class SecureStorageService {
   static const _offlineSessionExpiryKey = 'offline_session_expiry';
   static const _printerMacKey = 'printer_mac';
   static const _printerNameKey = 'printer_name';
+  static const _printerSerialKey = 'printer_serial';
 
   Future<void> saveTokens({
     required String accessToken,
@@ -195,17 +196,25 @@ class SecureStorageService {
   Future<void> savePrinter({
     required String mac,
     required String name,
+    String? serial,
   }) async {
     await _storage.write(key: _printerMacKey, value: mac);
     await _storage.write(key: _printerNameKey, value: name);
+    if (serial != null && serial.trim().isNotEmpty) {
+      await _storage.write(key: _printerSerialKey, value: serial.trim());
+    } else {
+      await _storage.delete(key: _printerSerialKey);
+    }
   }
 
   Future<String?> getPrinterMac() => _storage.read(key: _printerMacKey);
   Future<String?> getPrinterName() => _storage.read(key: _printerNameKey);
+  Future<String?> getPrinterSerial() => _storage.read(key: _printerSerialKey);
 
   Future<void> clearPrinter() async {
     await _storage.delete(key: _printerMacKey);
     await _storage.delete(key: _printerNameKey);
+    await _storage.delete(key: _printerSerialKey);
   }
 
   String _hashPin(String pin, String merchantCode, String agentCode) {

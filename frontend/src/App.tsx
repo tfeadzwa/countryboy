@@ -10,11 +10,13 @@ import AdminLayout from "./components/AdminLayout";
 import Dashboard from "./pages/Dashboard";
 import Depots from "./pages/Depots";
 import Agents from "./pages/Agents";
+import Drivers from "./pages/Drivers";
 import Fleets from "./pages/Fleets";
 import EditFleetPage from "./pages/EditFleetPage";
 import RoutesPage from "./pages/RoutesPage";
 import RouteDetailPage from "./pages/RouteDetailPage";
 import Trips from "./pages/Trips";
+import TripDetailPage from "./pages/TripDetailPage";
 import Tickets from "./pages/Tickets";
 import Devices from "./pages/Devices";
 import Settings from "./pages/Settings";
@@ -49,12 +51,14 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/depots" element={<SuperAdminRoute><Depots /></SuperAdminRoute>} />
               <Route path="/agents" element={<Agents />} />
+              <Route path="/drivers" element={<Drivers />} />
               <Route path="/fleets" element={<Fleets />} />
               <Route path="/fleets/:id/edit" element={<EditFleetPage />} />
               <Route path="/routes" element={<RoutesPage />} />
               <Route path="/routes/:id" element={<RouteDetailPage />} />
               <Route path="/routes/:id/edit" element={<Navigate to="/routes" replace />} />
               <Route path="/trips" element={<Trips />} />
+              <Route path="/trips/:id" element={<TripDetailPage />} />
               <Route path="/tickets" element={<Tickets />} />
               <Route path="/devices" element={<Devices />} />
               <Route path="/settings" element={<Settings />} />

@@ -28,6 +28,7 @@ interface AddFleetDialogProps {
 const AddFleetDialog = ({ open, onOpenChange, onSuccess }: AddFleetDialogProps) => {
   const { user } = useAuth();
   const [fleetNumber, setFleetNumber] = useState("");
+  const [registrationNumber, setRegistrationNumber] = useState("");
   const [status, setStatus] = useState<"ACTIVE" | "MAINTENANCE" | "OUT_OF_SERVICE" | "RETIRED">("ACTIVE");
   const [capacity, setCapacity] = useState("0");
   const [selectedDepotId, setSelectedDepotId] = useState("");
@@ -42,6 +43,7 @@ const AddFleetDialog = ({ open, onOpenChange, onSuccess }: AddFleetDialogProps) 
   useEffect(() => {
     if (!open) {
       setFleetNumber("");
+      setRegistrationNumber("");
       setStatus("ACTIVE");
       setCapacity("0");
       setSelectedDepotId("");
@@ -94,6 +96,11 @@ const AddFleetDialog = ({ open, onOpenChange, onSuccess }: AddFleetDialogProps) 
       return;
     }
 
+    if (!registrationNumber.trim()) {
+      setError("Registration number is required");
+      return;
+    }
+
     if (isSuperAdminUser && !selectedDepotId) {
       setError("Please select a depot");
       return;
@@ -109,6 +116,7 @@ const AddFleetDialog = ({ open, onOpenChange, onSuccess }: AddFleetDialogProps) 
 
     const payload = {
       number: fleetNumber.trim(),
+      registration_number: registrationNumber.trim(),
       status,
       capacity: parseInt(capacity, 10) || 0,
       licence_disc_expiry: compliance.licence_disc_expiry || null,
@@ -131,6 +139,11 @@ const AddFleetDialog = ({ open, onOpenChange, onSuccess }: AddFleetDialogProps) 
       const errorMessage = err instanceof Error ? err.message : "Failed to save fleet";
       if (errorMessage.includes("Depot context")) {
         setError("Unable to save fleet. Please try again.");
+      } else if (
+        errorMessage.toLowerCase().includes("registration") &&
+        (errorMessage.includes("duplicate") || errorMessage.includes("already exists"))
+      ) {
+        setError("A fleet with this registration number already exists in this depot.");
       } else if (errorMessage.includes("duplicate") || errorMessage.includes("already exists")) {
         setError("A fleet with this number already exists in this depot.");
       } else {
@@ -144,6 +157,7 @@ const AddFleetDialog = ({ open, onOpenChange, onSuccess }: AddFleetDialogProps) 
   const canSubmit =
     !loading &&
     Boolean(fleetNumber.trim()) &&
+    Boolean(registrationNumber.trim()) &&
     (!isSuperAdminUser || Boolean(selectedDepotId));
 
   return (
@@ -188,6 +202,23 @@ const AddFleetDialog = ({ open, onOpenChange, onSuccess }: AddFleetDialogProps) 
               </div>
 
               <div className="space-y-1.5">
+                <Label htmlFor="registration-number" className="text-sm">
+                  Registration Number
+                </Label>
+                <Input
+                  id="registration-number"
+                  placeholder="e.g. ABC234"
+                  value={registrationNumber}
+                  onChange={(e) => setRegistrationNumber(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="h-9 font-mono uppercase"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
                 <Label htmlFor="capacity" className="text-sm">
                   Capacity
                 </Label>
@@ -203,9 +234,7 @@ const AddFleetDialog = ({ open, onOpenChange, onSuccess }: AddFleetDialogProps) 
                   className="h-9"
                 />
               </div>
-            </div>
 
-            <div className={`grid ${isSuperAdminUser ? "grid-cols-2" : "grid-cols-1"} gap-3`}>
               <div className="space-y-1.5">
                 <Label htmlFor="status" className="text-sm">
                   Status
@@ -227,32 +256,32 @@ const AddFleetDialog = ({ open, onOpenChange, onSuccess }: AddFleetDialogProps) 
                   </SelectContent>
                 </Select>
               </div>
-
-              {isSuperAdminUser && (
-                <div className="space-y-1.5">
-                  <Label htmlFor="depot" className="text-sm">
-                    Assign to Depot
-                  </Label>
-                  <Select
-                    value={selectedDepotId || undefined}
-                    onValueChange={setSelectedDepotId}
-                    required
-                    disabled={loading}
-                  >
-                    <SelectTrigger id="depot" className="h-9">
-                      <SelectValue placeholder="Select a depot" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {depots.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.name} — {d.location}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
+
+            {isSuperAdminUser && (
+              <div className="space-y-1.5">
+                <Label htmlFor="depot" className="text-sm">
+                  Assign to Depot
+                </Label>
+                <Select
+                  value={selectedDepotId || undefined}
+                  onValueChange={setSelectedDepotId}
+                  required
+                  disabled={loading}
+                >
+                  <SelectTrigger id="depot" className="h-9">
+                    <SelectValue placeholder="Select a depot" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {depots.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name} — {d.location}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <Separator />

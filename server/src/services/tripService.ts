@@ -1,6 +1,7 @@
 import prisma from '../utils/prisma';
 import { Prisma } from '@prisma/client';
 import { ensureRoute } from './routeService';
+import { isDeviceOnline } from '../constants/presence';
 
 export const startTrip = async (
   depotId: string,
@@ -43,10 +44,27 @@ export const startTrip = async (
   });
 };
 
-export const endTrip = async (tripId: string) => {
+export const endTrip = async (tripId: string, depotId?: string) => {
+  const trip = await prisma.tblTrips.findUnique({ where: { id: tripId } });
+  if (!trip) {
+    throw new Error('Trip not found');
+  }
+  if (depotId && trip.depot_id !== depotId) {
+    throw new Error('Trip not found in this depot');
+  }
+  if (trip.status !== 'ACTIVE') {
+    throw new Error('Trip is already ended');
+  }
+
   return prisma.tblTrips.update({
     where: { id: tripId },
     data: { ended_at: new Date(), status: 'ENDED' },
+    include: {
+      agent: { select: { id: true, full_name: true, agent_code: true } },
+      fleet: { select: { id: true, number: true, registration_number: true } },
+      driver: { select: { id: true, full_name: true } },
+      depot: { select: { id: true, name: true } },
+    },
   });
 };
 
@@ -56,8 +74,309 @@ export const listActiveTrips = async (depotId?: string) => {
   return prisma.tblTrips.findMany({ where });
 };
 
-export const getTrip = async (tripId: string) => {
-  return prisma.tblTrips.findUnique({ where: { id: tripId }, include: { tickets: true } });
+export const getTrip = async (tripId: string, depotId?: string) => {
+  const trip = await prisma.tblTrips.findUnique({
+    where: { id: tripId },
+    include: {
+      agent: {
+        select: {
+          id: true,
+          full_name: true,
+          agent_code: true,
+          username: true,
+          status: true,
+        },
+      },
+      driver: {
+        select: {
+          id: true,
+          full_name: true,
+          phone: true,
+          licence_number: true,
+          employee_code: true,
+          status: true,
+        },
+      },
+      fleet: {
+        select: {
+          id: true,
+          number: true,
+          registration_number: true,
+          capacity: true,
+          status: true,
+        },
+      },
+      depot: { select: { id: true, name: true, merchant_code: true } },
+      device: {
+        select: {
+          id: true,
+          serial_number: true,
+          device_name: true,
+          device_model: true,
+          paired: true,
+          last_seen: true,
+        },
+      },
+      route: {
+        select: { id: true, origin: true, destination: true },
+      },
+      tickets: {
+        include: {
+          voids: true,
+        },
+        orderBy: { issued_at: 'desc' },
+      },
+    },
+  });
+
+  if (!trip) return null;
+  if (depotId && trip.depot_id !== depotId) return null;
+
+  const [agentOpenSession, driverActiveTrip] = await Promise.all([
+    prisma.tblAgentDeviceSessions.findFirst({
+      where: { agent_id: trip.agent_id, ended_at: null },
+      orderBy: { started_at: 'desc' },
+      include: {
+        device: {
+          select: { id: true, paired: true, last_seen: true },
+        },
+      },
+    }),
+    trip.driver_id
+      ? prisma.tblTrips.findFirst({
+          where: {
+            driver_id: trip.driver_id,
+            status: 'ACTIVE',
+          },
+          select: { id: true },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  return formatTripDetail(trip, {
+    agentOpenSession,
+    driverHasActiveTrip: Boolean(driverActiveTrip),
+  });
+};
+
+type TripDetailRecord = NonNullable<
+  Awaited<ReturnType<typeof prisma.tblTrips.findUnique>>
+> & {
+  agent?: {
+    id: string;
+    full_name: string;
+    agent_code: string;
+    username: string | null;
+    status: string;
+  } | null;
+  driver?: {
+    id: string;
+    full_name: string;
+    phone: string | null;
+    licence_number: string | null;
+    employee_code: string | null;
+    status: string;
+  } | null;
+  fleet?: {
+    id: string;
+    number: string;
+    capacity: number;
+    status: string;
+  } | null;
+  depot?: { id: string; name: string; merchant_code: string } | null;
+  device?: {
+    id: string;
+    serial_number: string;
+    device_name: string | null;
+    device_model: string | null;
+    paired?: boolean;
+    last_seen?: Date | null;
+  } | null;
+  route?: { id: string; origin: string; destination: string } | null;
+  tickets: Array<{
+    id: string;
+    serial_number: number | null;
+    ticket_category: string;
+    currency: string;
+    amount: { toString(): string } | number;
+    luggage_amount?: { toString(): string } | number | null;
+    departure: string | null;
+    destination: string | null;
+    passenger_name: string | null;
+    passenger_phone: string | null;
+    luggage_description: string | null;
+    printed?: boolean;
+    printed_at?: Date | null;
+    printer_name?: string | null;
+    printer_mac?: string | null;
+    printer_serial?: string | null;
+    issued_at: Date;
+    voids: Array<{
+      id: string;
+      reason: string;
+      created_at: Date;
+      agent_id: string | null;
+      device_id: string | null;
+      admin_user_id: string | null;
+    }>;
+  }>;
+};
+
+type TripPresenceContext = {
+  agentOpenSession?: {
+    id: string;
+    device?: { id: string; paired: boolean; last_seen: Date | null } | null;
+  } | null;
+  driverHasActiveTrip?: boolean;
+};
+
+export const formatTripDetail = (
+  trip: TripDetailRecord,
+  presence: TripPresenceContext = {},
+) => {
+  const mappedTickets = trip.tickets.map((ticket) => {
+    const isVoided = ticket.voids.length > 0;
+    return {
+      id: ticket.id,
+      serial_number: ticket.serial_number,
+      ticket_category: ticket.ticket_category,
+      currency: ticket.currency,
+      amount: Number(ticket.amount),
+      luggage_amount:
+        ticket.luggage_amount != null ? Number(ticket.luggage_amount) : null,
+      departure: ticket.departure,
+      destination: ticket.destination,
+      passenger_name: ticket.passenger_name,
+      passenger_phone: ticket.passenger_phone,
+      luggage_description: ticket.luggage_description,
+      printed: ticket.printed,
+      printed_at: ticket.printed_at ? ticket.printed_at.toISOString() : null,
+      printer_name: ticket.printer_name ?? null,
+      printer_mac: ticket.printer_mac ?? null,
+      printer_serial: ticket.printer_serial ?? null,
+      issued_at: ticket.issued_at.toISOString(),
+      is_voided: isVoided,
+      voids: ticket.voids.map((v) => ({
+        id: v.id,
+        reason: v.reason,
+        created_at: v.created_at.toISOString(),
+        agent_id: v.agent_id,
+        device_id: v.device_id,
+        admin_user_id: v.admin_user_id,
+      })),
+    };
+  });
+
+  const validTickets = mappedTickets.filter((t) => !t.is_voided);
+  const voidedCount = mappedTickets.length - validTickets.length;
+  const totalRevenue = validTickets.reduce((sum, t) => sum + t.amount, 0);
+  const revenueByCurrency = validTickets.reduce<Record<string, number>>(
+    (acc, t) => {
+      acc[t.currency] = (acc[t.currency] ?? 0) + t.amount;
+      return acc;
+    },
+    {},
+  );
+  const categoryCounts = validTickets.reduce<Record<string, number>>(
+    (acc, t) => {
+      acc[t.ticket_category] = (acc[t.ticket_category] ?? 0) + 1;
+      return acc;
+    },
+    {},
+  );
+
+  const status = trip.status === 'COMPLETED' ? 'ENDED' : trip.status;
+  const durationMs = (trip.ended_at ?? new Date()).getTime() - trip.started_at.getTime();
+
+  const sessionDevice = presence.agentOpenSession?.device;
+  const conductorOnline = isDeviceOnline({
+    paired: Boolean(sessionDevice?.paired),
+    lastSeen: sessionDevice?.last_seen ?? null,
+    hasOpenSession: Boolean(presence.agentOpenSession),
+  });
+  const conductor_presence = presence.agentOpenSession
+    ? conductorOnline
+      ? 'online'
+      : 'offline'
+    : 'signed_out';
+
+  const driverAccount = trip.driver?.status ?? null;
+  const driver_duty_status = !trip.driver
+    ? null
+    : driverAccount !== 'ACTIVE'
+      ? 'off_duty'
+      : presence.driverHasActiveTrip || status === 'ACTIVE'
+        ? 'on_trip'
+        : 'available';
+
+  const devicePaired = Boolean(trip.device?.paired);
+  const deviceOnline = isDeviceOnline({
+    paired: devicePaired,
+    lastSeen: trip.device?.last_seen ?? null,
+    // Device presence on a trip: treat recent last_seen as online when paired.
+    hasOpenSession: devicePaired,
+  });
+  const device_presence = !trip.device
+    ? null
+    : !devicePaired
+      ? 'unpaired'
+      : deviceOnline
+        ? 'online'
+        : 'offline';
+
+  return {
+    id: trip.id,
+    depot_id: trip.depot_id,
+    depot_name: trip.depot?.name ?? null,
+    depot_merchant_code: trip.depot?.merchant_code ?? null,
+    agent_id: trip.agent_id,
+    agent_name: trip.agent?.full_name ?? null,
+    agent_code: trip.agent?.agent_code ?? null,
+    agent_username: trip.agent?.username ?? null,
+    agent_status: trip.agent?.status ?? null,
+    conductor_presence,
+    conductor_is_online: conductorOnline,
+    driver_id: trip.driver_id,
+    driver_name: trip.driver?.full_name ?? null,
+    driver_phone: trip.driver?.phone ?? null,
+    driver_licence: trip.driver?.licence_number ?? null,
+    driver_employee_code: trip.driver?.employee_code ?? null,
+    driver_status: driverAccount,
+    driver_duty_status,
+    fleet_id: trip.fleet_id,
+    fleet_number: trip.fleet?.number ?? null,
+    fleet_registration_number: trip.fleet?.registration_number ?? null,
+    fleet_capacity: trip.fleet?.capacity ?? null,
+    fleet_status: trip.fleet?.status ?? null,
+    device_id: trip.device_id,
+    device_serial: trip.device?.serial_number ?? null,
+    device_name: trip.device?.device_name ?? null,
+    device_model: trip.device?.device_model ?? null,
+    device_paired: trip.device ? devicePaired : null,
+    device_last_seen: trip.device?.last_seen
+      ? trip.device.last_seen.toISOString()
+      : null,
+    device_presence,
+    route_id: trip.route_id,
+    origin: trip.origin,
+    destination: trip.destination,
+    route_label: `${trip.origin} → ${trip.destination}`,
+    route_origin: trip.route?.origin ?? null,
+    route_destination: trip.route?.destination ?? null,
+    status,
+    started_at: trip.started_at.toISOString(),
+    ended_at: trip.ended_at ? trip.ended_at.toISOString() : null,
+    started_offline: trip.started_offline,
+    duration_ms: durationMs,
+    ticket_count: validTickets.length,
+    voided_ticket_count: voidedCount,
+    total_revenue: totalRevenue,
+    revenue_by_currency: revenueByCurrency,
+    category_counts: categoryCounts,
+    tickets: mappedTickets,
+    created_at: trip.created_at.toISOString(),
+    updated_at: trip.updated_at.toISOString(),
+  };
 };
 
 export const getTripTotals = async (tripId: string) => {
@@ -86,7 +405,11 @@ export const listTrips = async (depotId?: string, filters?: {
   if (depotId) where.depot_id = depotId;
   
   if (filters?.status) {
-    where.status = filters.status;
+    if (filters.status === 'ENDED') {
+      where.status = { in: ['ENDED', 'COMPLETED'] };
+    } else {
+      where.status = filters.status;
+    }
   }
   if (filters?.agent_id) {
     where.agent_id = filters.agent_id;

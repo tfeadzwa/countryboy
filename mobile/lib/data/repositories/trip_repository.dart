@@ -49,6 +49,12 @@ class TripRepository {
       final agentId = agent['id']?.toString();
       if (agentId == null || agentId.isEmpty) return null;
 
+      // When online, prefer server truth so cashier/admin end closes local issue flow.
+      if (await _connectivity.checkReachability() &&
+          await _storage.hasOnlineAuth()) {
+        await reconcileActiveTripFromServer();
+      }
+
       final local = await _db.getActiveTrip(agentId);
       if (local != null) {
         final stats = await _loadTripStats(local.id);
@@ -58,31 +64,51 @@ class TripRepository {
         );
       }
 
-      if (await _connectivity.checkReachability() &&
-          await _storage.hasOnlineAuth()) {
-        try {
-          final remote = await _api.getActiveTrip();
-          if (remote == null) return null;
-          await _saveRemoteTripToLocal(remote);
-          return _mapRemoteTrip(remote);
-        } catch (_) {}
-      }
       return null;
     } catch (_) {
       return null;
     }
   }
 
-  /// Pulls the server's active trip into local storage after sign-in.
-  Future<void> syncActiveTripFromServer() async {
-    if (!await _connectivity.checkReachability() || !await _storage.hasOnlineAuth()) return;
+  /// Aligns local ACTIVE trip with `/agents/trips/active`.
+  /// Clears local ACTIVE when the cashier/admin has ended the trip on the server.
+  Future<void> reconcileActiveTripFromServer() async {
+    if (!await _connectivity.checkReachability() ||
+        !await _storage.hasOnlineAuth()) {
+      return;
+    }
+
+    final agent = await _storage.getAgentProfile();
+    final agentId = agent?['id']?.toString();
+    if (agentId == null || agentId.isEmpty) return;
+
     try {
       final remote = await _api.getActiveTrip();
-      if (remote != null) {
-        await _saveRemoteTripToLocal(remote);
+      if (remote == null) {
+        await _db.markAgentActiveTripsEnded(agentId);
+        return;
       }
-    } catch (_) {}
+
+      final remoteStatus = (remote['status'] as String?) ?? 'ACTIVE';
+      if (remoteStatus != 'ACTIVE') {
+        await _saveRemoteTripToLocal(remote);
+        await _db.markAgentActiveTripsEnded(agentId);
+        return;
+      }
+
+      final remoteId = remote['id'] as String;
+      final localActive = await _db.getActiveTrip(agentId);
+      if (localActive != null && localActive.id != remoteId) {
+        await _db.markTripEnded(localActive.id);
+      }
+      await _saveRemoteTripToLocal(remote);
+    } catch (_) {
+      // Keep local trip if reconcile fails (offline blip / auth).
+    }
   }
+
+  /// Pulls the server's active trip into local storage after sign-in.
+  Future<void> syncActiveTripFromServer() => reconcileActiveTripFromServer();
 
   Future<TripModel?> getTripById(String id) async {
     final local = await _db.getTripById(id);
@@ -105,6 +131,9 @@ class TripRepository {
   Future<TripModel> startTrip({
     required String fleetId,
     required String fleetNumber,
+    String? fleetRegistrationNumber,
+    required String driverId,
+    required String driverName,
     required String origin,
     required String destination,
   }) async {
@@ -150,6 +179,9 @@ class TripRepository {
         startedOffline: Value(offline),
         startedAt: startedAt,
         fleetNumber: Value(fleetNumber),
+        fleetRegistrationNumber: Value(fleetRegistrationNumber),
+        driverId: Value(driverId),
+        driverName: Value(driverName),
         routeOrigin: Value(origin),
         routeDestination: Value(destination),
         syncStatus: Value(offline ? 'pending' : 'syncing'),
@@ -159,6 +191,7 @@ class TripRepository {
     final syncPayload = {
       'id': tripId,
       'fleet_id': fleetId,
+      'driver_id': driverId,
       'origin': origin,
       'destination': destination,
       'device_id': deviceId,
@@ -187,6 +220,9 @@ class TripRepository {
         status: 'ACTIVE',
         startedAt: startedAt,
         fleetNumber: fleetNumber,
+        fleetRegistrationNumber: fleetRegistrationNumber,
+        driverId: driverId,
+        driverName: driverName,
         routeOrigin: origin,
         routeDestination: destination,
         syncStatus: 'pending',
@@ -197,6 +233,7 @@ class TripRepository {
       final response = await _api.startTrip(
         tripId: tripId,
         fleetId: fleetId,
+        driverId: driverId,
         origin: origin,
         destination: destination,
         deviceId: deviceId,
@@ -216,6 +253,13 @@ class TripRepository {
           status: const Value('ACTIVE'),
           startedAt: startedAt,
           fleetNumber: Value(fleetNumber),
+          fleetRegistrationNumber: Value(fleetRegistrationNumber),
+          driverId: Value(
+            trip['driver_id'] as String? ?? driverId,
+          ),
+          driverName: Value(
+            (trip['driver'] as Map?)?['full_name'] as String? ?? driverName,
+          ),
           routeOrigin: Value(origin),
           routeDestination: Value(destination),
           syncStatus: const Value('synced'),
@@ -226,7 +270,9 @@ class TripRepository {
         await (_db.delete(_db.localTrips)..where((t) => t.id.equals(tripId))).go();
       }
 
-      return _mapRemoteTrip(trip);
+      return _mapRemoteTrip(trip).copyWith(
+        fleetRegistrationNumber: fleetRegistrationNumber,
+      );
     } catch (e) {
       final apiError = asApiError(e);
       if (apiError?.statusCode == 409) {
@@ -275,6 +321,9 @@ class TripRepository {
         status: 'ACTIVE',
         startedAt: startedAt,
         fleetNumber: fleetNumber,
+        fleetRegistrationNumber: fleetRegistrationNumber,
+        driverId: driverId,
+        driverName: driverName,
         routeOrigin: origin,
         routeDestination: destination,
         syncStatus: 'pending',
@@ -296,70 +345,16 @@ class TripRepository {
   }
 
   Future<TripEndSummary> endTrip(String tripId) async {
-    final trip = await _db.getTripById(tripId);
-    if (trip == null) throw ApiError(message: 'Trip not found.');
-
-    final tickets = await _db.getAllTickets(tripId: tripId);
-    final localTicketCount = tickets.length;
-    final localRevenue = tickets.fold<double>(0, (sum, t) => sum + t.amount);
-    final currency = tickets.isNotEmpty ? tickets.first.currency : 'USD';
-
-    await _db.completeTrip(tripId);
-    final endedAt = DateTime.now();
-
-    var syncStatus = 'synced';
-    var totalTickets = localTicketCount;
-    var totalRevenue = localRevenue;
-
-    if (await _connectivity.checkReachability() && await _storage.hasOnlineAuth()) {
-      try {
-        final response = await _api.endTrip(tripId);
-        final result = response['trip'] as Map<String, dynamic>;
-        totalTickets = result['total_tickets'] as int? ?? localTicketCount;
-        totalRevenue =
-            (result['total_revenue'] as num?)?.toDouble() ?? localRevenue;
-        await _db.updateTripSyncStatus(tripId, 'synced');
-      } catch (_) {
-        syncStatus = 'pending';
-        await _enqueueEndTrip(tripId);
-      }
-    } else {
-      syncStatus = 'pending';
-      await _enqueueEndTrip(tripId);
-    }
-
-    final routeLabel = trip.routeOrigin != null && trip.routeDestination != null
-        ? '${trip.routeOrigin} -> ${trip.routeDestination}'
-        : 'Route';
-
-    return TripEndSummary(
-      tripId: tripId,
-      routeLabel: routeLabel,
-      fleetNumber: trip.fleetNumber ?? '—',
-      startedAt: trip.startedAt,
-      endedAt: endedAt,
-      totalTickets: totalTickets,
-      totalRevenue: totalRevenue,
-      currency: currency,
-      syncStatus: syncStatus,
+    throw ApiError(
+      message:
+          'Conductors cannot end trips. Ask the depot cashier to close this trip from the admin console.',
     );
   }
 
   Future<void> endTripOnServer(String tripId) async {
-    await _api.endTrip(tripId);
-  }
-
-  Future<void> _enqueueEndTrip(String tripId) async {
-    await _db.updateTripSyncStatus(tripId, 'pending');
-    await _db.enqueueSync(
-      SyncQueueItemsCompanion.insert(
-        entityType: 'trip',
-        entityId: tripId,
-        operation: 'END_TRIP',
-        payloadJson: jsonEncode({'id': tripId}),
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      ),
+    throw ApiError(
+      message:
+          'Conductors cannot end trips. Ask the depot cashier to close this trip from the admin console.',
     );
   }
 
@@ -376,11 +371,17 @@ class TripRepository {
     if (depotId == null) return;
 
     final fleet = json['fleet'] as Map<String, dynamic>?;
+    final driver = json['driver'] as Map<String, dynamic>?;
     final route = json['route'] as Map<String, dynamic>?;
     final origin =
         (json['origin'] as String?) ?? (route?['origin'] as String?);
     final destination =
         (json['destination'] as String?) ?? (route?['destination'] as String?);
+    final endedRaw = json['ended_at'];
+    DateTime? endedAt;
+    if (endedRaw is String && endedRaw.isNotEmpty) {
+      endedAt = DateTime.tryParse(endedRaw);
+    }
 
     await _db.upsertTrip(
       LocalTripsCompanion.insert(
@@ -392,7 +393,13 @@ class TripRepository {
         depotId: depotId,
         status: Value(json['status'] as String? ?? 'ACTIVE'),
         startedAt: DateTime.parse(json['started_at'] as String),
+        endedAt: Value(endedAt),
         fleetNumber: Value(fleet?['number'] as String?),
+        fleetRegistrationNumber: Value(
+          fleet?['registration_number'] as String?,
+        ),
+        driverId: Value(json['driver_id'] as String? ?? driver?['id'] as String?),
+        driverName: Value(driver?['full_name'] as String?),
         routeOrigin: Value(origin),
         routeDestination: Value(destination),
         syncStatus: const Value('synced'),
@@ -409,6 +416,9 @@ class TripRepository {
         status: t.status,
         startedAt: t.startedAt,
         fleetNumber: t.fleetNumber,
+        fleetRegistrationNumber: t.fleetRegistrationNumber,
+        driverId: t.driverId,
+        driverName: t.driverName,
         routeOrigin: t.routeOrigin,
         routeDestination: t.routeDestination,
         syncStatus: t.syncStatus.isEmpty ? 'pending' : t.syncStatus,
@@ -416,6 +426,7 @@ class TripRepository {
 
   TripModel _mapRemoteTrip(Map<String, dynamic> json) {
     final fleet = json['fleet'] as Map<String, dynamic>?;
+    final driver = json['driver'] as Map<String, dynamic>?;
     final route = json['route'] as Map<String, dynamic>?;
     final origin =
         (json['origin'] as String?) ?? (route?['origin'] as String?);
@@ -429,7 +440,11 @@ class TripRepository {
       deviceId: json['device_id'] as String?,
       status: json['status'] as String? ?? 'ACTIVE',
       startedAt: DateTime.parse(json['started_at'] as String),
-      fleetNumber: fleet?['number'] as String?,
+      fleetNumber: fleet?['number'] as String? ?? json['fleet_number'] as String?,
+      fleetRegistrationNumber: fleet?['registration_number'] as String? ??
+          json['fleet_registration_number'] as String?,
+      driverId: json['driver_id'] as String? ?? driver?['id'] as String?,
+      driverName: driver?['full_name'] as String?,
       routeOrigin: origin,
       routeDestination: destination,
       ticketsCount: json['tickets_count'] as int? ?? 0,

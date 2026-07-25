@@ -13,12 +13,14 @@ export interface FleetComplianceDates {
 
 export interface CreateFleetRequest extends FleetComplianceDates {
   number: string;
+  registration_number?: string | null;
   status?: 'ACTIVE' | 'MAINTENANCE' | 'OUT_OF_SERVICE' | 'RETIRED';
   capacity?: number;
 }
 
 export interface UpdateFleetRequest extends FleetComplianceDates {
   number?: string;
+  registration_number?: string | null;
   status?: 'ACTIVE' | 'MAINTENANCE' | 'OUT_OF_SERVICE' | 'RETIRED';
   capacity?: number;
 }

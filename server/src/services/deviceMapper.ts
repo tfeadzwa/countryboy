@@ -1,3 +1,5 @@
+import { isDeviceOnline } from '../constants/presence';
+
 const agentSummary = (agent?: {
   id: string;
   full_name: string;
@@ -22,6 +24,9 @@ export const mapDeviceRecord = (
     depot_id: string;
     device_name?: string | null;
     device_model?: string | null;
+    printer_name?: string | null;
+    printer_mac?: string | null;
+    printer_serial?: string | null;
     last_seen: Date | null;
     last_agent_id?: string | null;
     last_agent_login_at?: Date | null;
@@ -63,18 +68,28 @@ export const mapDeviceRecord = (
     agentSummary(device.lastAgent) ??
     (device.paired ? agentSummary(latestSession?.agent) : null);
 
+  const paired = Boolean(device.paired);
+  const online = isDeviceOnline({
+    paired,
+    lastSeen: device.last_seen,
+    hasOpenSession: Boolean(openSession),
+  });
+
   return {
     id: device.id,
     serial_number: device.serial_number,
     ...(options?.includeToken ? { token: device.token } : {}),
     // Never expose pairing codes for paired devices.
-    pairing_code: device.paired ? null : device.pairing_code ?? null,
-    paired: Boolean(device.paired),
+    pairing_code: paired ? null : device.pairing_code ?? null,
+    paired,
     paired_at: device.paired_at ? device.paired_at.toISOString() : null,
     depot_id: device.depot_id,
     depot_name: device.depot?.name ?? null,
     device_name: device.device_name,
     device_model: device.device_model,
+    printer_name: device.printer_name ?? null,
+    printer_mac: device.printer_mac ?? null,
+    printer_serial: device.printer_serial ?? null,
     last_seen: device.last_seen ? device.last_seen.toISOString() : null,
     last_agent_id: device.last_agent_id,
     last_agent_login_at: device.last_agent_login_at
@@ -89,6 +104,10 @@ export const mapDeviceRecord = (
           agent: agentSummary(openSession.agent),
         }
       : null,
+    /** True when an open session exists and last_seen is within the heartbeat window. */
+    is_online: online,
+    /** online | offline (signed in but stale) | null (no open session). */
+    conductor_status: openSession ? (online ? 'online' : 'offline') : null,
     app_version: device.app_version,
     sync_errors: device.sync_errors,
     created_at: device.created_at.toISOString(),

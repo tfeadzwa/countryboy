@@ -24,10 +24,10 @@ export const agents: Agent[] = [
 ];
 
 export const fleets: Fleet[] = [
-  { id: "f1", number: "FL-001", capacity: 65, depot_id: "d1", depot_name: "Harare Central", status: "ACTIVE", created_at: "2025-01-16", updated_at: "2025-01-16" },
-  { id: "f2", number: "FL-002", capacity: 45, depot_id: "d1", depot_name: "Harare Central", status: "ACTIVE", created_at: "2025-01-17", updated_at: "2025-01-17" },
-  { id: "f3", number: "FL-003", capacity: 65, depot_id: "d2", depot_name: "Bulawayo Main", status: "OUT_OF_SERVICE", created_at: "2025-01-22", updated_at: "2025-01-22" },
-  { id: "f4", number: "FL-004", capacity: 30, depot_id: "d3", depot_name: "Mutare Depot", status: "ACTIVE", created_at: "2025-02-03", updated_at: "2025-02-03" },
+  { id: "f1", number: "FL-001", registration_number: "ABC 1234", capacity: 65, depot_id: "d1", depot_name: "Harare Central", status: "ACTIVE", created_at: "2025-01-16", updated_at: "2025-01-16" },
+  { id: "f2", number: "FL-002", registration_number: "ABC 5678", capacity: 45, depot_id: "d1", depot_name: "Harare Central", status: "ACTIVE", created_at: "2025-01-17", updated_at: "2025-01-17" },
+  { id: "f3", number: "FL-003", registration_number: "BYO 9012", capacity: 65, depot_id: "d2", depot_name: "Bulawayo Main", status: "OUT_OF_SERVICE", created_at: "2025-01-22", updated_at: "2025-01-22" },
+  { id: "f4", number: "FL-004", registration_number: "MUT 3456", capacity: 30, depot_id: "d3", depot_name: "Mutare Depot", status: "ACTIVE", created_at: "2025-02-03", updated_at: "2025-02-03" },
 ];
 
 export const routes: RouteInfo[] = [

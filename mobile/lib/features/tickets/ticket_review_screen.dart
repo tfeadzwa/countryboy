@@ -49,7 +49,11 @@ class _TicketReviewScreenState extends ConsumerState<TicketReviewScreen> {
             luggageAmount: draft.luggageAmount,
             luggageDescription: draft.luggageDescription,
           );
-      final result = TicketIssueResult(trip: draft.trip, single: ticket);
+      final result = TicketIssueResult(
+        trip: draft.trip,
+        single: ticket,
+        draft: draft,
+      );
 
       ref.invalidate(homeDashboardProvider);
 

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/config/app_colors.dart';
 import '../../core/config/app_spacing.dart';
 import '../../core/connectivity/connectivity_service.dart';
+import '../../core/connectivity/online_sync_lifecycle.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/trip_repository.dart';
 import '../../domain/models/models.dart';
@@ -13,6 +14,9 @@ import '../../services/sync_service.dart';
 import '../../shared/widgets/widgets.dart';
 
 final homeDashboardProvider = FutureProvider<_DashboardData>((ref) async {
+  // Refresh when reconnect lifecycle bumps trip session (cashier end, etc.).
+  ref.watch(tripSessionRevisionProvider);
+
   AgentProfile? agent;
   TripModel? trip;
   var pending = 0;
@@ -188,18 +192,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 _HomeActionTile(
                   icon: Icons.play_circle_outline,
                   title: 'Start Trip',
-                  subtitle: 'Select bus and route to begin',
+                  subtitle: 'Select bus, driver and corridor',
                   emphasized: true,
                   onTap: () => context.push('/trips/start'),
                 ),
                 const SizedBox(height: AppSpacing.sm),
               ] else ...[
-                _HomeActionTile(
-                  icon: Icons.stop_circle_outlined,
-                  title: 'End Trip',
+                _HomeInfoTile(
+                  icon: Icons.schedule_outlined,
+                  title: 'Trip in progress',
                   subtitle:
-                      '${trip.ticketsCount} tickets · ${trip.totalRevenue.toStringAsFixed(2)}',
-                  onTap: () => context.push('/trips/end'),
+                      'The depot cashier closes this trip from the admin console.',
                 ),
                 const SizedBox(height: AppSpacing.sm),
               ],
@@ -539,6 +542,64 @@ class _MiniStat extends StatelessWidget {
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeInfoTile extends StatelessWidget {
+  const _HomeInfoTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMuted,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.brandGold.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            ),
+            child: Icon(icon, color: AppColors.brandGold, size: 26),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

@@ -4,6 +4,7 @@ import bcrypt from '../lib/bcrypt';
 import jwt from 'jsonwebtoken';
 import { touchDeviceActivity } from './agentSessionService';
 import { ensureRoute } from './routeService';
+import { isDeviceOnline } from '../constants/presence';
 
 export const listAgents = async (
   depotId?: string,
@@ -12,6 +13,7 @@ export const listAgents = async (
   const where: Prisma.tblAgentsWhereInput = {};
   if (depotId) where.depot_id = depotId;
 
+  // Load full depot set first so presence/trip ranking can be applied before pagination.
   const agents = await prisma.tblAgents.findMany({
     where,
     include: {
@@ -23,14 +25,126 @@ export const listAgents = async (
       },
     },
     orderBy: [{ full_name: 'asc' }],
-    ...(pagination ? { skip: pagination.skip, take: pagination.limit } : {}),
   });
 
-  return agents.map((agent) => ({
-    ...agent,
-    merchant_code: agent.depot.merchant_code,
-    depot_name: agent.depot.name,
-  }));
+  if (agents.length === 0) return [];
+
+  const agentIds = agents.map((a) => a.id);
+
+  const [openSessions, activeTrips] = await Promise.all([
+    prisma.tblAgentDeviceSessions.findMany({
+      where: { agent_id: { in: agentIds }, ended_at: null },
+      orderBy: { started_at: 'desc' },
+      include: {
+        device: {
+          select: {
+            id: true,
+            serial_number: true,
+            last_seen: true,
+            paired: true,
+          },
+        },
+      },
+    }),
+    prisma.tblTrips.findMany({
+      where: { agent_id: { in: agentIds }, status: 'ACTIVE' },
+      include: {
+        fleet: { select: { id: true, number: true, registration_number: true } },
+        driver: { select: { id: true, full_name: true } },
+        route: { select: { id: true, origin: true, destination: true } },
+      },
+    }),
+  ]);
+
+  const sessionByAgent = new Map<string, (typeof openSessions)[number]>();
+  for (const session of openSessions) {
+    if (!sessionByAgent.has(session.agent_id)) {
+      sessionByAgent.set(session.agent_id, session);
+    }
+  }
+
+  const tripByAgent = new Map<string, (typeof activeTrips)[number]>();
+  for (const trip of activeTrips) {
+    tripByAgent.set(trip.agent_id, trip);
+  }
+
+  const enriched = agents.map((agent) => {
+    const session = sessionByAgent.get(agent.id);
+    const trip = tripByAgent.get(agent.id);
+    const online = isDeviceOnline({
+      paired: Boolean(session?.device?.paired),
+      lastSeen: session?.device?.last_seen ?? null,
+      hasOpenSession: Boolean(session),
+    });
+
+    return {
+      ...agent,
+      merchant_code: agent.depot.merchant_code,
+      depot_name: agent.depot.name,
+      is_online: online,
+      conductor_status: session ? (online ? 'online' : 'offline') : null,
+      last_seen: session?.device?.last_seen
+        ? session.device.last_seen.toISOString()
+        : null,
+      active_session: session
+        ? {
+            id: session.id,
+            device_id: session.device_id,
+            device_serial: session.device?.serial_number ?? null,
+            started_at: session.started_at.toISOString(),
+            login_type: session.login_type,
+          }
+        : null,
+      active_trip: trip
+        ? {
+            id: trip.id,
+            origin: trip.origin,
+            destination: trip.destination,
+            fleet_id: trip.fleet_id,
+            fleet_number: trip.fleet?.number ?? null,
+            driver_id: trip.driver_id,
+            driver_name: trip.driver?.full_name ?? null,
+            route_id: trip.route_id,
+            route_origin: trip.route?.origin ?? null,
+            route_destination: trip.route?.destination ?? null,
+            started_at: trip.started_at.toISOString(),
+            started_offline: trip.started_offline,
+          }
+        : null,
+    };
+  });
+
+  enriched.sort((a, b) => {
+    const rank = (agent: (typeof enriched)[number]) => {
+      const onTrip = Boolean(agent.active_trip);
+      const online = agent.conductor_status === 'online' || agent.is_online;
+      const offline = agent.conductor_status === 'offline' || Boolean(agent.active_session);
+      if (onTrip && online) return 0;
+      if (onTrip) return 1;
+      if (online) return 2;
+      if (offline) return 3;
+      return 4;
+    };
+
+    const rankDiff = rank(a) - rank(b);
+    if (rankDiff !== 0) return rankDiff;
+
+    const aTrip = a.active_trip?.started_at ? Date.parse(a.active_trip.started_at) : 0;
+    const bTrip = b.active_trip?.started_at ? Date.parse(b.active_trip.started_at) : 0;
+    if (aTrip !== bTrip) return bTrip - aTrip;
+
+    const aSeen = a.last_seen ? Date.parse(a.last_seen) : 0;
+    const bSeen = b.last_seen ? Date.parse(b.last_seen) : 0;
+    if (aSeen !== bSeen) return bSeen - aSeen;
+
+    return a.full_name.localeCompare(b.full_name);
+  });
+
+  if (pagination) {
+    return enriched.slice(pagination.skip, pagination.skip + pagination.limit);
+  }
+
+  return enriched;
 };
 
 export const countAgents = async (depotId?: string): Promise<number> => {
@@ -437,8 +551,8 @@ export const startAgentTrip = async (data: {
           agent: {
             select: { id: true, full_name: true, agent_code: true },
           },
-          fleet: { select: { id: true, number: true } },
-          driver: { select: { id: true, full_name: true, employee_code: true } },
+          fleet: { select: { id: true, number: true, registration_number: true } },
+          driver: { select: { id: true, full_name: true } },
           route: { select: { id: true, origin: true, destination: true } },
         },
       });
@@ -515,7 +629,6 @@ export const startAgentTrip = async (data: {
         select: {
           id: true,
           full_name: true,
-          employee_code: true,
         }
       },
       route: {
@@ -666,7 +779,6 @@ export const getAgentActiveTrip = async (agentId: string) => {
         select: {
           id: true,
           full_name: true,
-          employee_code: true,
         }
       },
       route: {

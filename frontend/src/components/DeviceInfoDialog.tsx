@@ -22,6 +22,7 @@ import {
   RefreshCw,
   Pencil,
   Trash2,
+  Printer,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -472,6 +473,15 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated, onDeleted }: 
     ...(paired && device.device_model
       ? [{ label: "Model", value: device.device_model, icon: Smartphone }]
       : []),
+    ...(paired && device.printer_name
+      ? [{ label: "Printer", value: device.printer_name, icon: Printer }]
+      : []),
+    ...(paired && device.printer_mac
+      ? [{ label: "Printer MAC", value: device.printer_mac, icon: Printer, mono: true, copyable: true }]
+      : []),
+    ...(paired && device.printer_serial
+      ? [{ label: "Printer Serial", value: device.printer_serial, icon: Printer, mono: true, copyable: true }]
+      : []),
     ...(paired && device.app_version
       ? [{ label: "App Version", value: device.app_version, icon: Activity }]
       : []),
@@ -570,10 +580,41 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated, onDeleted }: 
             )}
 
             {device.active_session?.agent && (
-              <div className="rounded-lg border border-success/25 bg-success/5 p-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <Activity className="h-3.5 w-3.5 text-success" />
-                  <p className="text-xs font-medium text-success uppercase tracking-wide">Active session</p>
+              <div
+                className={`rounded-lg border p-3 ${
+                  device.is_online || device.conductor_status === "online"
+                    ? "border-success/25 bg-success/5"
+                    : "border-border/80 bg-muted/20"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-2">
+                    <Activity
+                      className={`h-3.5 w-3.5 ${
+                        device.is_online || device.conductor_status === "online"
+                          ? "text-success"
+                          : "text-muted-foreground"
+                      }`}
+                    />
+                    <p
+                      className={`text-xs font-medium uppercase tracking-wide ${
+                        device.is_online || device.conductor_status === "online"
+                          ? "text-success"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      Signed-in conductor
+                    </p>
+                  </div>
+                  <Badge
+                    className={`text-xs uppercase tracking-wide ${
+                      device.is_online || device.conductor_status === "online"
+                        ? "bg-success/10 text-success border border-success/20"
+                        : "bg-muted text-muted-foreground border border-border"
+                    }`}
+                  >
+                    {device.is_online || device.conductor_status === "online" ? "Online" : "Offline"}
+                  </Badge>
                 </div>
                 <p className="text-sm font-semibold">
                   {device.active_session.agent.full_name}{" "}
@@ -583,6 +624,9 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated, onDeleted }: 
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Since {new Date(device.active_session.started_at).toLocaleString()}
+                  {device.last_seen
+                    ? ` · last seen ${new Date(device.last_seen).toLocaleString()}`
+                    : ""}
                 </p>
               </div>
             )}

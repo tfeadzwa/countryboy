@@ -49,6 +49,10 @@ export const mapSession = (session: {
     : undefined,
 });
 
+/**
+ * Bump device last_seen (and optionally last_agent_id) without treating it as a new sign-in.
+ * Used by sync, trips, and heartbeats.
+ */
 export const touchDeviceActivity = async (
   deviceId: string,
   agentId?: string,
@@ -58,14 +62,72 @@ export const touchDeviceActivity = async (
     where: { id: deviceId },
     data: {
       last_seen: now,
-      ...(agentId
+      ...(agentId ? { last_agent_id: agentId } : {}),
+    },
+  });
+};
+
+const cleanPrinterField = (value: unknown): string | null | undefined => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+/** Heartbeat from a signed-in conductor — refreshes presence and optional printer identity. */
+export const recordAgentHeartbeat = async (params: {
+  deviceId: string;
+  agentId: string;
+  printerName?: string | null;
+  printerMac?: string | null;
+  printerSerial?: string | null;
+}) => {
+  const { deviceId, agentId } = params;
+  const openSession = await prisma.tblAgentDeviceSessions.findFirst({
+    where: {
+      device_id: deviceId,
+      agent_id: agentId,
+      ended_at: null,
+    },
+    orderBy: { started_at: 'desc' },
+  });
+
+  if (!openSession) {
+    return { ok: false as const, reason: 'no_active_session' as const };
+  }
+
+  const printerName = cleanPrinterField(params.printerName);
+  const printerMac = cleanPrinterField(params.printerMac);
+  const printerSerial = cleanPrinterField(params.printerSerial);
+  const hasPrinterUpdate =
+    printerName !== undefined ||
+    printerMac !== undefined ||
+    printerSerial !== undefined;
+
+  const now = new Date();
+  await prisma.tblDevices.update({
+    where: { id: deviceId },
+    data: {
+      last_seen: now,
+      last_agent_id: agentId,
+      ...(hasPrinterUpdate
         ? {
-            last_agent_id: agentId,
-            last_agent_login_at: now,
+            ...(printerName !== undefined ? { printer_name: printerName } : {}),
+            ...(printerMac !== undefined ? { printer_mac: printerMac } : {}),
+            ...(printerSerial !== undefined
+              ? { printer_serial: printerSerial }
+              : {}),
           }
         : {}),
     },
   });
+
+  return {
+    ok: true as const,
+    last_seen: now.toISOString(),
+    session_id: openSession.id,
+  };
 };
 
 export const closeOpenSessionsForDevice = async (

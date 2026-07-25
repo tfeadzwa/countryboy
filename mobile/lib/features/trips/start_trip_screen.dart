@@ -21,7 +21,9 @@ class StartTripScreen extends ConsumerStatefulWidget {
 
 class _StartTripScreenState extends ConsumerState<StartTripScreen> {
   List<FleetModel>? _fleets;
+  List<DriverModel>? _drivers;
   FleetModel? _selectedFleet;
+  DriverModel? _selectedDriver;
   final _originController = TextEditingController();
   final _destinationController = TextEditingController();
   bool _loading = true;
@@ -47,8 +49,15 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
       _error = null;
     });
     try {
-      final fleets = await ref.read(referenceRepositoryProvider).getFleets();
-      setState(() => _fleets = fleets);
+      final repo = ref.read(referenceRepositoryProvider);
+      final results = await Future.wait([
+        repo.getFleets(),
+        repo.getDrivers(),
+      ]);
+      setState(() {
+        _fleets = results[0] as List<FleetModel>;
+        _drivers = results[1] as List<DriverModel>;
+      });
     } on ApiError catch (e) {
       setState(() => _error = e.message);
     } finally {
@@ -59,6 +68,10 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
   Future<void> _start() async {
     if (_selectedFleet == null) {
       setState(() => _error = 'Select a bus');
+      return;
+    }
+    if (_selectedDriver == null) {
+      setState(() => _error = 'Select a driver');
       return;
     }
 
@@ -88,6 +101,9 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
       await ref.read(tripRepositoryProvider).startTrip(
             fleetId: _selectedFleet!.id,
             fleetNumber: _selectedFleet!.number,
+            fleetRegistrationNumber: _selectedFleet!.registrationNumber,
+            driverId: _selectedDriver!.id,
+            driverName: _selectedDriver!.fullName,
             origin: origin,
             destination: destination,
           );
@@ -106,6 +122,7 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final canPreview = _selectedFleet != null &&
+        _selectedDriver != null &&
         _originController.text.trim().length >= 2 &&
         _destinationController.text.trim().length >= 2;
 
@@ -125,13 +142,13 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Bus & corridor',
+                          'Bus, driver & corridor',
                           style: theme.textTheme.headlineMedium,
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
-                          'Pick the bus from your depot fleet, then type this '
-                          'trip’s origin and destination.',
+                          'Pick the bus and driver from your depot, then type '
+                          'this trip’s origin and destination.',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: AppColors.textSecondary,
                           ),
@@ -165,6 +182,31 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
                             if (picked != null && mounted) {
                               setState(() {
                                 _selectedFleet = picked;
+                                _error = null;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        SearchableSelectField(
+                          label: 'Driver',
+                          hint: 'Search and choose driver',
+                          valueText: _selectedDriver?.fullName,
+                          subtitle: _selectedDriver?.status,
+                          leadingIcon: Icons.person_rounded,
+                          onTap: () async {
+                            final drivers = _drivers ?? [];
+                            if (drivers.isEmpty) return;
+                            final picked = await showDriverPickerSheet(
+                              context: context,
+                              drivers: drivers,
+                              selected: _selectedDriver,
+                              title: 'Select driver',
+                              subtitle: 'Drivers from your depot only',
+                            );
+                            if (picked != null && mounted) {
+                              setState(() {
+                                _selectedDriver = picked;
                                 _error = null;
                               });
                             }
@@ -225,6 +267,7 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
                                 ),
                                 const SizedBox(height: AppSpacing.sm),
                                 Text('Bus: ${_selectedFleet!.number}'),
+                                Text('Driver: ${_selectedDriver!.fullName}'),
                                 Text(
                                   'Corridor: ${_originController.text.trim()}'
                                   '  →  ${_destinationController.text.trim()}',

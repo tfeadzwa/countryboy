@@ -33,7 +33,7 @@ export const list = async (req: AuthenticatedRequest, res: Response) => {
 
 export const create = async (req: AuthenticatedRequest, res: Response) => {
   const depotId = req.depotId as string;
-  const { full_name, employee_code, phone, licence_number, status } = req.body;
+  const { full_name, phone, licence_number, status } = req.body;
 
   if (!depotId) {
     return res.status(400).json({
@@ -44,13 +44,12 @@ export const create = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const driver = await driverService.createDriver(
       depotId,
-      { full_name, employee_code, phone, licence_number, status },
+      { full_name, phone, licence_number, status },
       req.user?.id,
     );
     res.status(201).json(driverService.formatDriverResponse(driver));
   } catch (err) {
     const friendly = formatPrismaError(err, {
-      employee_code,
       full_name,
     });
     if (friendly) {
