@@ -29,6 +29,7 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
   bool _loading = true;
   bool _submitting = false;
   String? _error;
+  String? _emptyHint;
 
   @override
   void initState() {
@@ -47,6 +48,7 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _emptyHint = null;
     });
     try {
       final repo = ref.read(referenceRepositoryProvider);
@@ -54,9 +56,15 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
         repo.getFleets(),
         repo.getDrivers(),
       ]);
+      final fleets = results[0] as List<FleetModel>;
+      final drivers = results[1] as List<DriverModel>;
       setState(() {
-        _fleets = results[0] as List<FleetModel>;
-        _drivers = results[1] as List<DriverModel>;
+        _fleets = fleets;
+        _drivers = drivers;
+        if (drivers.isEmpty) {
+          _emptyHint =
+              'No drivers registered for this depot yet. Ask an admin to add drivers.';
+        }
       });
     } on ApiError catch (e) {
       setState(() => _error = e.message);
@@ -161,6 +169,14 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
                               color: theme.colorScheme.error,
                             ),
                           ),
+                        ] else if (_emptyHint != null) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          Text(
+                            _emptyHint!,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
                         ],
                         const SizedBox(height: AppSpacing.xl),
                         SearchableSelectField(
@@ -171,7 +187,14 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
                           leadingIcon: Icons.directions_bus_rounded,
                           onTap: () async {
                             final fleets = _fleets ?? [];
-                            if (fleets.isEmpty) return;
+                            if (fleets.isEmpty) {
+                              setState(() {
+                                _error = null;
+                                _emptyHint =
+                                    'No buses available for this depot yet. Ask an admin to add fleets.';
+                              });
+                              return;
+                            }
                             final picked = await showFleetPickerSheet(
                               context: context,
                               fleets: fleets,
@@ -196,7 +219,14 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
                           leadingIcon: Icons.person_rounded,
                           onTap: () async {
                             final drivers = _drivers ?? [];
-                            if (drivers.isEmpty) return;
+                            if (drivers.isEmpty) {
+                              setState(() {
+                                _error = null;
+                                _emptyHint =
+                                    'No drivers registered for this depot yet. Ask an admin to add drivers.';
+                              });
+                              return;
+                            }
                             final picked = await showDriverPickerSheet(
                               context: context,
                               drivers: drivers,

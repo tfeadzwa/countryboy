@@ -204,13 +204,14 @@ class ReferenceRepository {
       if (await _canFetchFromApi()) {
         final drivers = await _api.getDrivers();
         await _cacheDrivers(drivers);
+        // Empty depot is valid — callers show a friendly empty state.
         return drivers;
       }
     } catch (_) {
       // Fall through to cache.
     }
     final cached = await _db.getCachedDrivers();
-    final active = cached
+    return cached
         .where((d) => d.status == 'ACTIVE')
         .map(
           (d) => DriverModel(
@@ -220,14 +221,6 @@ class ReferenceRepository {
           ),
         )
         .toList();
-    if (active.isEmpty) {
-      throw ApiError(
-        message: await _storage.hasOnlineAuth()
-            ? 'No drivers available. Ask admin to add drivers for your depot.'
-            : 'No drivers available offline. Sign in online after drivers are added.',
-      );
-    }
-    return active;
   }
 
   List<String> _decodeIdList(String? raw) {

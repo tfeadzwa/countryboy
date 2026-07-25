@@ -14,6 +14,7 @@ export const list = async (req: AuthenticatedRequest, res: Response) => {
         driverService.listDrivers(req.depotId, { skip, limit }),
         driverService.countDrivers(req.depotId),
       ]);
+      // Empty depot → 200 with empty items (never 404).
       return res.json(
         buildPaginatedResult(
           drivers.map(driverService.formatDriverResponse),

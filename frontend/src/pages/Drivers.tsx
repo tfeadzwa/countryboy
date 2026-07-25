@@ -117,7 +117,16 @@ const Drivers = () => {
       setTotal(data.total ?? 0);
       setTotalPages(data.totalPages ?? 1);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load drivers");
+      const message = err instanceof Error ? err.message : "Failed to load drivers";
+      // Empty depot / legacy "not found" responses should show the empty state, not an error.
+      if (/not found/i.test(message)) {
+        setDrivers([]);
+        setTotal(0);
+        setTotalPages(1);
+        setError(null);
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -202,6 +211,21 @@ const Drivers = () => {
         <div className="flex items-center justify-center py-16 text-muted-foreground">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           Loading drivers…
+        </div>
+      ) : total === 0 ? (
+        <div className="rounded-3xl border border-dashed border-border/80 bg-muted/20 px-6 py-16 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+            <UserRound className="h-6 w-6 text-primary" />
+          </div>
+          <p className="text-base font-semibold">No drivers yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Add drivers for this depot so conductors can assign them when starting a trip.
+          </p>
+          {canManage && (
+            <Button size="sm" className="mt-5 gap-2" onClick={() => setDialogOpen(true)}>
+              <Plus className="h-4 w-4" /> Add first driver
+            </Button>
+          )}
         </div>
       ) : (
         <div className="space-y-4">

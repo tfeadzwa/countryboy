@@ -109,11 +109,23 @@ class ReferenceApi {
   }
 
   Future<List<DriverModel>> getDrivers() async {
-    final response = await _dio.get<List<dynamic>>('/drivers');
-    return (response.data ?? [])
-        .map((e) => DriverModel.fromJson(e as Map<String, dynamic>))
-        .where((d) => (d.status ?? 'ACTIVE') == 'ACTIVE')
-        .toList();
+    try {
+      final response = await _dio.get<dynamic>('/drivers');
+      final raw = response.data;
+      final list = raw is List
+          ? raw
+          : (raw is Map && raw['items'] is List)
+              ? raw['items'] as List
+              : const <dynamic>[];
+      return list
+          .map((e) => DriverModel.fromJson(e as Map<String, dynamic>))
+          .where((d) => (d.status ?? 'ACTIVE') == 'ACTIVE')
+          .toList();
+    } on DioException catch (e) {
+      // Empty depot must never surface as a hard failure.
+      if (e.response?.statusCode == 404) return [];
+      rethrow;
+    }
   }
 
   Future<List<RouteModel>> getRoutes() async {
