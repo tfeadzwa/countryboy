@@ -107,11 +107,14 @@ const AddAgentDialog = ({ open, onOpenChange, onSuccess, agent }: AddAgentDialog
         if (isSuperAdminUser && selectedDepotId && selectedDepotId !== agent.depot_id) {
           agentData.depot_id = selectedDepotId;
         }
-        
-        // Pass depot_id for context (use new depot if changed, otherwise current depot)
-        const contextDepotId = isSuperAdminUser && selectedDepotId ? selectedDepotId : agent.depot_id;
-        const updatedAgent = await agentService.update(agent.id, agentData, contextDepotId);
-        
+
+        // Scope by the agent's *current* depot (new depot belongs in the body only).
+        const updatedAgent = await agentService.update(
+          agent.id,
+          agentData,
+          isSuperAdminUser ? agent.depot_id : undefined,
+        );
+
         // Pass credentials back to parent to show after update
         const credentials = {
           full_name: updatedAgent.full_name,

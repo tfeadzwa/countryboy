@@ -158,10 +158,12 @@ export const updateDriver = async (
   updatedBy?: string,
   depotId?: string,
 ): Promise<DriverWithDepot> => {
-  const existing = await prisma.tblDrivers.findFirst({
-    where: { id, ...(depotId ? { depot_id: depotId } : {}) },
-  });
+  const existing = await prisma.tblDrivers.findUnique({ where: { id } });
   if (!existing) {
+    throw new Error('Driver not found');
+  }
+  // Enforce depot scope against the driver's current depot (not the target depot).
+  if (depotId && existing.depot_id !== depotId) {
     throw new Error('Driver not found');
   }
 

@@ -109,9 +109,13 @@ const AddDriverDialog = ({ open, onOpenChange, onSuccess, driver }: AddDriverDia
         if (isSuperAdminUser && selectedDepotId && selectedDepotId !== driver.depot_id) {
           payload.depot_id = selectedDepotId;
         }
-        const contextDepotId =
-          isSuperAdminUser && selectedDepotId ? selectedDepotId : driver.depot_id;
-        await driverService.update(driver.id, payload, contextDepotId);
+        // Scope by the driver's *current* depot. Using the new depot here makes
+        // the server look up id+newDepot and return "Driver not found".
+        await driverService.update(
+          driver.id,
+          payload,
+          isSuperAdminUser ? driver.depot_id : undefined,
+        );
       } else {
         await driverService.create(
           {
