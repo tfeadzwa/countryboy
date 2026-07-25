@@ -329,23 +329,27 @@ const Agents = () => {
       );
     }
     return (
-      <button
-        type="button"
-        className="group/trip max-w-[260px] text-left"
-        onClick={(e) => {
-          e.stopPropagation();
-          navigate(`/trips/${trip.id}`);
-        }}
-      >
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-amber-800 ring-1 ring-inset ring-amber-500/30 group-hover/trip:bg-amber-500/25">
+      <div className="max-w-[260px] space-y-1.5">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-amber-800 ring-1 ring-inset ring-amber-500/30">
           <Bus className="h-3 w-3" />
           On trip
         </span>
-        <p className="mt-1 truncate text-[11px] text-muted-foreground group-hover/trip:text-foreground">
+        <p className="truncate text-[11px] text-muted-foreground">
           {trip.fleet_number ? `Bus ${trip.fleet_number} · ` : ""}
           {trip.origin} → {trip.destination}
         </p>
-      </button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 gap-1 text-xs"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/trips/${trip.id}`);
+          }}
+        >
+          <Eye className="h-3 w-3" /> View trip
+        </Button>
+      </div>
     );
   };
 
@@ -569,7 +573,7 @@ const Agents = () => {
                   <TableRow
                     key={a.id}
                     className="group cursor-pointer border-border/60 hover:bg-muted/40"
-                    onClick={() => openTrip(a)}
+                    onClick={() => setSelectedAgent(a)}
                   >
                     <TableCell className="py-3.5">
                       <div className="flex items-center gap-3">
@@ -577,9 +581,9 @@ const Agents = () => {
                           {initials(a.full_name)}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold leading-tight">{a.full_name}</p>
+                          <p className="leading-tight">{a.full_name}</p>
                           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                            <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0">
+                            <Badge variant="outline" className="font-mono text-[10px] font-normal px-1.5 py-0">
                               {a.agent_code}
                             </Badge>
                             {a.username ? (
@@ -618,16 +622,16 @@ const Agents = () => {
               renderCard={(a) => {
                 const account = statusConfig[a.status] ?? statusConfig.INACTIVE;
                 return (
-                  <div className="space-y-3.5" onClick={() => openTrip(a)}>
+                  <div className="space-y-3.5" onClick={() => setSelectedAgent(a)}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-3">
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-rose-500/15 to-amber-500/10 text-xs font-bold text-rose-800">
                           {initials(a.full_name)}
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate font-semibold">{a.full_name}</p>
+                          <p className="truncate">{a.full_name}</p>
                           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                            <Badge variant="outline" className="font-mono text-[10px]">
+                            <Badge variant="outline" className="font-mono text-[10px] font-normal">
                               {a.agent_code}
                             </Badge>
                             {a.username ? (
