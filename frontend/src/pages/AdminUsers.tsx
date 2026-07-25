@@ -64,7 +64,6 @@ const presenceConfig = {
 
 const columns = [
   { header: "Name" },
-  { header: "Username" },
   { header: "Role" },
   { header: "Depot" },
   { header: "Presence" },
@@ -305,7 +304,26 @@ const AdminUsers = () => {
                 Profile
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {!editingAdmin && (
+                {editingAdmin ? (
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="au-username" className="text-sm">
+                      Username
+                    </Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="au-username"
+                        value={form.username}
+                        className="pl-9 font-mono bg-muted/40"
+                        disabled
+                        readOnly
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Username cannot be changed after the account is created.
+                    </p>
+                  </div>
+                ) : (
                   <div className="space-y-1.5 sm:col-span-2">
                     <Label htmlFor="au-username" className="text-sm">
                       Username <span className="text-destructive">*</span>
@@ -324,7 +342,7 @@ const AdminUsers = () => {
                   </div>
                 )}
 
-                <div className={`space-y-1.5 ${editingAdmin ? "sm:col-span-2" : ""}`}>
+                <div className="space-y-1.5 sm:col-span-2">
                   <Label htmlFor="au-fullname" className="text-sm">
                     Full name <span className="text-destructive">*</span>
                   </Label>
@@ -565,7 +583,6 @@ const AdminUsers = () => {
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="font-mono text-sm text-muted-foreground">{a.username}</TableCell>
               <TableCell>
                 <RoleBadge roleName={roleName} />
               </TableCell>
@@ -657,7 +674,9 @@ const AdminUsers = () => {
                         <span className="text-[10px] text-accent font-semibold">(You)</span>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground font-mono">{a.username}</p>
+                    {a.email && (
+                      <p className="text-xs text-muted-foreground truncate max-w-[180px]">{a.email}</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
