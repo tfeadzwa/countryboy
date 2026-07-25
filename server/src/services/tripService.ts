@@ -180,6 +180,7 @@ type TripDetailRecord = NonNullable<
   fleet?: {
     id: string;
     number: string;
+    registration_number: string | null;
     capacity: number;
     status: string;
   } | null;
