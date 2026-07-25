@@ -27,5 +27,25 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
+    build: {
+      // Page chunks can still be large; vendor split keeps the warning useful.
+      chunkSizeWarningLimit: 900,
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                name: "vendor-react",
+                test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/,
+              },
+              {
+                name: "vendor-ui",
+                test: /node_modules[\\/](@radix-ui|framer-motion|lucide-react|recharts|date-fns)[\\/]/,
+              },
+            ],
+          },
+        },
+      },
+    },
   };
 });
