@@ -27,6 +27,7 @@ import tripRoutes from "./routes/trip";
 import ticketRoutes from "./routes/ticket";
 import publicRoutes from "./routes/public";
 import notificationRoutes from "./routes/notification";
+import settingsRoutes from "./routes/settings";
 
 dotenv.config();
 const app = express();
@@ -112,6 +113,7 @@ app.use("/api/fares", fareRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/admin-users", adminUsersRoutes);
+app.use("/api/settings", settingsRoutes);
 app.use("/api/public", publicRoutes);
 
 // health check

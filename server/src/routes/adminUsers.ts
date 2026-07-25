@@ -79,6 +79,7 @@ const adminUserSelect = {
   username: true,
   full_name: true,
   email: true,
+  phone: true,
   depot_id: true,
   status: true,
   last_seen_at: true,
@@ -92,6 +93,7 @@ const mapAdminUser = (user: {
   username: string;
   full_name: string | null;
   email: string | null;
+  phone?: string | null;
   depot_id: string | null;
   status: string;
   last_seen_at: Date | null;
@@ -100,6 +102,7 @@ const mapAdminUser = (user: {
   roles: { role: { id: string; name: string } }[];
 }) => ({
   ...user,
+  phone: user.phone ?? null,
   last_seen_at: user.last_seen_at ? user.last_seen_at.toISOString() : null,
   is_online: isAdminOnline({
     status: user.status,
@@ -256,6 +259,81 @@ router.put('/:id', validate(updateAdminUserSchema), async (req: AuthenticatedReq
   } catch (err) {
     logger.error('Failed to update admin user', { err });
     res.status(500).json({ error: 'Failed to update admin user' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin-users/:id/reset-password — set or generate a new password
+// ---------------------------------------------------------------------------
+const resetPasswordSchema = z.object({
+  params: z.object({ id: z.string() }),
+  body: z
+    .object({
+      password: z.string().min(8, 'Password must be at least 8 characters').optional(),
+    })
+    .optional()
+    .default({}),
+});
+
+router.post(
+  '/:id/reset-password',
+  validate(resetPasswordSchema),
+  async (req: AuthenticatedRequest, res: Response) => {
+  const { id } = req.params;
+  const requesterId = req.user?.id;
+  const providedPassword =
+    typeof req.body?.password === 'string' ? req.body.password.trim() : '';
+
+  try {
+    const existing = await prisma.tblAdminUsers.findUnique({
+      where: { id },
+      include: { roles: { include: { role: true } } },
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Admin user not found' });
+    }
+
+    const isSuperAdmin = existing.roles.some((r) => r.role.name === 'SUPER_ADMIN');
+    if (isSuperAdmin) {
+      return res.status(403).json({ error: 'Cannot reset password for a super admin account' });
+    }
+
+    if (id === requesterId) {
+      return res.status(400).json({
+        error: 'Use Forgot password to reset your own password',
+      });
+    }
+
+    if (providedPassword && providedPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    const temporaryPassword = providedPassword || generateTempPassword();
+    const password_hash = await bcrypt.hash(temporaryPassword, 10);
+
+    const updated = await prisma.tblAdminUsers.update({
+      where: { id },
+      data: {
+        password_hash,
+        updated_by: requesterId,
+      },
+      select: adminUserSelect,
+    });
+
+    authLoginLogger.info('ADMIN_USER_PASSWORD_RESET', {
+      resetById: requesterId,
+      targetUserId: id,
+      username: updated.username,
+      mode: providedPassword ? 'manual' : 'generated',
+    });
+
+    res.json({
+      ...mapAdminUser(updated),
+      temporaryPassword,
+    });
+  } catch (err) {
+    logger.error('Failed to reset admin password', { err });
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 });
 

@@ -57,6 +57,7 @@ model tblAdminUsers {
   id           String   @id @default(uuid())
   username     String   @unique
   email        String?  @unique
+  phone        String?
   password_hash String
   full_name    String?
   depot_id     String?  // null for super admins
@@ -393,4 +394,20 @@ model tblDailyAggregates {
   depot       tblDepots @relation(fields: [depot_id], references: [id])
 
   @@unique([depot_id, date, currency])
+}
+
+/// Singleton org-wide portal settings (always id = "default").
+model tblSystemSettings {
+  id                 String   @id @default("default")
+  company_name       String   @default("CountryBoy")
+  company_email      String?
+  company_phone      String?
+  support_email      String?
+  /// JSON array of enabled ticket currencies, e.g. ["USD","ZWL","ZAR"]
+  enabled_currencies Json     @default("[\"USD\", \"ZWL\", \"ZAR\"]")
+  default_currency   String   @default("USD")
+  timezone           String   @default("Africa/Harare")
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+  updated_by         String?
 }
