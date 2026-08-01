@@ -6,6 +6,7 @@ export type TripStatus = "ACTIVE" | "ENDED" | "COMPLETED" | "CANCELLED";
 export type AgentStatus = "ACTIVE" | "SUSPENDED" | "INACTIVE";
 export type DeviceStatus = "REGISTERED" | "BLOCKED";
 export type AdminRole =
+  | "DEVELOPER"
   | "SUPER_ADMIN"
   | "DEPOT_ADMIN"
   | "CASHIER"
@@ -97,8 +98,43 @@ export interface Driver {
   duty_status?: DriverDutyStatus;
   on_trip?: boolean;
   active_trip?: DriverActiveTrip | null;
+  drivers_licence_expiry?: string | null;
+  medical_certificate_expiry?: string | null;
+  defensive_driving_certificate_expiry?: string | null;
+  defensive_driving_certificate_number?: string | null;
+  drivers_licence_file_name?: string | null;
+  medical_certificate_file_name?: string | null;
+  defensive_driving_certificate_file_name?: string | null;
+  drivers_licence_uploaded_at?: string | null;
+  medical_certificate_uploaded_at?: string | null;
+  defensive_driving_certificate_uploaded_at?: string | null;
+  documents?: DriverDocumentItem[];
+  documents_summary?: {
+    worst_severity: ComplianceSeverity;
+    items_needing_attention: number;
+  };
   created_at: string;
   updated_at: string;
+}
+
+export type DriverDocumentKey =
+  | 'drivers_licence'
+  | 'medical_certificate'
+  | 'defensive_driving_certificate';
+
+export interface DriverDocumentItem {
+  key: DriverDocumentKey;
+  label: string;
+  shortLabel: string;
+  certificate_number?: string | null;
+  expiry_date: string | null;
+  file_name: string | null;
+  uploaded_at: string | null;
+  has_file: boolean;
+  days_remaining: number | null;
+  frequency: AlertFrequency | null;
+  severity: ComplianceSeverity;
+  status_label: string;
 }
 
 export type ComplianceSeverity = 'ok' | 'info' | 'warning' | 'urgent' | 'expired';
@@ -129,6 +165,8 @@ export interface Fleet {
   depot_id: string;
   depot_name?: string | null;
   status: 'ACTIVE' | 'MAINTENANCE' | 'OUT_OF_SERVICE' | 'RETIRED';
+  on_trip?: boolean;
+  duty_status?: DriverDutyStatus;
   capacity: number;
   licence_disc_expiry?: string | null;
   cof_expiry?: string | null;
@@ -242,8 +280,13 @@ export interface Trip {
   started_at: string;
   ended_at?: string;
   started_offline?: boolean;
+  starting_mileage?: number | null;
+  waybill_no?: string | null;
+  closing_mileage?: number | null;
   ticket_count?: number;
   total_revenue?: number;
+  conductor_presence?: "online" | "offline" | "signed_out" | null;
+  conductor_is_online?: boolean | null;
   created_at?: string;
   updated_at?: string;
 }

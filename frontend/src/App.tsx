@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import SuperAdminRoute from "./components/auth/SuperAdminRoute";
+import DenyCashierRoute from "./components/auth/DenyCashierRoute";
 import AdminLayout from "./components/AdminLayout";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -16,6 +17,8 @@ const Agents = lazy(() => import("./pages/Agents"));
 const Drivers = lazy(() => import("./pages/Drivers"));
 const Fleets = lazy(() => import("./pages/Fleets"));
 const EditFleetPage = lazy(() => import("./pages/EditFleetPage"));
+const EditDriverPage = lazy(() => import("./pages/EditDriverPage"));
+const CreateDriverPage = lazy(() => import("./pages/CreateDriverPage"));
 const RoutesPage = lazy(() => import("./pages/RoutesPage"));
 const RouteDetailPage = lazy(() => import("./pages/RouteDetailPage"));
 const Trips = lazy(() => import("./pages/Trips"));
@@ -30,6 +33,8 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const VerifyTicket = lazy(() => import("./pages/VerifyTicket"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
+const AppReleases = lazy(() => import("./pages/AppReleases"));
+const AppReleaseNotesPage = lazy(() => import("./pages/AppReleaseNotesPage"));
 
 const queryClient = new QueryClient();
 
@@ -60,10 +65,12 @@ const App = () => (
               <Route element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/depots" element={<SuperAdminRoute><Depots /></SuperAdminRoute>} />
-                <Route path="/agents" element={<Agents />} />
-                <Route path="/drivers" element={<Drivers />} />
-                <Route path="/fleets" element={<Fleets />} />
-                <Route path="/fleets/:id/edit" element={<EditFleetPage />} />
+                <Route path="/agents" element={<DenyCashierRoute><Agents /></DenyCashierRoute>} />
+                <Route path="/drivers" element={<DenyCashierRoute><Drivers /></DenyCashierRoute>} />
+                <Route path="/drivers/new" element={<DenyCashierRoute><CreateDriverPage /></DenyCashierRoute>} />
+                <Route path="/drivers/:id/edit" element={<DenyCashierRoute><EditDriverPage /></DenyCashierRoute>} />
+                <Route path="/fleets" element={<DenyCashierRoute><Fleets /></DenyCashierRoute>} />
+                <Route path="/fleets/:id/edit" element={<DenyCashierRoute><EditFleetPage /></DenyCashierRoute>} />
                 <Route path="/routes" element={<RoutesPage />} />
                 <Route path="/routes/:id" element={<RouteDetailPage />} />
                 <Route path="/routes/:id/edit" element={<Navigate to="/routes" replace />} />
@@ -74,6 +81,8 @@ const App = () => (
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/notifications" element={<Notifications />} />
                 <Route path="/admin-users" element={<SuperAdminRoute><AdminUsers /></SuperAdminRoute>} />
+                <Route path="/app-releases" element={<SuperAdminRoute><AppReleases /></SuperAdminRoute>} />
+                <Route path="/app-releases/:id/notes" element={<SuperAdminRoute><AppReleaseNotesPage /></SuperAdminRoute>} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

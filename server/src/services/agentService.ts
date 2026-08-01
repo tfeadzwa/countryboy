@@ -5,6 +5,10 @@ import jwt from 'jsonwebtoken';
 import { touchDeviceActivity } from './agentSessionService';
 import { ensureRoute } from './routeService';
 import { isDeviceOnline } from '../constants/presence';
+import {
+  parseRequiredMileage,
+  parseRequiredWaybillNo,
+} from '../utils/tripMileage';
 
 export const listAgents = async (
   depotId?: string,
@@ -493,6 +497,8 @@ export const startAgentTrip = async (data: {
   driverId?: string | null;
   deviceId?: string;
   startedOffline?: boolean;
+  startingMileage: number;
+  waybillNo: string;
 }) => {
   const {
     id,
@@ -503,6 +509,8 @@ export const startAgentTrip = async (data: {
     deviceId,
     startedOffline,
     driverId,
+    startingMileage: rawStartingMileage,
+    waybillNo: rawWaybillNo,
   } = data;
 
   const trimmedOrigin = origin.trim();
@@ -516,6 +524,12 @@ export const startAgentTrip = async (data: {
   if (trimmedOrigin.toLowerCase() === trimmedDestination.toLowerCase()) {
     throw new Error('Origin and destination must be different');
   }
+
+  const startingMileage = parseRequiredMileage(
+    rawStartingMileage,
+    'Starting mileage',
+  );
+  const waybillNo = parseRequiredWaybillNo(rawWaybillNo);
 
   // Step 1: Verify agent exists and is active
   const agent = await prisma.tblAgents.findUnique({
@@ -560,7 +574,7 @@ export const startAgentTrip = async (data: {
     throw new Error('Agent has an active trip');
   }
 
-  // Step 3: Validate fleet exists and belongs to same depot
+  // Step 3: Validate fleet exists, belongs to depot, and is not already on a trip
   const fleet = await prisma.tblFleets.findUnique({
     where: { id: fleetId }
   });
@@ -571,6 +585,18 @@ export const startAgentTrip = async (data: {
 
   if (fleet.depot_id !== depotId) {
     throw new Error('Fleet does not belong to agent\'s depot');
+  }
+
+  if (fleet.on_trip) {
+    throw new Error('Fleet is already on an active trip');
+  }
+
+  const fleetActiveTrip = await prisma.tblTrips.findFirst({
+    where: { fleet_id: fleetId, status: 'ACTIVE' },
+    select: { id: true },
+  });
+  if (fleetActiveTrip) {
+    throw new Error('Fleet is already on an active trip');
   }
 
   // Step 3b: Validate driver belongs to same depot when provided
@@ -588,6 +614,16 @@ export const startAgentTrip = async (data: {
     if (driver.status !== 'ACTIVE') {
       throw new Error('Driver is not active');
     }
+    if (driver.on_trip) {
+      throw new Error('Driver is already on an active trip');
+    }
+    const driverActiveTrip = await prisma.tblTrips.findFirst({
+      where: { driver_id: driverId, status: 'ACTIVE' },
+      select: { id: true },
+    });
+    if (driverActiveTrip) {
+      throw new Error('Driver is already on an active trip');
+    }
     resolvedDriverId = driver.id;
   }
 
@@ -595,50 +631,67 @@ export const startAgentTrip = async (data: {
   const parentRoute = await ensureRoute(depotId, trimmedOrigin, trimmedDestination);
   const resolvedRouteId = parentRoute.id;
 
-  // Step 5: Create the trip record (reuse client id when syncing offline trips)
-  const trip = await prisma.tblTrips.create({
-    data: {
-      ...(id ? { id } : {}),
-      depot_id: depotId,
-      agent_id: agentId,
-      fleet_id: fleetId,
-      driver_id: resolvedDriverId,
-      route_id: resolvedRouteId,
-      origin: trimmedOrigin,
-      destination: trimmedDestination,
-      device_id: deviceId,
-      started_at: new Date(),
-      status: 'ACTIVE',
-      started_offline: startedOffline || false
-    },
-    include: {
-      agent: {
-        select: {
-          id: true,
-          full_name: true,
-          agent_code: true
-        }
+  // Step 5: Create the trip and mark fleet/driver as on trip
+  const trip = await prisma.$transaction(async (tx) => {
+    const created = await tx.tblTrips.create({
+      data: {
+        ...(id ? { id } : {}),
+        depot_id: depotId,
+        agent_id: agentId,
+        fleet_id: fleetId,
+        driver_id: resolvedDriverId,
+        route_id: resolvedRouteId,
+        origin: trimmedOrigin,
+        destination: trimmedDestination,
+        device_id: deviceId,
+        started_at: new Date(),
+        status: 'ACTIVE',
+        started_offline: startedOffline || false,
+        starting_mileage: startingMileage,
+        waybill_no: waybillNo,
       },
-      fleet: {
-        select: {
-          id: true,
-          number: true
-        }
-      },
-      driver: {
-        select: {
-          id: true,
-          full_name: true,
-        }
-      },
-      route: {
-        select: {
-          id: true,
-          origin: true,
-          destination: true
+      include: {
+        agent: {
+          select: {
+            id: true,
+            full_name: true,
+            agent_code: true
+          }
+        },
+        fleet: {
+          select: {
+            id: true,
+            number: true
+          }
+        },
+        driver: {
+          select: {
+            id: true,
+            full_name: true,
+          }
+        },
+        route: {
+          select: {
+            id: true,
+            origin: true,
+            destination: true
+          }
         }
       }
+    });
+
+    await tx.tblFleets.update({
+      where: { id: fleetId },
+      data: { on_trip: true },
+    });
+    if (resolvedDriverId) {
+      await tx.tblDrivers.update({
+        where: { id: resolvedDriverId },
+        data: { on_trip: true },
+      });
     }
+
+    return created;
   });
 
   if (deviceId) {
@@ -698,35 +751,50 @@ export const endAgentTrip = async (agentId: string, tripId: string) => {
     0
   );
 
-  // Step 5: Update trip to completed
-  const updatedTrip = await prisma.tblTrips.update({
-    where: { id: tripId },
-    data: {
-      status: 'COMPLETED',
-      ended_at: new Date()
-    },
-    include: {
-      agent: {
-        select: {
-          id: true,
-          full_name: true,
-          agent_code: true
-        }
+  // Step 5: Update trip to completed and free fleet/driver
+  const updatedTrip = await prisma.$transaction(async (tx) => {
+    const ended = await tx.tblTrips.update({
+      where: { id: tripId },
+      data: {
+        status: 'COMPLETED',
+        ended_at: new Date()
       },
-      fleet: {
-        select: {
-          id: true,
-          number: true
-        }
-      },
-      route: {
-        select: {
-          id: true,
-          origin: true,
-          destination: true
+      include: {
+        agent: {
+          select: {
+            id: true,
+            full_name: true,
+            agent_code: true
+          }
+        },
+        fleet: {
+          select: {
+            id: true,
+            number: true
+          }
+        },
+        route: {
+          select: {
+            id: true,
+            origin: true,
+            destination: true
+          }
         }
       }
+    });
+
+    await tx.tblFleets.update({
+      where: { id: trip.fleet_id },
+      data: { on_trip: false },
+    });
+    if (trip.driver_id) {
+      await tx.tblDrivers.update({
+        where: { id: trip.driver_id },
+        data: { on_trip: false },
+      });
     }
+
+    return ended;
   });
 
   return {

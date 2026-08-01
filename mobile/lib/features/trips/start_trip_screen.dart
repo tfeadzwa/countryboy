@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -26,6 +27,8 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
   DriverModel? _selectedDriver;
   final _originController = TextEditingController();
   final _destinationController = TextEditingController();
+  final _startingMileageController = TextEditingController();
+  final _waybillController = TextEditingController();
   bool _loading = true;
   bool _submitting = false;
   String? _error;
@@ -41,6 +44,8 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
   void dispose() {
     _originController.dispose();
     _destinationController.dispose();
+    _startingMileageController.dispose();
+    _waybillController.dispose();
     super.dispose();
   }
 
@@ -78,8 +83,20 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
       setState(() => _error = 'Select a bus');
       return;
     }
+    if (_selectedFleet!.onTrip) {
+      setState(
+        () => _error = 'That bus is already on a trip. Choose another.',
+      );
+      return;
+    }
     if (_selectedDriver == null) {
       setState(() => _error = 'Select a driver');
+      return;
+    }
+    if (_selectedDriver!.onTrip) {
+      setState(
+        () => _error = 'That driver is already on a trip. Choose another.',
+      );
       return;
     }
 
@@ -100,6 +117,19 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
       return;
     }
 
+    final mileageRaw = _startingMileageController.text.trim();
+    final startingMileage = int.tryParse(mileageRaw);
+    if (mileageRaw.isEmpty || startingMileage == null || startingMileage < 0) {
+      setState(() => _error = 'Enter the starting mileage (whole km).');
+      return;
+    }
+
+    final waybillNo = _waybillController.text.trim();
+    if (!RegExp(r'^\d{5}$').hasMatch(waybillNo)) {
+      setState(() => _error = 'Waybill number must be exactly 5 digits.');
+      return;
+    }
+
     setState(() {
       _submitting = true;
       _error = null;
@@ -114,6 +144,8 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
             driverName: _selectedDriver!.fullName,
             origin: origin,
             destination: destination,
+            startingMileage: startingMileage,
+            waybillNo: waybillNo,
           );
       ref.invalidate(homeDashboardProvider);
       if (mounted) context.go('/home');
@@ -132,7 +164,9 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
     final canPreview = _selectedFleet != null &&
         _selectedDriver != null &&
         _originController.text.trim().length >= 2 &&
-        _destinationController.text.trim().length >= 2;
+        _destinationController.text.trim().length >= 2 &&
+        int.tryParse(_startingMileageController.text.trim()) != null &&
+        RegExp(r'^\d{5}$').hasMatch(_waybillController.text.trim());
 
     return Scaffold(
       appBar: AppBar(
@@ -270,12 +304,57 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
                         TextField(
                           controller: _destinationController,
                           textCapitalization: TextCapitalization.words,
-                          textInputAction: TextInputAction.done,
+                          textInputAction: TextInputAction.next,
                           onChanged: (_) => setState(() => _error = null),
                           decoration: const InputDecoration(
                             labelText: 'Destination *',
                             hintText: 'e.g. Bulawayo',
                             prefixIcon: Icon(Icons.flag_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+                        Text(
+                          'Trip paperwork',
+                          style: theme.textTheme.labelLarge,
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          'Starting mileage and a 5-digit waybill number are required.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        TextField(
+                          controller: _startingMileageController,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.next,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          onChanged: (_) => setState(() => _error = null),
+                          decoration: const InputDecoration(
+                            labelText: 'Starting mileage (km) *',
+                            hintText: 'e.g. 124580',
+                            prefixIcon: Icon(Icons.speed_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        TextField(
+                          controller: _waybillController,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.done,
+                          maxLength: 5,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(5),
+                          ],
+                          onChanged: (_) => setState(() => _error = null),
+                          decoration: const InputDecoration(
+                            labelText: 'Waybill No *',
+                            hintText: '5 digits',
+                            counterText: '',
+                            prefixIcon: Icon(Icons.pin_outlined),
                           ),
                         ),
                         if (canPreview) ...[
@@ -301,6 +380,12 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
                                 Text(
                                   'Corridor: ${_originController.text.trim()}'
                                   '  →  ${_destinationController.text.trim()}',
+                                ),
+                                Text(
+                                  'Starting mileage: ${_startingMileageController.text.trim()} km',
+                                ),
+                                Text(
+                                  'Waybill: ${_waybillController.text.trim()}',
                                 ),
                               ],
                             ),

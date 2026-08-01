@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../network/api_client.dart';
+import '../session/session_invalidation.dart';
 import '../storage/secure_storage_service.dart';
 
 /// How often the conductor app reports presence while signed in online.
@@ -14,6 +15,7 @@ final heartbeatServiceProvider = Provider<HeartbeatService>((ref) {
   final service = HeartbeatService(
     dio: ref.watch(dioProvider),
     storage: ref.watch(secureStorageServiceProvider),
+    sessionInvalidation: ref.watch(sessionInvalidationServiceProvider),
   );
   ref.onDispose(service.dispose);
   return service;
@@ -30,11 +32,14 @@ class HeartbeatService with WidgetsBindingObserver {
   HeartbeatService({
     required Dio dio,
     required SecureStorageService storage,
+    required SessionInvalidationService sessionInvalidation,
   })  : _dio = dio,
-        _storage = storage;
+        _storage = storage,
+        _sessionInvalidation = sessionInvalidation;
 
   final Dio _dio;
   final SecureStorageService _storage;
+  final SessionInvalidationService _sessionInvalidation;
 
   Timer? _timer;
   bool _started = false;
@@ -108,8 +113,14 @@ class HeartbeatService with WidgetsBindingObserver {
           receiveTimeout: const Duration(seconds: 8),
         ),
       );
-    } catch (_) {
-      // Offline / unpaired / no session — admin will flip to offline via threshold.
+    } catch (error) {
+      // Device-unpair 401 is handled by TokenRefreshInterceptor.
+      // Closed server sessions (409) are handled here so we don't treat all 409s app-wide.
+      final apiError = asApiError(error);
+      if (apiError != null && apiError.isNoActiveSession) {
+        await _sessionInvalidation.handleSessionEnded();
+      }
+      // Offline / transient errors — admin flips to offline via last_seen threshold.
     } finally {
       _inFlight = false;
     }

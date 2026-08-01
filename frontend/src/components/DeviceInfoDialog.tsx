@@ -405,6 +405,7 @@ const DeviceInfoDialog = ({ open, onOpenChange, device, onUpdated, onDeleted }: 
                 <li>Device returns to unpaired status</li>
                 <li>A new pairing code is generated</li>
                 <li>Active conductor sessions end</li>
+                <li>The conductor app on that device will sign out and require re-pairing</li>
               </ul>
             </AlertDescription>
           </Alert>

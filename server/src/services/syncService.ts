@@ -6,6 +6,10 @@ import { listDrivers } from './driverService';
 import { listRoutes, ensureRoute, linkTicketSegmentToTrip } from './routeService';
 import { listFares } from './fareService';
 import { allocateTripSerial } from '../utils/ticketSerial';
+import {
+  parseRequiredMileage,
+  parseRequiredWaybillNo,
+} from '../utils/tripMileage';
 
 interface PushPayload {
   trips?: any[];
@@ -45,6 +49,12 @@ const normalizeTripRecord = (raw: Record<string, unknown>, depotId: string) => {
     throw new Error('Trip origin and destination must be different');
   }
 
+  const startingMileage = parseRequiredMileage(
+    raw.starting_mileage,
+    'Starting mileage',
+  );
+  const waybillNo = parseRequiredWaybillNo(raw.waybill_no);
+
   return {
     id: raw.id as string,
     depot_id: depotId,
@@ -59,6 +69,12 @@ const normalizeTripRecord = (raw: Record<string, unknown>, depotId: string) => {
     ended_at: raw.ended_at != null ? parseSyncDateTime(raw.ended_at, 'ended_at') : null,
     status: (raw.status as string | undefined) ?? 'ACTIVE',
     started_offline: Boolean(raw.started_offline),
+    starting_mileage: startingMileage,
+    waybill_no: waybillNo,
+    closing_mileage:
+      raw.closing_mileage != null
+        ? parseRequiredMileage(raw.closing_mileage, 'Closing mileage')
+        : null,
   };
 };
 
@@ -115,14 +131,21 @@ export const pushData = async (
         if (data.driver_id) {
           const driver = await prismaTx.tblDrivers.findUnique({
             where: { id: data.driver_id },
-            select: { id: true, depot_id: true, status: true },
+            select: { id: true, depot_id: true, status: true, on_trip: true },
           });
           if (!driver || driver.depot_id !== depotId) {
             throw new Error('Driver not found in this depot');
           }
         }
 
-        // Ensure main parent corridor exists for conductor-entered OD.
+        const fleet = await prismaTx.tblFleets.findUnique({
+          where: { id: data.fleet_id },
+          select: { id: true, depot_id: true, on_trip: true },
+        });
+        if (!fleet || fleet.depot_id !== depotId) {
+          throw new Error('Fleet not found in this depot');
+        }
+
         const parent = await ensureRoute(depotId, data.origin, data.destination, {
           client: prismaTx,
         });
@@ -130,30 +153,72 @@ export const pushData = async (
 
         const existing = await prismaTx.tblTrips.findUnique({
           where: { id: data.id },
-          select: { id: true, status: true, ended_at: true },
+          select: {
+            id: true,
+            status: true,
+            ended_at: true,
+            closing_mileage: true,
+            starting_mileage: true,
+            waybill_no: true,
+          },
         });
 
-        // Never let a stale mobile push reopen a cashier/admin-ended trip.
         const existingTerminal =
           existing &&
           (existing.status === 'ENDED' || existing.status === 'COMPLETED');
         if (existingTerminal) {
           data.status = existing.status;
           data.ended_at = existing.ended_at;
+          // Never clear cashier-entered closing mileage from a stale mobile push.
+          data.closing_mileage =
+            existing.closing_mileage ?? data.closing_mileage;
+          data.starting_mileage =
+            existing.starting_mileage ?? data.starting_mileage;
+          data.waybill_no = existing.waybill_no ?? data.waybill_no;
         } else if (data.status === 'ACTIVE') {
-          // Offline sync may legitimately replace a stale server-side active trip.
-          await prismaTx.tblTrips.updateMany({
+          const otherActive = await prismaTx.tblTrips.findMany({
             where: {
               agent_id: data.agent_id,
               status: 'ACTIVE',
               id: { not: data.id },
             },
-            data: {
-              status: 'COMPLETED',
-              ended_at: new Date(),
-              updated_at: new Date(),
-            },
+            select: { id: true, fleet_id: true, driver_id: true },
           });
+          for (const other of otherActive) {
+            await prismaTx.tblTrips.update({
+              where: { id: other.id },
+              data: {
+                status: 'COMPLETED',
+                ended_at: new Date(),
+                updated_at: new Date(),
+              },
+            });
+            await prismaTx.tblFleets.update({
+              where: { id: other.fleet_id },
+              data: { on_trip: false },
+            });
+            if (other.driver_id) {
+              await prismaTx.tblDrivers.update({
+                where: { id: other.driver_id },
+                data: { on_trip: false },
+              });
+            }
+          }
+
+          if (!existing) {
+            if (fleet.on_trip) {
+              throw new Error('Fleet is already on an active trip');
+            }
+            if (data.driver_id) {
+              const driverBusy = await prismaTx.tblDrivers.findUnique({
+                where: { id: data.driver_id },
+                select: { on_trip: true },
+              });
+              if (driverBusy?.on_trip) {
+                throw new Error('Driver is already on an active trip');
+              }
+            }
+          }
         }
 
         const upserted = await prismaTx.tblTrips.upsert({
@@ -161,12 +226,36 @@ export const pushData = async (
           update: { ...data, updated_at: new Date() },
           create: data,
         });
+
+        if (upserted.status === 'ACTIVE') {
+          await prismaTx.tblFleets.update({
+            where: { id: upserted.fleet_id },
+            data: { on_trip: true },
+          });
+          if (upserted.driver_id) {
+            await prismaTx.tblDrivers.update({
+              where: { id: upserted.driver_id },
+              data: { on_trip: true },
+            });
+          }
+        } else {
+          await prismaTx.tblFleets.update({
+            where: { id: upserted.fleet_id },
+            data: { on_trip: false },
+          });
+          if (upserted.driver_id) {
+            await prismaTx.tblDrivers.update({
+              where: { id: upserted.driver_id },
+              data: { on_trip: false },
+            });
+          }
+        }
+
         results.trips.push(upserted);
         tripCount++;
       }
     }
     if (payload.tickets) {
-      // Passenger tickets must exist before linked luggage tickets.
       const sortedTickets = [...payload.tickets].sort((a, b) => {
         const aLinked = a.linked_passenger_ticket_id ? 1 : 0;
         const bLinked = b.linked_passenger_ticket_id ? 1 : 0;
@@ -213,8 +302,6 @@ export const pushData = async (
           },
         });
 
-        // Once printed on a device, never clear that flag from a stale push.
-        // Fill printer identity if an older print sync lacked it.
         if (existingTicket?.printed) {
           data.printed = true;
           data.printed_at = existingTicket.printed_at;
@@ -245,7 +332,6 @@ export const pushData = async (
         results.tickets.push(upserted);
         ticketCount++;
 
-        // Keep the phone's "current printer" in sync when print payloads include it.
         if (
           context.deviceId &&
           data.printed &&
@@ -267,7 +353,6 @@ export const pushData = async (
   });
 
   const duration = Date.now() - start;
-  // log with details including counts and duration
   await prisma.tblSyncLogs.create({
     data: {
       depot_id: depotId,
@@ -300,6 +385,7 @@ const buildReferenceSnapshot = async (depotId: string) => {
       id: f.id,
       number: f.number,
       status: f.status,
+      on_trip: Boolean(f.on_trip),
     })),
     drivers: drivers
       .filter((d) => d.status === 'ACTIVE')
@@ -307,6 +393,7 @@ const buildReferenceSnapshot = async (depotId: string) => {
         id: d.id,
         full_name: d.full_name,
         status: d.status,
+        on_trip: Boolean(d.on_trip) || Boolean(d.trips?.[0]),
       })),
     routes,
     fares: fares.map((f) => ({
@@ -326,15 +413,61 @@ export const pullData = async (
 ) => {
   const start = Date.now();
   const sinceDate = since ? new Date(since) : new Date(0);
-  const [trips, tickets, reference] = await Promise.all([
-    prisma.tblTrips.findMany({
-      where: { depot_id: depotId, updated_at: { gte: sinceDate } },
-    }),
-    prisma.tblTickets.findMany({
-      where: { depot_id: depotId, updated_at: { gte: sinceDate } },
-    }),
-    buildReferenceSnapshot(depotId),
-  ]);
+  const agentId = context.agentId;
+
+  // Always include this conductor's ACTIVE trip + today's tickets so peer
+  // devices catch up even when incremental `since` already skipped those rows.
+  const activeAgentTrips = agentId
+    ? await prisma.tblTrips.findMany({
+        where: { depot_id: depotId, agent_id: agentId, status: 'ACTIVE' },
+      })
+    : [];
+  const activeTripIds = activeAgentTrips.map((t) => t.id);
+
+  const dayStart = new Date();
+  dayStart.setHours(0, 0, 0, 0);
+
+  const [changedTrips, changedTickets, activeTripTickets, todayAgentTickets] =
+    await Promise.all([
+      prisma.tblTrips.findMany({
+        where: { depot_id: depotId, updated_at: { gte: sinceDate } },
+      }),
+      prisma.tblTickets.findMany({
+        where: { depot_id: depotId, updated_at: { gte: sinceDate } },
+      }),
+      activeTripIds.length > 0
+        ? prisma.tblTickets.findMany({
+            where: { trip_id: { in: activeTripIds } },
+          })
+        : Promise.resolve([]),
+      agentId
+        ? prisma.tblTickets.findMany({
+            where: {
+              depot_id: depotId,
+              agent_id: agentId,
+              issued_at: { gte: dayStart },
+            },
+          })
+        : Promise.resolve([]),
+    ]);
+
+  const tripsById = new Map<string, (typeof changedTrips)[number]>();
+  for (const trip of [...changedTrips, ...activeAgentTrips]) {
+    tripsById.set(trip.id, trip);
+  }
+  const ticketsById = new Map<string, (typeof changedTickets)[number]>();
+  for (const ticket of [
+    ...changedTickets,
+    ...activeTripTickets,
+    ...todayAgentTickets,
+  ]) {
+    ticketsById.set(ticket.id, ticket);
+  }
+
+  const trips = Array.from(tripsById.values());
+  const tickets = Array.from(ticketsById.values());
+  const reference = await buildReferenceSnapshot(depotId);
+
   const duration = Date.now() - start;
   await prisma.tblSyncLogs.create({
     data: {

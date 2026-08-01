@@ -18,6 +18,11 @@ async function main() {
 
   // 1. ROLES
   console.log('\n📋 Creating roles...');
+  const developerRole = await prisma.tblRoles.upsert({
+    where: { name: 'DEVELOPER' },
+    update: {},
+    create: { name: 'DEVELOPER' },
+  });
   const superAdminRole = await prisma.tblRoles.upsert({
     where: { name: 'SUPER_ADMIN' },
     update: {},
@@ -43,7 +48,7 @@ async function main() {
     update: {},
     create: { name: 'CASHIER' },
   });
-  console.log(`✅ Created roles (incl. CASHIER)`);
+  console.log(`✅ Created roles (incl. DEVELOPER, CASHIER)`);
 
   // 2. DEPOTS
   console.log('\n🏢 Creating depots...');
@@ -91,6 +96,19 @@ async function main() {
   // 3. ADMIN USERS
   console.log('\n👤 Creating admin users...');
   const adminUsers = await Promise.all([
+    prisma.tblAdminUsers.upsert({
+      where: { username: 'developer' },
+      update: {},
+      create: {
+        id: 'admin-dev-001',
+        username: 'developer',
+        email: 'developer@countryboy.local',
+        password_hash: defaultPasswordHash,
+        full_name: 'Platform Developer',
+        depot_id: null,
+        status: 'ACTIVE',
+      },
+    }),
     prisma.tblAdminUsers.upsert({
       where: { username: 'superadmin' },
       update: {},
@@ -175,6 +193,7 @@ async function main() {
   // 4. USER ROLES MAPPING
   console.log('\n🔐 Mapping user roles...');
   const userRoleMappings = [
+    { userId: 'admin-dev-001', roleId: developerRole.id },
     { userId: 'admin-super-001', roleId: superAdminRole.id },
     { userId: 'admin-hre-001', roleId: depotAdminRole.id },
     { userId: 'admin-byo-001', roleId: depotAdminRole.id },

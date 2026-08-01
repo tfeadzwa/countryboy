@@ -5,10 +5,12 @@ import 'package:intl/intl.dart';
 
 import '../../core/config/app_colors.dart';
 import '../../core/config/app_spacing.dart';
+import '../../core/connectivity/online_sync_lifecycle.dart';
 import '../../data/repositories/ticket_repository.dart';
 import '../../data/repositories/trip_repository.dart';
 import '../../domain/models/models.dart';
 import '../../domain/models/ticket_issue_draft.dart';
+import '../../services/sync_service.dart';
 import '../../shared/widgets/widgets.dart';
 
 enum _TicketScope { trip, today, all, pending }
@@ -36,6 +38,8 @@ class _IssuedTicketsScreenState extends ConsumerState<IssuedTicketsScreen> {
   Future<void> _bootstrap() async {
     if (_bootstrapped) return;
     _bootstrapped = true;
+    await ref.read(syncServiceProvider).syncIfOnline();
+    if (!mounted) return;
     final activeTrip = await ref.read(tripRepositoryProvider).getActiveTrip();
     if (!mounted) return;
     setState(() {
@@ -51,6 +55,8 @@ class _IssuedTicketsScreenState extends ConsumerState<IssuedTicketsScreen> {
   }
 
   Future<void> _reload() async {
+    await ref.read(syncServiceProvider).syncIfOnline(force: true);
+    if (!mounted) return;
     setState(() => _future = _loadPage());
     await _future;
   }
@@ -114,6 +120,11 @@ class _IssuedTicketsScreenState extends ConsumerState<IssuedTicketsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<int>(tripSessionRevisionProvider, (previous, next) {
+      if (!_bootstrapped || previous == next) return;
+      _reload();
+    });
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Sales & Tickets')),
@@ -205,7 +216,7 @@ class _IssuedTicketsScreenState extends ConsumerState<IssuedTicketsScreen> {
                         icon: Icons.receipt_long_outlined,
                                       title: _emptyTitle(),
                                       subtitle:
-                                          'Issued tickets stay on this device until synced.',
+                                          'Pull to refresh to load tickets from your other devices once they are online.',
                                     ),
                                   ),
                                 ],
@@ -302,7 +313,7 @@ class _IssuedTicketsScreenState extends ConsumerState<IssuedTicketsScreen> {
       case _TicketScope.today:
         return "Today's sales";
       case _TicketScope.all:
-        return 'All sales on this device';
+        return 'All sales (this conductor)';
       case _TicketScope.pending:
         return 'Waiting to sync';
     }

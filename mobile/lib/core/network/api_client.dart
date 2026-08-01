@@ -2,11 +2,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/env.dart';
+import '../session/session_invalidation.dart';
 import '../storage/secure_storage_service.dart';
 import 'api_error.dart';
 
 final dioProvider = Provider<Dio>((ref) {
   final storage = ref.watch(secureStorageServiceProvider);
+  final sessionInvalidation = ref.watch(sessionInvalidationServiceProvider);
   final dio = Dio(
     BaseOptions(
       baseUrl: Env.apiBaseUrl,
@@ -17,7 +19,7 @@ final dioProvider = Provider<Dio>((ref) {
   );
 
   dio.interceptors.addAll([
-    TokenRefreshInterceptor(storage, dio),
+    TokenRefreshInterceptor(storage, dio, sessionInvalidation),
     ApiErrorInterceptor(),
   ]);
   return dio;
@@ -40,11 +42,13 @@ ApiError? asApiError(Object error) {
 }
 
 /// Handles 401 by refreshing agent tokens and retrying once.
+/// Device-unpair 401s are not refreshed — they force a local sign-out.
 class TokenRefreshInterceptor extends Interceptor {
-  TokenRefreshInterceptor(this._storage, this._dio);
+  TokenRefreshInterceptor(this._storage, this._dio, this._sessionInvalidation);
 
   final SecureStorageService _storage;
   final Dio _dio;
+  final SessionInvalidationService _sessionInvalidation;
   bool _isRefreshing = false;
 
   @override
@@ -71,7 +75,16 @@ class TokenRefreshInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (err.response?.statusCode != 401) {
+    final status = err.response?.statusCode;
+    final code = extractApiErrorCode(err.response?.data);
+
+    // Admin unpaired / token rotated — do not attempt JWT refresh.
+    if (status == 401 && isDeviceCredentialFailureCode(code)) {
+      await _sessionInvalidation.handleDeviceUnpaired();
+      return handler.next(err);
+    }
+
+    if (status != 401) {
       return handler.next(err);
     }
 

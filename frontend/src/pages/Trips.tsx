@@ -24,9 +24,10 @@ import {
 import ErrorAlert from "@/components/ErrorAlert";
 import EndTripConfirmDialog from "@/components/EndTripConfirmDialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { canEndTrips, canPrintTicketBatches } from "@/lib/permissions";
+import { canEndTrips, canPrintTicketBatches, isSuperAdmin } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
+import { sortTrips } from "@/lib/trip-sort";
 import type { Trip } from "@/types";
 
 const statusConfig: Record<string, { class: string; dot: string; label: string }> = {
@@ -35,6 +36,9 @@ const statusConfig: Record<string, { class: string; dot: string; label: string }
   COMPLETED: { class: "bg-muted text-muted-foreground", dot: "bg-muted-foreground", label: "Ended" },
   CANCELLED: { class: "bg-destructive/10 text-destructive border border-destructive/20", dot: "bg-destructive", label: "Cancelled" },
 };
+
+const isConductorOnline = (trip: Pick<Trip, "conductor_is_online" | "conductor_presence">) =>
+  Boolean(trip.conductor_is_online) || trip.conductor_presence === "online";
 
 const columns = [
   { header: "Fleet" },
@@ -54,6 +58,7 @@ const Trips = () => {
   const userRoles = user?.roles || [];
   const canEnd = canEndTrips(userRoles);
   const canPrint = canPrintTicketBatches(userRoles);
+  const canForceEnd = isSuperAdmin(userRoles);
 
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,13 +102,19 @@ const Trips = () => {
     }
   };
 
-  const handleEndTrip = async () => {
+  const handleEndTrip = async (closingMileage: number) => {
     const trip = endConfirmTrip;
     if (!canEnd || !trip || trip.status !== "ACTIVE") return;
 
+    const online = isConductorOnline(trip);
+    if (!online && !canForceEnd) return;
+
     setEndingId(trip.id);
     try {
-      await tripService.end(trip.id, trip.depot_id);
+      await tripService.end(trip.id, trip.depot_id, {
+        force: !online && canForceEnd,
+        closingMileage,
+      });
       setEndConfirmTrip(null);
       toast({
         title: "Trip ended",
@@ -132,12 +143,14 @@ const Trips = () => {
   const totalTickets = trips.reduce((sum, t) => sum + (t.ticket_count || 0), 0);
   const activeCount = trips.filter((t) => t.status === "ACTIVE").length;
 
-  const totalPages = Math.max(1, Math.ceil(trips.length / DEFAULT_PAGE_SIZE));
+  const sortedTrips = useMemo(() => sortTrips(trips), [trips]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedTrips.length / DEFAULT_PAGE_SIZE));
 
   const paginated = useMemo(() => {
     const start = (page - 1) * DEFAULT_PAGE_SIZE;
-    return trips.slice(start, start + DEFAULT_PAGE_SIZE);
-  }, [trips, page]);
+    return sortedTrips.slice(start, start + DEFAULT_PAGE_SIZE);
+  }, [sortedTrips, page]);
 
   const renderStatus = (status: string) => {
     const config = statusConfig[status] || statusConfig.ENDED;
@@ -169,8 +182,17 @@ const Trips = () => {
         <Button
           variant="outline"
           size="sm"
-          className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-          disabled={endingId === t.id}
+          className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-60"
+          disabled={
+            endingId === t.id || (!isConductorOnline(t) && !canForceEnd)
+          }
+          title={
+            !isConductorOnline(t) && !canForceEnd
+              ? "Conductor must be online to end this trip"
+              : !isConductorOnline(t) && canForceEnd
+                ? "Conductor offline — force end available"
+                : undefined
+          }
           onClick={(e) => {
             e.stopPropagation();
             setEndConfirmTrip(t);
@@ -214,7 +236,14 @@ const Trips = () => {
           if (!open && !endingId) setEndConfirmTrip(null);
         }}
         loading={!!endingId}
-        onConfirm={() => void handleEndTrip()}
+        forceMode={
+          !!endConfirmTrip && !isConductorOnline(endConfirmTrip) && canForceEnd
+        }
+        canConfirm={
+          !!endConfirmTrip &&
+          (isConductorOnline(endConfirmTrip) || canForceEnd)
+        }
+        onConfirm={(closingMileage) => void handleEndTrip(closingMileage)}
         trip={
           endConfirmTrip
             ? {
@@ -228,6 +257,10 @@ const Trips = () => {
                   endConfirmTrip.total_revenue != null
                     ? `USD ${Number(endConfirmTrip.total_revenue).toFixed(2)}`
                     : null,
+                conductor_presence: endConfirmTrip.conductor_presence,
+                conductor_is_online: endConfirmTrip.conductor_is_online,
+                starting_mileage: endConfirmTrip.starting_mileage,
+                waybill_no: endConfirmTrip.waybill_no,
               }
             : null
         }

@@ -114,6 +114,16 @@ class SecureStorageService {
     await _storage.delete(key: _pairedKey);
   }
 
+  /// Clears offline PIN cache so an unpaired device cannot keep signing in offline.
+  Future<void> clearOfflineCredentials() async {
+    await _storage.delete(key: _offlineEnabledKey);
+    await _storage.delete(key: _offlinePinHashKey);
+    await _storage.delete(key: _offlineMerchantKey);
+    await _storage.delete(key: _offlineAgentKey);
+    await _storage.delete(key: _offlineSessionKey);
+    await _storage.delete(key: _offlineSessionExpiryKey);
+  }
+
   Future<void> saveAgentProfile(Map<String, dynamic> agent) async {
     await _storage.write(key: _agentJsonKey, value: jsonEncode(agent));
   }

@@ -156,6 +156,8 @@ model tblFleets {
   registration_number          String?
   depot_id                     String
   status                       FleetStatus @default(ACTIVE)
+  /// True while assigned to an ACTIVE trip (cleared when the trip ends).
+  on_trip                      Boolean     @default(false)
   capacity                     Int         @default(0)
   licence_disc_expiry          DateTime?   // Vehicle Licence Disc
   cof_expiry                   DateTime?   // Certificate of Fitness
@@ -172,6 +174,7 @@ model tblFleets {
 
   @@unique([depot_id, number])
   @@unique([depot_id, registration_number])
+  @@index([on_trip])
 }
 
 enum FleetStatus {
@@ -187,8 +190,26 @@ model tblDrivers {
   employee_code String?
   phone         String?
   licence_number String?
+  /// Official driver's licence document (scan/photo).
+  drivers_licence_file_path      String?
+  drivers_licence_file_name      String?
+  drivers_licence_expiry         DateTime?
+  drivers_licence_uploaded_at    DateTime?
+  /// Medical fitness certificate.
+  medical_certificate_file_path      String?
+  medical_certificate_file_name      String?
+  medical_certificate_expiry         DateTime?
+  medical_certificate_uploaded_at    DateTime?
+  /// Defensive Driving Certificate (DDC) — validity must not exceed 2 years.
+  defensive_driving_certificate_number         String?
+  defensive_driving_certificate_file_path      String?
+  defensive_driving_certificate_file_name      String?
+  defensive_driving_certificate_expiry         DateTime?
+  defensive_driving_certificate_uploaded_at    DateTime?
   depot_id      String
   status        String   @default("ACTIVE") // ACTIVE, INACTIVE, SUSPENDED
+  /// True while assigned to an ACTIVE trip (cleared when the trip ends).
+  on_trip       Boolean  @default(false)
   created_at    DateTime @default(now())
   updated_at    DateTime @updatedAt
   created_by    String?
@@ -199,6 +220,7 @@ model tblDrivers {
 
   @@unique([depot_id, employee_code])
   @@index([depot_id, status])
+  @@index([on_trip])
 }
 
 model tblRoutes {
@@ -268,6 +290,12 @@ model tblTrips {
   /// Conductor-entered trip corridor.
   origin          String
   destination     String
+  /// Odometer reading at trip start (km). Required for new trips.
+  starting_mileage Int?
+  /// 5-digit waybill number entered by the conductor at start.
+  waybill_no      String?
+  /// Odometer reading at trip end (km). Required when cashier ends the trip.
+  closing_mileage Int?
   started_at      DateTime
   ended_at        DateTime?
   status          String   @default("ACTIVE")
@@ -287,6 +315,7 @@ model tblTrips {
 
   @@index([depot_id, origin, destination])
   @@index([driver_id])
+  @@index([depot_id, waybill_no])
 }
 
 model tblTickets {
@@ -410,4 +439,33 @@ model tblSystemSettings {
   created_at         DateTime @default(now())
   updated_at         DateTime @updatedAt
   updated_by         String?
+}
+
+/// Mobile app release packages hosted for Super Admin download / distribution.
+model tblAppReleases {
+  id             String   @id @default(uuid())
+  /// Semver display version, e.g. "1.0.0"
+  version_name   String
+  /// Android versionCode / build number, e.g. 1
+  version_code   Int
+  platform       String   @default("android") // android
+  file_path      String
+  file_name      String
+  file_size      Int
+  mime_type      String?
+  /// @deprecated Prefer mobile_notes / admin_notes. Kept for older rows.
+  release_notes  String?
+  /// Changelog for the conductor mobile app.
+  mobile_notes   String?
+  /// Changelog for the admin web panel.
+  admin_notes    String?
+  /// Only one release should be marked current at a time.
+  is_current     Boolean  @default(false)
+  uploaded_by    String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  @@unique([platform, version_name, version_code])
+  @@index([platform, is_current])
+  @@index([created_at])
 }

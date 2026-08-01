@@ -130,6 +130,7 @@ class FleetModel extends Equatable {
     required this.number,
     this.registrationNumber,
     this.status,
+    this.onTrip = false,
   });
 
   factory FleetModel.fromJson(Map<String, dynamic> json) => FleetModel(
@@ -137,15 +138,17 @@ class FleetModel extends Equatable {
         number: json['number'] as String,
         registrationNumber: json['registration_number'] as String?,
         status: json['status'] as String?,
+        onTrip: json['on_trip'] == true,
       );
 
   final String id;
   final String number;
   final String? registrationNumber;
   final String? status;
+  final bool onTrip;
 
   @override
-  List<Object?> get props => [id, number, registrationNumber, status];
+  List<Object?> get props => [id, number, registrationNumber, status, onTrip];
 }
 
 class DriverModel extends Equatable {
@@ -153,22 +156,25 @@ class DriverModel extends Equatable {
     required this.id,
     required this.fullName,
     this.status,
+    this.onTrip = false,
   });
 
   factory DriverModel.fromJson(Map<String, dynamic> json) => DriverModel(
         id: json['id'] as String,
         fullName: json['full_name'] as String,
         status: json['status'] as String?,
+        onTrip: json['on_trip'] == true || json['duty_status'] == 'on_trip',
       );
 
   final String id;
   final String fullName;
   final String? status;
+  final bool onTrip;
 
   String get displayLabel => fullName;
 
   @override
-  List<Object?> get props => [id, fullName, status];
+  List<Object?> get props => [id, fullName, status, onTrip];
 }
 
 class RouteModel extends Equatable {
@@ -295,6 +301,9 @@ class TripModel extends Equatable {
     this.driverName,
     this.routeOrigin,
     this.routeDestination,
+    this.startingMileage,
+    this.waybillNo,
+    this.closingMileage,
     this.ticketsCount = 0,
     this.totalRevenue = 0,
     this.syncStatus = 'synced',
@@ -313,6 +322,9 @@ class TripModel extends Equatable {
   final String? driverName;
   final String? routeOrigin;
   final String? routeDestination;
+  final int? startingMileage;
+  final String? waybillNo;
+  final int? closingMileage;
   final int ticketsCount;
   final double totalRevenue;
   final String syncStatus;
@@ -334,6 +346,9 @@ class TripModel extends Equatable {
     double? totalRevenue,
     String? syncStatus,
     String? fleetRegistrationNumber,
+    int? startingMileage,
+    String? waybillNo,
+    int? closingMileage,
   }) =>
       TripModel(
         id: id,
@@ -350,6 +365,9 @@ class TripModel extends Equatable {
         driverName: driverName,
         routeOrigin: routeOrigin,
         routeDestination: routeDestination,
+        startingMileage: startingMileage ?? this.startingMileage,
+        waybillNo: waybillNo ?? this.waybillNo,
+        closingMileage: closingMileage ?? this.closingMileage,
         ticketsCount: ticketsCount ?? this.ticketsCount,
         totalRevenue: totalRevenue ?? this.totalRevenue,
         syncStatus: syncStatus ?? this.syncStatus,

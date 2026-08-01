@@ -29,6 +29,11 @@ apiClient.interceptors.request.use(
       }
     }
 
+    // Let the browser set multipart boundary — default application/json breaks file uploads.
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+
     return config;
   },
   (error) => {

@@ -36,7 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
-import { isSuperAdmin } from "@/lib/permissions";
+import { canViewAgents, canViewFleets, isSuperAdmin } from "@/lib/permissions";
 import {
   metricsService,
   type ActiveTripSnapshot,
@@ -184,7 +184,10 @@ const RevenueTooltip = ({ active, payload, label }: any) => {
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const userIsSuperAdmin = user ? isSuperAdmin(user.roles || []) : false;
+  const userRoles = user?.roles || [];
+  const userIsSuperAdmin = user ? isSuperAdmin(userRoles) : false;
+  const canOpenAgents = canViewAgents(userRoles);
+  const canOpenFleets = canViewFleets(userRoles);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -417,7 +420,7 @@ const Dashboard = () => {
             value={overview?.conductorsOnline ?? 0}
             hint={`${overview?.conductorsSignedIn ?? 0} signed in`}
             tone={(overview?.conductorsOnline ?? 0) > 0 ? "live" : "muted"}
-            to="/agents"
+            to={canOpenAgents ? "/agents" : undefined}
           />
           <OpsPill
             label="Devices online"
@@ -939,12 +942,14 @@ const Dashboard = () => {
                   <p className="border-t border-border/50 pt-2 text-xs text-muted-foreground">
                     {fleetUtilization.active_trips} of {fleetUtilization.total} fleets on trips
                   </p>
-                  <Link
-                    to="/fleets"
-                    className="inline-flex items-center gap-0.5 text-[11px] font-medium text-primary hover:text-primary/80"
-                  >
-                    Manage fleets <ArrowUpRight className="h-3 w-3" />
-                  </Link>
+                  {canOpenFleets && (
+                    <Link
+                      to="/fleets"
+                      className="inline-flex items-center gap-0.5 text-[11px] font-medium text-primary hover:text-primary/80"
+                    >
+                      Manage fleets <ArrowUpRight className="h-3 w-3" />
+                    </Link>
+                  )}
                 </div>
               ) : (
                 <div className="py-8 text-center text-sm text-muted-foreground">No fleet data</div>

@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Building2, Users, Bus, MapPin, Ticket, Route, Smartphone, UserCog,
-  LogOut, ChevronsLeft, ChevronsRight, Shield, ShieldCheck, X, UserRound
+  LogOut, ChevronsLeft, ChevronsRight, Shield, ShieldCheck, X, UserRound, Download
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -25,6 +25,7 @@ const mainLinks: NavLinkDef[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/depots", label: "Depots", icon: Building2, superOnly: true },
   { to: "/admin-users", label: "Admin Users", icon: UserCog, superOnly: true },
+  { to: "/app-releases", label: "App Releases", icon: Download, superOnly: true },
   { to: "/agents", label: "Conductors", icon: Users, hideForCashier: true },
   { to: "/drivers", label: "Drivers", icon: UserRound, hideForCashier: true },
   { to: "/fleets", label: "Fleets", icon: Bus, hideForCashier: true },

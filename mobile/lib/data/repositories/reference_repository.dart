@@ -89,6 +89,7 @@ class ReferenceRepository {
               number: f.number,
               registrationNumber: Value(f.registrationNumber),
               status: Value(f.status ?? 'ACTIVE'),
+              onTrip: Value(f.onTrip),
               cachedAt: DateTime.now(),
             ),
           )
@@ -104,6 +105,7 @@ class ReferenceRepository {
               id: d.id,
               fullName: d.fullName,
               status: Value(d.status ?? 'ACTIVE'),
+              onTrip: Value(d.onTrip),
               cachedAt: DateTime.now(),
             ),
           )
@@ -194,6 +196,7 @@ class ReferenceRepository {
             number: f.number,
             registrationNumber: f.registrationNumber,
             status: f.status,
+            onTrip: f.onTrip,
           ),
         )
         .toList();
@@ -218,6 +221,7 @@ class ReferenceRepository {
             id: d.id,
             fullName: d.fullName,
             status: d.status,
+            onTrip: d.onTrip,
           ),
         )
         .toList();

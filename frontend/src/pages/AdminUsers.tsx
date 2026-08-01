@@ -28,7 +28,7 @@ import {
   KeyRound,
   Clock,
 } from "lucide-react";
-import { adminUsersService, AdminUserListItem, getPrimaryRoleName } from "@/lib/api/adminUsers.service";
+import { adminUsersService, AdminUserListItem, getPrimaryRoleName, isProtectedAdminRole } from "@/lib/api/adminUsers.service";
 import { depotService } from "@/lib/api/depot.service";
 import { Depot } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,14 +37,15 @@ import type { AdminUserRole } from "@/lib/api/adminUsers.service";
 
 const PRESENCE_POLL_MS = 30_000;
 
-const ROLE_OPTIONS: { value: Exclude<AdminUserRole, "SUPER_ADMIN">; label: string; description: string }[] = [
+const ROLE_OPTIONS: { value: Exclude<AdminUserRole, "SUPER_ADMIN" | "DEVELOPER">; label: string; description: string }[] = [
   { value: "DEPOT_ADMIN", label: "Depot Admin", description: "Full access to one depot" },
-  { value: "CASHIER", label: "Cashier", description: "End trips, view sales, and print ticket batches" },
+  { value: "CASHIER", label: "Cashier", description: "End trips and print ticket batches; no conductors, drivers, or fleets access" },
   { value: "MANAGER", label: "Manager", description: "View and manage depot operations" },
   { value: "VIEWER", label: "Viewer", description: "Read-only access" },
 ];
 
 const roleConfig: Record<string, { class: string; icon: typeof Shield }> = {
+  DEVELOPER: { class: "bg-violet-500/10 text-violet-700 border border-violet-500/25 dark:text-violet-300", icon: ShieldCheck },
   SUPER_ADMIN: { class: "bg-warning/10 text-warning border border-warning/20", icon: ShieldCheck },
   DEPOT_ADMIN: { class: "bg-primary/10 text-primary border border-primary/20", icon: Shield },
   CASHIER: { class: "bg-success/10 text-success border border-success/20", icon: Shield },
@@ -76,7 +77,7 @@ const emptyForm = {
   username: "",
   full_name: "",
   email: "",
-  role: "" as Exclude<AdminUserRole, "SUPER_ADMIN"> | "",
+  role: "" as Exclude<AdminUserRole, "SUPER_ADMIN" | "DEVELOPER"> | "",
   depot_id: "",
   password: "",
 };
@@ -114,6 +115,7 @@ const AdminUsers = () => {
   const [resetError, setResetError] = useState<string | null>(null);
 
   const openResetDialog = (admin: AdminUserListItem) => {
+    if (isProtectedAdminRole(getPrimaryRoleName(admin))) return;
     setResetTarget(admin);
     setResetMode("generate");
     setResetManualPassword("");
@@ -160,14 +162,16 @@ const AdminUsers = () => {
   };
 
   const openEditDialog = (admin: AdminUserListItem) => {
-    if (getPrimaryRoleName(admin) === "SUPER_ADMIN") return;
+    if (isProtectedAdminRole(getPrimaryRoleName(admin))) return;
     setEditingAdmin(admin);
     const primaryRole = getPrimaryRoleName(admin);
     setForm({
       username: admin.username,
       full_name: admin.full_name,
       email: admin.email ?? "",
-      role: primaryRole === "SUPER_ADMIN" ? "" : primaryRole,
+      role: isProtectedAdminRole(primaryRole)
+        ? ""
+        : (primaryRole as Exclude<AdminUserRole, "SUPER_ADMIN" | "DEVELOPER">),
       depot_id: admin.depot_id ?? "",
       password: "",
     });
@@ -200,7 +204,7 @@ const AdminUsers = () => {
         await adminUsersService.update(editingAdmin.id, {
           full_name: form.full_name.trim(),
           email: form.email.trim() || null,
-          role: form.role as Exclude<AdminUserRole, "SUPER_ADMIN">,
+          role: form.role as Exclude<AdminUserRole, "SUPER_ADMIN" | "DEVELOPER">,
           depot_id: form.depot_id || null,
         });
         toast({ title: "Admin updated", description: `${form.full_name} has been updated.` });
@@ -209,7 +213,7 @@ const AdminUsers = () => {
           username: form.username.trim(),
           full_name: form.full_name.trim(),
           email: form.email.trim() || undefined,
-          role: form.role as Exclude<AdminUserRole, "SUPER_ADMIN">,
+          role: form.role as Exclude<AdminUserRole, "SUPER_ADMIN" | "DEVELOPER">,
           depot_id: form.depot_id || undefined,
           password: form.password.trim() || undefined,
         });
@@ -729,7 +733,7 @@ const AdminUsers = () => {
         renderRow={(a) => {
           const roleName = getPrimaryRoleName(a);
           const isCurrentUser = a.id === currentUserId;
-          const canOpen = roleName !== "SUPER_ADMIN";
+          const canOpen = !isProtectedAdminRole(roleName);
           return (
             <TableRow
               key={a.id}
@@ -790,7 +794,7 @@ const AdminUsers = () => {
                 </Badge>
               </TableCell>
               <TableCell className="text-right space-x-1" onClick={(e) => e.stopPropagation()}>
-                {roleName !== "SUPER_ADMIN" && !isCurrentUser && (
+                {canOpen && !isCurrentUser && (
                   <>
                     <Button
                       variant="ghost"
@@ -815,7 +819,7 @@ const AdminUsers = () => {
                     </Button>
                   </>
                 )}
-                {roleName === "SUPER_ADMIN" && (
+                {isProtectedAdminRole(roleName) && (
                   <span className="text-xs text-muted-foreground/50 pr-2">Protected</span>
                 )}
               </TableCell>
@@ -825,7 +829,7 @@ const AdminUsers = () => {
         renderCard={(a) => {
           const roleName = getPrimaryRoleName(a);
           const isCurrentUser = a.id === currentUserId;
-          const canOpen = roleName !== "SUPER_ADMIN";
+          const canOpen = !isProtectedAdminRole(roleName);
           return (
             <div
               className={`space-y-3 ${canOpen ? "cursor-pointer" : ""}`}
@@ -894,7 +898,7 @@ const AdminUsers = () => {
                 </div>
               </div>
 
-              {roleName !== "SUPER_ADMIN" && !isCurrentUser && (
+              {canOpen && !isCurrentUser && (
                 <div
                   className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-border/40"
                   onClick={(e) => e.stopPropagation()}
@@ -921,6 +925,9 @@ const AdminUsers = () => {
                     {a.status === "ACTIVE" ? "Deactivate" : "Activate"}
                   </Button>
                 </div>
+              )}
+              {isProtectedAdminRole(roleName) && (
+                <p className="text-xs text-muted-foreground/50 text-right pt-1">Protected</p>
               )}
             </div>
           );

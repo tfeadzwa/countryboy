@@ -81,6 +81,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _refreshDashboard() async {
     await ref.read(syncServiceProvider).syncIfOnline(force: true);
     ref.invalidate(homeDashboardProvider);
+    ref.read(tripSessionRevisionProvider.notifier).state++;
   }
 
   Future<void> _confirmLogout() async {

@@ -187,6 +187,7 @@ export const heartbeat = async (req: AuthenticatedRequest, res: Response) => {
     if (!device) {
       return res.status(401).json({
         error: 'Device is unpaired or token is invalid. Pair this device again.',
+        code: 'DEVICE_UNPAIRED',
       });
     }
     if (req.depotId && device.depot_id !== req.depotId) {
@@ -204,6 +205,7 @@ export const heartbeat = async (req: AuthenticatedRequest, res: Response) => {
     if (!result.ok) {
       return res.status(409).json({
         error: 'No active conductor session on this device',
+        code: 'NO_ACTIVE_SESSION',
         reason: result.reason,
       });
     }
@@ -344,8 +346,18 @@ export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
     }
 
     // Extract trip details from request body
-    const { id, fleet_id, origin, destination, route_id, device_id, started_offline, driver_id } =
-      req.body;
+    const {
+      id,
+      fleet_id,
+      origin,
+      destination,
+      route_id,
+      device_id,
+      started_offline,
+      driver_id,
+      starting_mileage,
+      waybill_no,
+    } = req.body;
 
     // Validate required fields
     if (!fleet_id) {
@@ -360,6 +372,12 @@ export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
     if (!driver_id) {
       return res.status(400).json({ error: 'driver_id is required' });
     }
+    if (starting_mileage === undefined || starting_mileage === null || starting_mileage === '') {
+      return res.status(400).json({ error: 'starting_mileage is required' });
+    }
+    if (waybill_no === undefined || waybill_no === null || String(waybill_no).trim() === '') {
+      return res.status(400).json({ error: 'waybill_no is required' });
+    }
 
     // Start the trip using agent service
     const trip = await agentService.startAgentTrip({
@@ -371,7 +389,9 @@ export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
       routeId: route_id,
       driverId: driver_id,
       deviceId: device_id,
-      startedOffline: started_offline || false
+      startedOffline: started_offline || false,
+      startingMileage: starting_mileage,
+      waybillNo: waybill_no,
     });
 
     res.status(201).json({
@@ -403,7 +423,9 @@ export const startTrip = async (req: AuthenticatedRequest, res: Response) => {
     if (
       typeof err.message === 'string' &&
       (err.message.includes('does not belong') ||
-        err.message === 'Driver is not active')
+        err.message === 'Driver is not active' ||
+        err.message.includes('mileage') ||
+        err.message.includes('Waybill'))
     ) {
       return res.status(400).json({ error: err.message });
     }

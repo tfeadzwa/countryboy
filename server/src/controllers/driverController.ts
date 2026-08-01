@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import * as driverService from '../services/driverService';
 import { formatPrismaError } from '../utils/prismaErrors';
 import { buildPaginatedResult, parsePagination, wantsPagination } from '../utils/pagination';
+import { isDriverDocumentType } from '../utils/driverCompliance';
 
 export const list = async (req: AuthenticatedRequest, res: Response) => {
   try {
@@ -34,7 +35,8 @@ export const list = async (req: AuthenticatedRequest, res: Response) => {
 
 export const create = async (req: AuthenticatedRequest, res: Response) => {
   const depotId = req.depotId as string;
-  const { full_name, phone, licence_number, status } = req.body;
+  const { full_name, phone, licence_number, status, defensive_driving_certificate_number } =
+    req.body;
 
   if (!depotId) {
     return res.status(400).json({
@@ -45,7 +47,7 @@ export const create = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const driver = await driverService.createDriver(
       depotId,
-      { full_name, phone, licence_number, status },
+      { full_name, phone, licence_number, status, defensive_driving_certificate_number },
       req.user?.id,
     );
     res.status(201).json(driverService.formatDriverResponse(driver));
@@ -118,5 +120,100 @@ export const getOne = async (req: AuthenticatedRequest, res: Response) => {
     res.json(driverService.formatDriverResponse(driver));
   } catch (err) {
     res.status(500).json({ error: 'Error fetching driver', details: err });
+  }
+};
+
+export const uploadDocument = async (req: AuthenticatedRequest, res: Response) => {
+  const id = req.params.id;
+  const typeParam = req.params.type;
+
+  if (!isDriverDocumentType(typeParam)) {
+    return res.status(400).json({ error: 'Invalid document type' });
+  }
+
+  const file = req.file;
+  if (!file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  const expiryRaw = req.body?.expiry_date;
+  const expiryDate =
+    expiryRaw === '' || expiryRaw === 'null' || expiryRaw === undefined
+      ? null
+      : String(expiryRaw);
+
+  try {
+    const updated = await driverService.uploadDriverDocument(
+      id,
+      typeParam,
+      file,
+      expiryDate,
+      req.user?.id,
+      req.depotId,
+    );
+    res.json(driverService.formatDriverResponse(updated));
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.message === 'Driver not found') {
+        return res.status(404).json({ error: err.message });
+      }
+      if (
+        err.message.includes('not allowed') ||
+        err.message.includes('expiry') ||
+        err.message.includes('Invalid document')
+      ) {
+        return res.status(400).json({ error: err.message });
+      }
+    }
+    res.status(400).json({ error: 'Could not upload document', details: err });
+  }
+};
+
+export const downloadDocument = async (req: AuthenticatedRequest, res: Response) => {
+  const id = req.params.id;
+  const typeParam = req.params.type;
+
+  if (!isDriverDocumentType(typeParam)) {
+    return res.status(400).json({ error: 'Invalid document type' });
+  }
+
+  try {
+    const { absolutePath, fileName } = await driverService.getDriverDocumentForDownload(
+      id,
+      typeParam,
+      req.depotId,
+    );
+    res.download(absolutePath, fileName);
+  } catch (err) {
+    if (err instanceof Error) {
+      if (err.message === 'Driver not found' || err.message === 'Document not found') {
+        return res.status(404).json({ error: err.message });
+      }
+    }
+    res.status(500).json({ error: 'Could not download document', details: err });
+  }
+};
+
+export const removeDocument = async (req: AuthenticatedRequest, res: Response) => {
+  const id = req.params.id;
+  const typeParam = req.params.type;
+
+  if (!isDriverDocumentType(typeParam)) {
+    return res.status(400).json({ error: 'Invalid document type' });
+  }
+
+  try {
+    const updated = await driverService.removeDriverDocument(
+      id,
+      typeParam,
+      req.user?.id,
+      req.depotId,
+    );
+    res.json(driverService.formatDriverResponse(updated));
+  } catch (err) {
+    if (err instanceof Error && err.message === 'Driver not found') {
+      return res.status(404).json({ error: err.message });
+    }
+    res.status(400).json({ error: 'Could not remove document', details: err });
   }
 };

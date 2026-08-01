@@ -82,21 +82,27 @@ class SyncService {
       final since = await _db.getSyncMeta('last_sync_at');
       final data = await _syncApi.pull(since: since);
       await _referenceRepository.cacheFromPullSnapshot(data);
-      await _applyPulledTripUpdates(data['trips'] as List<dynamic>?);
-      await _applyPulledTicketPrintState(data['tickets'] as List<dynamic>?);
+      await _applyPulledTrips(data['trips'] as List<dynamic>?);
+      await _applyPulledTickets(data['tickets'] as List<dynamic>?);
       await _reconcileActiveTripFromServer();
     } catch (_) {
       // Reference pull is best-effort; direct fetches still work when authenticated.
     }
   }
 
-  /// Apply cashier/admin trip status changes from sync pull onto matching local rows.
-  Future<void> _applyPulledTripUpdates(List<dynamic>? trips) async {
+  /// Upsert this conductor's trips from depot pull so peer-device tickets have context.
+  Future<void> _applyPulledTrips(List<dynamic>? trips) async {
     if (trips == null || trips.isEmpty) return;
 
     final agent = await _storage.getAgentProfile();
     final agentId = agent?['id']?.toString();
-    if (agentId == null || agentId.isEmpty) return;
+    final depotId = await _storage.getDepotId();
+    if (agentId == null || agentId.isEmpty || depotId == null) return;
+
+    final fleets = await _db.getCachedFleets();
+    final fleetById = {for (final f in fleets) f.id: f};
+    final drivers = await _db.getCachedDrivers();
+    final driverById = {for (final d in drivers) d.id: d};
 
     for (final raw in trips) {
       if (raw is! Map) continue;
@@ -106,50 +112,141 @@ class SyncService {
       final tripId = json['id']?.toString();
       if (tripId == null || tripId.isEmpty) continue;
 
-      final local = await _db.getTripById(tripId);
-      if (local == null) continue;
+      final fleetId = json['fleet_id']?.toString();
+      if (fleetId == null || fleetId.isEmpty) continue;
 
-      final status = (json['status'] as String?) ?? local.status;
-      if (status == 'ACTIVE') continue;
+      final startedRaw = json['started_at']?.toString();
+      if (startedRaw == null || startedRaw.isEmpty) continue;
+      final startedAt = DateTime.tryParse(startedRaw);
+      if (startedAt == null) continue;
 
       DateTime? endedAt;
-      final endedRaw = json['ended_at'];
-      if (endedRaw is String && endedRaw.isNotEmpty) {
+      final endedRaw = json['ended_at']?.toString();
+      if (endedRaw != null && endedRaw.isNotEmpty) {
         endedAt = DateTime.tryParse(endedRaw);
       }
 
-      await _db.markTripEnded(
-        tripId,
-        status: status == 'COMPLETED' ? 'COMPLETED' : 'ENDED',
-        endedAt: endedAt,
+      final status = (json['status'] as String?) ?? 'ACTIVE';
+      final fleet = fleetById[fleetId];
+      final driverId = json['driver_id']?.toString();
+      final driver = driverId == null ? null : driverById[driverId];
+
+      await _db.upsertTrip(
+        LocalTripsCompanion.insert(
+          id: tripId,
+          agentId: agentId,
+          fleetId: fleetId,
+          routeId: Value(json['route_id'] as String?),
+          deviceId: Value(json['device_id'] as String?),
+          depotId: depotId,
+          status: Value(status),
+          startedAt: startedAt,
+          endedAt: Value(endedAt),
+          fleetNumber: Value(fleet?.number),
+          fleetRegistrationNumber: Value(fleet?.registrationNumber),
+          driverId: Value(driverId),
+          driverName: Value(driver?.fullName),
+          routeOrigin: Value(json['origin'] as String?),
+          routeDestination: Value(json['destination'] as String?),
+          syncStatus: const Value('synced'),
+        ),
       );
+
+      if (status != 'ACTIVE') {
+        await _db.markTripEnded(
+          tripId,
+          status: status == 'COMPLETED' ? 'COMPLETED' : 'ENDED',
+          endedAt: endedAt,
+        );
+      }
     }
   }
 
-  Future<void> _applyPulledTicketPrintState(List<dynamic>? tickets) async {
+  /// Merge this conductor's tickets from other devices into local Sales & Tickets.
+  Future<void> _applyPulledTickets(List<dynamic>? tickets) async {
     if (tickets == null || tickets.isEmpty) return;
 
-    final printedIds = <String>[];
-    DateTime? latestPrintedAt;
+    final agent = await _storage.getAgentProfile();
+    final agentId = agent?['id']?.toString();
+    final depotId = await _storage.getDepotId();
+    if (agentId == null || agentId.isEmpty || depotId == null) return;
 
     for (final raw in tickets) {
       if (raw is! Map) continue;
       final json = Map<String, dynamic>.from(raw);
-      if (json['printed'] != true) continue;
-      final id = json['id']?.toString();
-      if (id == null || id.isEmpty) continue;
-      final local = await _db.getTicketById(id);
-      if (local == null || local.printed) continue;
-      printedIds.add(id);
-      final rawAt = json['printed_at'];
-      if (rawAt is String && rawAt.isNotEmpty) {
-        latestPrintedAt = DateTime.tryParse(rawAt) ?? latestPrintedAt;
-      }
-    }
+      if (json['agent_id']?.toString() != agentId) continue;
 
-    if (printedIds.isNotEmpty) {
-      await _db.markTicketsPrinted(printedIds, printedAt: latestPrintedAt);
+      final id = json['id']?.toString();
+      final tripId = json['trip_id']?.toString();
+      if (id == null || id.isEmpty || tripId == null || tripId.isEmpty) {
+        continue;
+      }
+
+      final amount = _parseAmount(json['amount']);
+      if (amount == null) continue;
+
+      final issuedRaw = json['issued_at']?.toString();
+      final issuedAt = issuedRaw == null || issuedRaw.isEmpty
+          ? null
+          : DateTime.tryParse(issuedRaw);
+      if (issuedAt == null) continue;
+
+      final existing = await _db.getTicketById(id);
+      // Don't clobber an unsynced local issue still waiting to push.
+      if (existing != null && existing.syncStatus != 'synced') {
+        if (json['printed'] == true && !existing.printed) {
+          DateTime? printedAt;
+          final printedRaw = json['printed_at']?.toString();
+          if (printedRaw != null && printedRaw.isNotEmpty) {
+            printedAt = DateTime.tryParse(printedRaw);
+          }
+          await _db.markTicketsPrinted([id], printedAt: printedAt);
+        }
+        continue;
+      }
+
+      DateTime? printedAt;
+      final printedRaw = json['printed_at']?.toString();
+      if (printedRaw != null && printedRaw.isNotEmpty) {
+        printedAt = DateTime.tryParse(printedRaw);
+      }
+
+      final luggageAmount = _parseAmount(json['luggage_amount']);
+      final currency = (json['currency'] as String?) ?? 'USD';
+      final category = (json['ticket_category'] as String?) ?? 'PASSENGER';
+
+      await _db.upsertTicket(
+        LocalTicketsCompanion.insert(
+          id: id,
+          tripId: tripId,
+          agentId: agentId,
+          deviceId: Value(json['device_id'] as String?),
+          depotId: (json['depot_id'] as String?) ?? depotId,
+          ticketCategory: category,
+          currency: currency,
+          amount: amount,
+          departure: Value(json['departure'] as String?),
+          destination: Value(json['destination'] as String?),
+          passengerName: Value(json['passenger_name'] as String?),
+          passengerPhone: Value(json['passenger_phone'] as String?),
+          luggageAmount: Value(luggageAmount),
+          luggageDescription: Value(json['luggage_description'] as String?),
+          serialNumber: Value(json['serial_number'] as int?),
+          issuedAt: issuedAt,
+          printed: Value(json['printed'] == true),
+          printedAt: Value(printedAt),
+          syncStatus: const Value('synced'),
+          idempotencyKey: existing?.idempotencyKey ?? 'pull:$id',
+        ),
+      );
     }
+  }
+
+  double? _parseAmount(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is num) return raw.toDouble();
+    if (raw is String) return double.tryParse(raw);
+    return null;
   }
 
   /// If the server has no ACTIVE trip for this agent, clear local ACTIVE rows.
@@ -176,6 +273,40 @@ class SyncService {
       if (localActive != null && localActive.id != remoteId) {
         await _db.markTripEnded(localActive.id);
       }
+
+      // Ensure peer devices import the shared active trip shell.
+      final depotId = await _storage.getDepotId();
+      if (depotId == null) return;
+      final fleet = remote['fleet'] as Map<String, dynamic>?;
+      final driver = remote['driver'] as Map<String, dynamic>?;
+      final route = remote['route'] as Map<String, dynamic>?;
+      final origin =
+          (remote['origin'] as String?) ?? (route?['origin'] as String?);
+      final destination = (remote['destination'] as String?) ??
+          (route?['destination'] as String?);
+      await _db.upsertTrip(
+        LocalTripsCompanion.insert(
+          id: remoteId,
+          agentId: agentId,
+          fleetId: remote['fleet_id'] as String,
+          routeId: Value(remote['route_id'] as String?),
+          deviceId: Value(remote['device_id'] as String?),
+          depotId: depotId,
+          status: const Value('ACTIVE'),
+          startedAt: DateTime.parse(remote['started_at'] as String),
+          fleetNumber: Value(fleet?['number'] as String?),
+          fleetRegistrationNumber: Value(
+            fleet?['registration_number'] as String?,
+          ),
+          driverId: Value(
+            remote['driver_id'] as String? ?? driver?['id'] as String?,
+          ),
+          driverName: Value(driver?['full_name'] as String?),
+          routeOrigin: Value(origin),
+          routeDestination: Value(destination),
+          syncStatus: const Value('synced'),
+        ),
+      );
     } catch (_) {
       // Keep local state if active-trip probe fails.
     }
@@ -241,6 +372,21 @@ class SyncService {
     }
 
     try {
+      final startingMileage = (payload['starting_mileage'] as num?)?.toInt() ??
+          localTrip?.startingMileage;
+      final waybillNo =
+          payload['waybill_no'] as String? ?? localTrip?.waybillNo;
+      if (startingMileage == null) {
+        throw ApiError(
+          message: 'Starting mileage is required before syncing this trip.',
+        );
+      }
+      if (waybillNo == null || waybillNo.isEmpty) {
+        throw ApiError(
+          message: 'Waybill number is required before syncing this trip.',
+        );
+      }
+
       final response = await _tripApi.startTrip(
         tripId: localTripId,
         fleetId: payload['fleet_id'] as String? ?? localTrip?.fleetId ?? '',
@@ -250,6 +396,8 @@ class SyncService {
         driverId: payload['driver_id'] as String? ?? localTrip?.driverId,
         deviceId: payload['device_id'] as String? ?? localTrip?.deviceId,
         startedOffline: payload['started_offline'] as bool? ?? true,
+        startingMileage: startingMileage,
+        waybillNo: waybillNo,
       );
 
       final serverTrip = response['trip'] as Map<String, dynamic>?;
@@ -450,6 +598,11 @@ class SyncService {
       'started_at': trip.startedAt.toUtc().toIso8601String(),
       'status': trip.status,
       'started_offline': trip.startedOffline,
+      if (trip.startingMileage != null)
+        'starting_mileage': trip.startingMileage,
+      if (trip.waybillNo != null) 'waybill_no': trip.waybillNo,
+      if (trip.closingMileage != null)
+        'closing_mileage': trip.closingMileage,
       if (trip.endedAt != null)
         'ended_at': trip.endedAt!.toUtc().toIso8601String(),
     };

@@ -6,17 +6,25 @@ import { isSyncPushRequest } from './logSyncPush';
 export const deviceAuthMiddleware = async (req: Request & { deviceId?: string; depotId?: string; requestId?: string }, res: Response, next: NextFunction) => {
   const token = req.headers['x-device-token'] as string;
   if (!token) {
-    return res.status(401).json({ error: 'Device token missing' });
+    return res.status(401).json({
+      error: 'Device token missing',
+      code: 'DEVICE_TOKEN_MISSING',
+    });
   }
 
   const device = await prisma.tblDevices.findUnique({ where: { token } });
   if (!device) {
-    return res.status(401).json({ error: 'Invalid device token' });
+    // Token was rotated on unpair (or never existed) — treat as unpaired for clients.
+    return res.status(401).json({
+      error: 'Invalid device token',
+      code: 'INVALID_DEVICE_TOKEN',
+    });
   }
 
   if (!device.paired) {
     return res.status(401).json({
       error: 'Device is unpaired. Pair this device again with a new pairing code.',
+      code: 'DEVICE_UNPAIRED',
     });
   }
 

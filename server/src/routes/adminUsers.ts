@@ -3,16 +3,26 @@ import bcrypt from '../lib/bcrypt';
 import { z } from 'zod';
 import prisma from '../utils/prisma';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth';
-import { requireRole } from '../middleware/rbac';
+import { isDeveloper, requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import logger, { authLoginLogger } from '../utils/logger';
 import { isAdminOnline } from '../constants/presence';
 
 const router = Router();
 
-// All admin-users endpoints require a valid session + SUPER_ADMIN role
+// SUPER_ADMIN and DEVELOPER (developer inherits SUPER_ADMIN via rbac expansion)
 router.use(authMiddleware);
 router.use(requireRole('SUPER_ADMIN'));
+
+const PROTECTED_ROLES = new Set(['SUPER_ADMIN', 'DEVELOPER']);
+
+const userHasProtectedRole = (
+  roles: { role: { name: string } }[],
+): boolean => roles.some((r) => PROTECTED_ROLES.has(r.role.name));
+
+const userHasDeveloperRole = (
+  roles: { role: { name: string } }[],
+): boolean => roles.some((r) => r.role.name === 'DEVELOPER');
 
 // ---------------------------------------------------------------------------
 // Validation schemas
@@ -119,7 +129,14 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
       select: adminUserSelect,
       orderBy: { created_at: 'asc' },
     });
-    res.json(users.map(mapAdminUser));
+
+    // Super admins must not see developer accounts; developers see everyone.
+    const requesterIsDeveloper = isDeveloper(req);
+    const visible = requesterIsDeveloper
+      ? users
+      : users.filter((u) => !userHasDeveloperRole(u.roles));
+
+    res.json(visible.map(mapAdminUser));
   } catch (err) {
     logger.error('Failed to list admin users', { err });
     res.status(500).json({ error: 'Failed to load admin users' });
@@ -212,6 +229,18 @@ router.put('/:id', validate(updateAdminUserSchema), async (req: AuthenticatedReq
     });
     if (!existing) return res.status(404).json({ error: 'Admin user not found' });
 
+    // Super admins cannot view/modify developer accounts.
+    if (userHasDeveloperRole(existing.roles) && !isDeveloper(req)) {
+      return res.status(404).json({ error: 'Admin user not found' });
+    }
+
+    // Protected elevated accounts cannot be edited via this console.
+    if (userHasProtectedRole(existing.roles)) {
+      return res.status(403).json({
+        error: 'Cannot modify a developer or super admin account from this page',
+      });
+    }
+
     // Prevent self-deactivation
     if (status === 'INACTIVE' && id === requesterId) {
       return res.status(400).json({ error: 'You cannot deactivate your own account' });
@@ -293,9 +322,14 @@ router.post(
       return res.status(404).json({ error: 'Admin user not found' });
     }
 
-    const isSuperAdmin = existing.roles.some((r) => r.role.name === 'SUPER_ADMIN');
-    if (isSuperAdmin) {
-      return res.status(403).json({ error: 'Cannot reset password for a super admin account' });
+    if (userHasDeveloperRole(existing.roles) && !isDeveloper(req)) {
+      return res.status(404).json({ error: 'Admin user not found' });
+    }
+
+    if (userHasProtectedRole(existing.roles)) {
+      return res.status(403).json({
+        error: 'Cannot reset password for a developer or super admin account',
+      });
     }
 
     if (id === requesterId) {

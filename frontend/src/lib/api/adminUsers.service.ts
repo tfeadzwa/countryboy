@@ -1,6 +1,7 @@
 import apiClient from './axios';
 
 export type AdminUserRole =
+  | 'DEVELOPER'
   | 'SUPER_ADMIN'
   | 'DEPOT_ADMIN'
   | 'CASHIER'
@@ -26,7 +27,7 @@ export interface CreateAdminUserRequest {
   username: string;
   full_name: string;
   email?: string;
-  role: Exclude<AdminUserRole, 'SUPER_ADMIN'>;
+  role: Exclude<AdminUserRole, 'SUPER_ADMIN' | 'DEVELOPER'>;
   depot_id?: string;
   password?: string;
 }
@@ -34,7 +35,7 @@ export interface CreateAdminUserRequest {
 export interface UpdateAdminUserRequest {
   full_name?: string;
   email?: string | null;
-  role?: Exclude<AdminUserRole, 'SUPER_ADMIN'>;
+  role?: Exclude<AdminUserRole, 'SUPER_ADMIN' | 'DEVELOPER'>;
   depot_id?: string | null;
   status?: AdminUserStatus;
 }
@@ -71,5 +72,21 @@ export const adminUsersService = new AdminUsersService();
 
 // Helper to extract the primary role name from a list item
 export const getPrimaryRoleName = (user: AdminUserListItem): AdminUserRole => {
-  return (user.roles?.[0]?.role?.name as AdminUserRole) ?? 'VIEWER';
+  const names = (user.roles ?? []).map((r) => r.role.name);
+  const priority: Record<string, number> = {
+    DEVELOPER: 0,
+    SUPER_ADMIN: 1,
+    DEPOT_ADMIN: 2,
+    CASHIER: 3,
+    MANAGER: 4,
+    VIEWER: 5,
+  };
+  const sorted = [...names].sort(
+    (a, b) => (priority[a] ?? 999) - (priority[b] ?? 999),
+  );
+  return (sorted[0] as AdminUserRole) ?? 'VIEWER';
+};
+
+export const isProtectedAdminRole = (roleName: string): boolean => {
+  return roleName === 'SUPER_ADMIN' || roleName === 'DEVELOPER';
 };

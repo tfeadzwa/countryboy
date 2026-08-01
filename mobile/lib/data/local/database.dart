@@ -32,7 +32,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -75,6 +75,15 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(cachedFleets, cachedFleets.registrationNumber);
             await m.addColumn(localTrips, localTrips.fleetRegistrationNumber);
           }
+          if (from < 12) {
+            await m.addColumn(cachedFleets, cachedFleets.onTrip);
+            await m.addColumn(cachedDrivers, cachedDrivers.onTrip);
+          }
+          if (from < 13) {
+            await m.addColumn(localTrips, localTrips.startingMileage);
+            await m.addColumn(localTrips, localTrips.waybillNo);
+            await m.addColumn(localTrips, localTrips.closingMileage);
+          }
         },
       );
 
@@ -92,6 +101,12 @@ class AppDatabase extends _$AppDatabase {
   Future<List<CachedFleet>> getCachedFleets() =>
       (select(cachedFleets)..orderBy([(t) => OrderingTerm.asc(t.number)])).get();
 
+  Future<void> setFleetOnTrip(String fleetId, bool onTrip) async {
+    await (update(cachedFleets)..where((t) => t.id.equals(fleetId))).write(
+      CachedFleetsCompanion(onTrip: Value(onTrip)),
+    );
+  }
+
   Future<void> cacheDrivers(List<CachedDriversCompanion> items) async {
     await transaction(() async {
       await delete(cachedDrivers).go();
@@ -104,6 +119,12 @@ class AppDatabase extends _$AppDatabase {
   Future<List<CachedDriver>> getCachedDrivers() => (select(cachedDrivers)
         ..orderBy([(t) => OrderingTerm.asc(t.fullName)]))
       .get();
+
+  Future<void> setDriverOnTrip(String driverId, bool onTrip) async {
+    await (update(cachedDrivers)..where((t) => t.id.equals(driverId))).write(
+      CachedDriversCompanion(onTrip: Value(onTrip)),
+    );
+  }
 
   Future<void> cacheRoutes(List<CachedRoutesCompanion> items) async {
     await transaction(() async {
@@ -204,6 +225,10 @@ class AppDatabase extends _$AppDatabase {
 
   Future<void> insertTicket(LocalTicketsCompanion ticket) =>
       into(localTickets).insert(ticket);
+
+  /// Insert or update a ticket from a server pull (cross-device sync).
+  Future<void> upsertTicket(LocalTicketsCompanion ticket) =>
+      into(localTickets).insertOnConflictUpdate(ticket);
 
   Future<bool> ticketExistsByIdempotencyKey(String key) async {
     final row = await (select(localTickets)

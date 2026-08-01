@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { tripService } from "@/lib/api/trip.service";
-import { canEndTrips, canPrintTicketBatches } from "@/lib/permissions";
+import { canEndTrips, canPrintTicketBatches, isSuperAdmin } from "@/lib/permissions";
 import type { TripDetail, TripDetailTicket } from "@/types";
 
 const statusConfig: Record<string, { class: string; label: string }> = {
@@ -257,6 +257,7 @@ const TripDetailPage = () => {
   const { toast } = useToast();
   const canEnd = canEndTrips(user?.roles || []);
   const canPrint = canPrintTicketBatches(user?.roles || []);
+  const canForceEnd = isSuperAdmin(user?.roles || []);
   const [trip, setTrip] = useState<TripDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [ending, setEnding] = useState(false);
@@ -302,12 +303,19 @@ const TripDetailPage = () => {
     };
   }, [id]);
 
-  const handleEndTrip = async () => {
+  const handleEndTrip = async (closingMileage: number) => {
     if (!trip || !canEnd || trip.status !== "ACTIVE") return;
+
+    const online =
+      Boolean(trip.conductor_is_online) || trip.conductor_presence === "online";
+    if (!online && !canForceEnd) return;
 
     setEnding(true);
     try {
-      await tripService.end(trip.id, trip.depot_id);
+      await tripService.end(trip.id, trip.depot_id, {
+        force: !online && canForceEnd,
+        closingMileage,
+      });
       setEndConfirmOpen(false);
       toast({
         title: "Trip ended",
@@ -329,6 +337,12 @@ const TripDetailPage = () => {
   const activeTickets = useMemo(() => tickets.filter((t) => !t.is_voided), [tickets]);
   const voidedTickets = useMemo(() => tickets.filter((t) => t.is_voided), [tickets]);
   const ticketCount = trip?.ticket_count ?? activeTickets.length;
+  const conductorOnline = Boolean(
+    trip &&
+      (trip.conductor_is_online || trip.conductor_presence === "online"),
+  );
+  const canConfirmEnd = conductorOnline || canForceEnd;
+  const forceEndMode = Boolean(trip && !conductorOnline && canForceEnd);
   const avgFare = useMemo(() => {
     if (!trip || ticketCount <= 0) return null;
     const entries = Object.entries(trip.revenue_by_currency ?? {});
@@ -381,16 +395,32 @@ const TripDetailPage = () => {
             <Link to="/trips">All trips</Link>
           </Button>
           {canEnd && trip.status === "ACTIVE" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              disabled={ending}
-              onClick={() => setEndConfirmOpen(true)}
-            >
-              <Square className="h-3.5 w-3.5" />
-              End trip
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-60"
+                disabled={ending || !canConfirmEnd}
+                title={
+                  !canConfirmEnd
+                    ? "Conductor must be online to end this trip"
+                    : forceEndMode
+                      ? "Conductor offline — force end available"
+                      : undefined
+                }
+                onClick={() => setEndConfirmOpen(true)}
+              >
+                <Square className="h-3.5 w-3.5" />
+                End trip
+              </Button>
+              {!conductorOnline && (
+                <p className="max-w-[14rem] text-right text-[11px] text-muted-foreground">
+                  {canForceEnd
+                    ? "Conductor offline — force end if the device is abandoned."
+                    : "Conductor must be online to end this trip."}
+                </p>
+              )}
+            </div>
           )}
           <Badge className={`text-xs ${status.class}`}>{status.label}</Badge>
         </div>
@@ -441,7 +471,7 @@ const TripDetailPage = () => {
         </div>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <InfoCell
           label="Tickets sold"
           icon={Ticket}
@@ -458,6 +488,25 @@ const TripDetailPage = () => {
           value={moneyBits(trip.revenue_by_currency, trip.total_revenue)}
         />
         <InfoCell label="Duration" icon={Clock} value={durationLabel(trip)} />
+        <InfoCell
+          label="Waybill"
+          icon={Ticket}
+          value={trip.waybill_no || "—"}
+          hint={
+            trip.starting_mileage != null || trip.closing_mileage != null
+              ? [
+                  trip.starting_mileage != null
+                    ? `Start ${trip.starting_mileage} km`
+                    : null,
+                  trip.closing_mileage != null
+                    ? `Close ${trip.closing_mileage} km`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : "Entered at trip start"
+          }
+        />
         <InfoCell
           label="Occupancy"
           icon={Gauge}
@@ -596,7 +645,9 @@ const TripDetailPage = () => {
         open={endConfirmOpen}
         onOpenChange={setEndConfirmOpen}
         loading={ending}
-        onConfirm={() => void handleEndTrip()}
+        forceMode={forceEndMode}
+        canConfirm={canConfirmEnd}
+        onConfirm={(closingMileage) => void handleEndTrip(closingMileage)}
         trip={{
           fleet_number: trip.fleet_number,
           origin: trip.origin,
@@ -605,6 +656,10 @@ const TripDetailPage = () => {
           agent_name: trip.agent_name,
           ticket_count: trip.ticket_count ?? activeTickets.length,
           revenue_label: moneyBits(trip.revenue_by_currency, trip.total_revenue),
+          conductor_presence: trip.conductor_presence,
+          conductor_is_online: trip.conductor_is_online,
+          starting_mileage: trip.starting_mileage,
+          waybill_no: trip.waybill_no,
         }}
       />
 

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/agent_code_screen.dart';
@@ -15,6 +16,9 @@ import '../../domain/models/ticket_issue_draft.dart';
 import '../../features/tickets/issued_tickets_screen.dart';
 import '../../features/trips/end_trip_screen.dart';
 import '../../features/trips/start_trip_screen.dart';
+
+/// Shared messenger so forced logout can show a SnackBar after navigation.
+final rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(

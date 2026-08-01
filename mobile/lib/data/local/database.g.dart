@@ -48,6 +48,19 @@ class $CachedFleetsTable extends CachedFleets
     requiredDuringInsert: false,
     defaultValue: const Constant('ACTIVE'),
   );
+  static const VerificationMeta _onTripMeta = const VerificationMeta('onTrip');
+  @override
+  late final GeneratedColumn<bool> onTrip = GeneratedColumn<bool>(
+    'on_trip',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("on_trip" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _capacityMeta = const VerificationMeta(
     'capacity',
   );
@@ -77,6 +90,7 @@ class $CachedFleetsTable extends CachedFleets
     number,
     registrationNumber,
     status,
+    onTrip,
     capacity,
     cachedAt,
   ];
@@ -120,6 +134,12 @@ class $CachedFleetsTable extends CachedFleets
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
       );
     }
+    if (data.containsKey('on_trip')) {
+      context.handle(
+        _onTripMeta,
+        onTrip.isAcceptableOrUnknown(data['on_trip']!, _onTripMeta),
+      );
+    }
     if (data.containsKey('capacity')) {
       context.handle(
         _capacityMeta,
@@ -159,6 +179,10 @@ class $CachedFleetsTable extends CachedFleets
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
+      onTrip: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}on_trip'],
+      )!,
       capacity: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}capacity'],
@@ -181,6 +205,7 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
   final String number;
   final String? registrationNumber;
   final String status;
+  final bool onTrip;
   final int capacity;
   final DateTime cachedAt;
   const CachedFleet({
@@ -188,6 +213,7 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
     required this.number,
     this.registrationNumber,
     required this.status,
+    required this.onTrip,
     required this.capacity,
     required this.cachedAt,
   });
@@ -200,6 +226,7 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
       map['registration_number'] = Variable<String>(registrationNumber);
     }
     map['status'] = Variable<String>(status);
+    map['on_trip'] = Variable<bool>(onTrip);
     map['capacity'] = Variable<int>(capacity);
     map['cached_at'] = Variable<DateTime>(cachedAt);
     return map;
@@ -213,6 +240,7 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
           ? const Value.absent()
           : Value(registrationNumber),
       status: Value(status),
+      onTrip: Value(onTrip),
       capacity: Value(capacity),
       cachedAt: Value(cachedAt),
     );
@@ -230,6 +258,7 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
         json['registrationNumber'],
       ),
       status: serializer.fromJson<String>(json['status']),
+      onTrip: serializer.fromJson<bool>(json['onTrip']),
       capacity: serializer.fromJson<int>(json['capacity']),
       cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
     );
@@ -242,6 +271,7 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
       'number': serializer.toJson<String>(number),
       'registrationNumber': serializer.toJson<String?>(registrationNumber),
       'status': serializer.toJson<String>(status),
+      'onTrip': serializer.toJson<bool>(onTrip),
       'capacity': serializer.toJson<int>(capacity),
       'cachedAt': serializer.toJson<DateTime>(cachedAt),
     };
@@ -252,6 +282,7 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
     String? number,
     Value<String?> registrationNumber = const Value.absent(),
     String? status,
+    bool? onTrip,
     int? capacity,
     DateTime? cachedAt,
   }) => CachedFleet(
@@ -261,6 +292,7 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
         ? registrationNumber.value
         : this.registrationNumber,
     status: status ?? this.status,
+    onTrip: onTrip ?? this.onTrip,
     capacity: capacity ?? this.capacity,
     cachedAt: cachedAt ?? this.cachedAt,
   );
@@ -272,6 +304,7 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
           ? data.registrationNumber.value
           : this.registrationNumber,
       status: data.status.present ? data.status.value : this.status,
+      onTrip: data.onTrip.present ? data.onTrip.value : this.onTrip,
       capacity: data.capacity.present ? data.capacity.value : this.capacity,
       cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
     );
@@ -284,6 +317,7 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
           ..write('number: $number, ')
           ..write('registrationNumber: $registrationNumber, ')
           ..write('status: $status, ')
+          ..write('onTrip: $onTrip, ')
           ..write('capacity: $capacity, ')
           ..write('cachedAt: $cachedAt')
           ..write(')'))
@@ -291,8 +325,15 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, number, registrationNumber, status, capacity, cachedAt);
+  int get hashCode => Object.hash(
+    id,
+    number,
+    registrationNumber,
+    status,
+    onTrip,
+    capacity,
+    cachedAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -301,6 +342,7 @@ class CachedFleet extends DataClass implements Insertable<CachedFleet> {
           other.number == this.number &&
           other.registrationNumber == this.registrationNumber &&
           other.status == this.status &&
+          other.onTrip == this.onTrip &&
           other.capacity == this.capacity &&
           other.cachedAt == this.cachedAt);
 }
@@ -310,6 +352,7 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
   final Value<String> number;
   final Value<String?> registrationNumber;
   final Value<String> status;
+  final Value<bool> onTrip;
   final Value<int> capacity;
   final Value<DateTime> cachedAt;
   final Value<int> rowid;
@@ -318,6 +361,7 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
     this.number = const Value.absent(),
     this.registrationNumber = const Value.absent(),
     this.status = const Value.absent(),
+    this.onTrip = const Value.absent(),
     this.capacity = const Value.absent(),
     this.cachedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -327,6 +371,7 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
     required String number,
     this.registrationNumber = const Value.absent(),
     this.status = const Value.absent(),
+    this.onTrip = const Value.absent(),
     this.capacity = const Value.absent(),
     required DateTime cachedAt,
     this.rowid = const Value.absent(),
@@ -338,6 +383,7 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
     Expression<String>? number,
     Expression<String>? registrationNumber,
     Expression<String>? status,
+    Expression<bool>? onTrip,
     Expression<int>? capacity,
     Expression<DateTime>? cachedAt,
     Expression<int>? rowid,
@@ -347,6 +393,7 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
       if (number != null) 'number': number,
       if (registrationNumber != null) 'registration_number': registrationNumber,
       if (status != null) 'status': status,
+      if (onTrip != null) 'on_trip': onTrip,
       if (capacity != null) 'capacity': capacity,
       if (cachedAt != null) 'cached_at': cachedAt,
       if (rowid != null) 'rowid': rowid,
@@ -358,6 +405,7 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
     Value<String>? number,
     Value<String?>? registrationNumber,
     Value<String>? status,
+    Value<bool>? onTrip,
     Value<int>? capacity,
     Value<DateTime>? cachedAt,
     Value<int>? rowid,
@@ -367,6 +415,7 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
       number: number ?? this.number,
       registrationNumber: registrationNumber ?? this.registrationNumber,
       status: status ?? this.status,
+      onTrip: onTrip ?? this.onTrip,
       capacity: capacity ?? this.capacity,
       cachedAt: cachedAt ?? this.cachedAt,
       rowid: rowid ?? this.rowid,
@@ -388,6 +437,9 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (onTrip.present) {
+      map['on_trip'] = Variable<bool>(onTrip.value);
+    }
     if (capacity.present) {
       map['capacity'] = Variable<int>(capacity.value);
     }
@@ -407,6 +459,7 @@ class CachedFleetsCompanion extends UpdateCompanion<CachedFleet> {
           ..write('number: $number, ')
           ..write('registrationNumber: $registrationNumber, ')
           ..write('status: $status, ')
+          ..write('onTrip: $onTrip, ')
           ..write('capacity: $capacity, ')
           ..write('cachedAt: $cachedAt, ')
           ..write('rowid: $rowid')
@@ -451,6 +504,19 @@ class $CachedDriversTable extends CachedDrivers
     requiredDuringInsert: false,
     defaultValue: const Constant('ACTIVE'),
   );
+  static const VerificationMeta _onTripMeta = const VerificationMeta('onTrip');
+  @override
+  late final GeneratedColumn<bool> onTrip = GeneratedColumn<bool>(
+    'on_trip',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("on_trip" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _cachedAtMeta = const VerificationMeta(
     'cachedAt',
   );
@@ -463,7 +529,13 @@ class $CachedDriversTable extends CachedDrivers
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, fullName, status, cachedAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    fullName,
+    status,
+    onTrip,
+    cachedAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -495,6 +567,12 @@ class $CachedDriversTable extends CachedDrivers
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
       );
     }
+    if (data.containsKey('on_trip')) {
+      context.handle(
+        _onTripMeta,
+        onTrip.isAcceptableOrUnknown(data['on_trip']!, _onTripMeta),
+      );
+    }
     if (data.containsKey('cached_at')) {
       context.handle(
         _cachedAtMeta,
@@ -524,6 +602,10 @@ class $CachedDriversTable extends CachedDrivers
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
+      onTrip: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}on_trip'],
+      )!,
       cachedAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}cached_at'],
@@ -541,11 +623,13 @@ class CachedDriver extends DataClass implements Insertable<CachedDriver> {
   final String id;
   final String fullName;
   final String status;
+  final bool onTrip;
   final DateTime cachedAt;
   const CachedDriver({
     required this.id,
     required this.fullName,
     required this.status,
+    required this.onTrip,
     required this.cachedAt,
   });
   @override
@@ -554,6 +638,7 @@ class CachedDriver extends DataClass implements Insertable<CachedDriver> {
     map['id'] = Variable<String>(id);
     map['full_name'] = Variable<String>(fullName);
     map['status'] = Variable<String>(status);
+    map['on_trip'] = Variable<bool>(onTrip);
     map['cached_at'] = Variable<DateTime>(cachedAt);
     return map;
   }
@@ -563,6 +648,7 @@ class CachedDriver extends DataClass implements Insertable<CachedDriver> {
       id: Value(id),
       fullName: Value(fullName),
       status: Value(status),
+      onTrip: Value(onTrip),
       cachedAt: Value(cachedAt),
     );
   }
@@ -576,6 +662,7 @@ class CachedDriver extends DataClass implements Insertable<CachedDriver> {
       id: serializer.fromJson<String>(json['id']),
       fullName: serializer.fromJson<String>(json['fullName']),
       status: serializer.fromJson<String>(json['status']),
+      onTrip: serializer.fromJson<bool>(json['onTrip']),
       cachedAt: serializer.fromJson<DateTime>(json['cachedAt']),
     );
   }
@@ -586,6 +673,7 @@ class CachedDriver extends DataClass implements Insertable<CachedDriver> {
       'id': serializer.toJson<String>(id),
       'fullName': serializer.toJson<String>(fullName),
       'status': serializer.toJson<String>(status),
+      'onTrip': serializer.toJson<bool>(onTrip),
       'cachedAt': serializer.toJson<DateTime>(cachedAt),
     };
   }
@@ -594,11 +682,13 @@ class CachedDriver extends DataClass implements Insertable<CachedDriver> {
     String? id,
     String? fullName,
     String? status,
+    bool? onTrip,
     DateTime? cachedAt,
   }) => CachedDriver(
     id: id ?? this.id,
     fullName: fullName ?? this.fullName,
     status: status ?? this.status,
+    onTrip: onTrip ?? this.onTrip,
     cachedAt: cachedAt ?? this.cachedAt,
   );
   CachedDriver copyWithCompanion(CachedDriversCompanion data) {
@@ -606,6 +696,7 @@ class CachedDriver extends DataClass implements Insertable<CachedDriver> {
       id: data.id.present ? data.id.value : this.id,
       fullName: data.fullName.present ? data.fullName.value : this.fullName,
       status: data.status.present ? data.status.value : this.status,
+      onTrip: data.onTrip.present ? data.onTrip.value : this.onTrip,
       cachedAt: data.cachedAt.present ? data.cachedAt.value : this.cachedAt,
     );
   }
@@ -616,13 +707,14 @@ class CachedDriver extends DataClass implements Insertable<CachedDriver> {
           ..write('id: $id, ')
           ..write('fullName: $fullName, ')
           ..write('status: $status, ')
+          ..write('onTrip: $onTrip, ')
           ..write('cachedAt: $cachedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, fullName, status, cachedAt);
+  int get hashCode => Object.hash(id, fullName, status, onTrip, cachedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -630,6 +722,7 @@ class CachedDriver extends DataClass implements Insertable<CachedDriver> {
           other.id == this.id &&
           other.fullName == this.fullName &&
           other.status == this.status &&
+          other.onTrip == this.onTrip &&
           other.cachedAt == this.cachedAt);
 }
 
@@ -637,12 +730,14 @@ class CachedDriversCompanion extends UpdateCompanion<CachedDriver> {
   final Value<String> id;
   final Value<String> fullName;
   final Value<String> status;
+  final Value<bool> onTrip;
   final Value<DateTime> cachedAt;
   final Value<int> rowid;
   const CachedDriversCompanion({
     this.id = const Value.absent(),
     this.fullName = const Value.absent(),
     this.status = const Value.absent(),
+    this.onTrip = const Value.absent(),
     this.cachedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -650,6 +745,7 @@ class CachedDriversCompanion extends UpdateCompanion<CachedDriver> {
     required String id,
     required String fullName,
     this.status = const Value.absent(),
+    this.onTrip = const Value.absent(),
     required DateTime cachedAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -659,6 +755,7 @@ class CachedDriversCompanion extends UpdateCompanion<CachedDriver> {
     Expression<String>? id,
     Expression<String>? fullName,
     Expression<String>? status,
+    Expression<bool>? onTrip,
     Expression<DateTime>? cachedAt,
     Expression<int>? rowid,
   }) {
@@ -666,6 +763,7 @@ class CachedDriversCompanion extends UpdateCompanion<CachedDriver> {
       if (id != null) 'id': id,
       if (fullName != null) 'full_name': fullName,
       if (status != null) 'status': status,
+      if (onTrip != null) 'on_trip': onTrip,
       if (cachedAt != null) 'cached_at': cachedAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -675,6 +773,7 @@ class CachedDriversCompanion extends UpdateCompanion<CachedDriver> {
     Value<String>? id,
     Value<String>? fullName,
     Value<String>? status,
+    Value<bool>? onTrip,
     Value<DateTime>? cachedAt,
     Value<int>? rowid,
   }) {
@@ -682,6 +781,7 @@ class CachedDriversCompanion extends UpdateCompanion<CachedDriver> {
       id: id ?? this.id,
       fullName: fullName ?? this.fullName,
       status: status ?? this.status,
+      onTrip: onTrip ?? this.onTrip,
       cachedAt: cachedAt ?? this.cachedAt,
       rowid: rowid ?? this.rowid,
     );
@@ -699,6 +799,9 @@ class CachedDriversCompanion extends UpdateCompanion<CachedDriver> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (onTrip.present) {
+      map['on_trip'] = Variable<bool>(onTrip.value);
+    }
     if (cachedAt.present) {
       map['cached_at'] = Variable<DateTime>(cachedAt.value);
     }
@@ -714,6 +817,7 @@ class CachedDriversCompanion extends UpdateCompanion<CachedDriver> {
           ..write('id: $id, ')
           ..write('fullName: $fullName, ')
           ..write('status: $status, ')
+          ..write('onTrip: $onTrip, ')
           ..write('cachedAt: $cachedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1797,6 +1901,39 @@ class $LocalTripsTable extends LocalTrips
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _startingMileageMeta = const VerificationMeta(
+    'startingMileage',
+  );
+  @override
+  late final GeneratedColumn<int> startingMileage = GeneratedColumn<int>(
+    'starting_mileage',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _waybillNoMeta = const VerificationMeta(
+    'waybillNo',
+  );
+  @override
+  late final GeneratedColumn<String> waybillNo = GeneratedColumn<String>(
+    'waybill_no',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _closingMileageMeta = const VerificationMeta(
+    'closingMileage',
+  );
+  @override
+  late final GeneratedColumn<int> closingMileage = GeneratedColumn<int>(
+    'closing_mileage',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _syncStatusMeta = const VerificationMeta(
     'syncStatus',
   );
@@ -1827,6 +1964,9 @@ class $LocalTripsTable extends LocalTrips
     driverName,
     routeOrigin,
     routeDestination,
+    startingMileage,
+    waybillNo,
+    closingMileage,
     syncStatus,
   ];
   @override
@@ -1959,6 +2099,30 @@ class $LocalTripsTable extends LocalTrips
         ),
       );
     }
+    if (data.containsKey('starting_mileage')) {
+      context.handle(
+        _startingMileageMeta,
+        startingMileage.isAcceptableOrUnknown(
+          data['starting_mileage']!,
+          _startingMileageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('waybill_no')) {
+      context.handle(
+        _waybillNoMeta,
+        waybillNo.isAcceptableOrUnknown(data['waybill_no']!, _waybillNoMeta),
+      );
+    }
+    if (data.containsKey('closing_mileage')) {
+      context.handle(
+        _closingMileageMeta,
+        closingMileage.isAcceptableOrUnknown(
+          data['closing_mileage']!,
+          _closingMileageMeta,
+        ),
+      );
+    }
     if (data.containsKey('sync_status')) {
       context.handle(
         _syncStatusMeta,
@@ -2038,6 +2202,18 @@ class $LocalTripsTable extends LocalTrips
         DriftSqlType.string,
         data['${effectivePrefix}route_destination'],
       ),
+      startingMileage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}starting_mileage'],
+      ),
+      waybillNo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}waybill_no'],
+      ),
+      closingMileage: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}closing_mileage'],
+      ),
       syncStatus: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}sync_status'],
@@ -2068,6 +2244,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
   final String? driverName;
   final String? routeOrigin;
   final String? routeDestination;
+  final int? startingMileage;
+  final String? waybillNo;
+  final int? closingMileage;
   final String syncStatus;
   const LocalTrip({
     required this.id,
@@ -2086,6 +2265,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
     this.driverName,
     this.routeOrigin,
     this.routeDestination,
+    this.startingMileage,
+    this.waybillNo,
+    this.closingMileage,
     required this.syncStatus,
   });
   @override
@@ -2127,6 +2309,15 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
     if (!nullToAbsent || routeDestination != null) {
       map['route_destination'] = Variable<String>(routeDestination);
     }
+    if (!nullToAbsent || startingMileage != null) {
+      map['starting_mileage'] = Variable<int>(startingMileage);
+    }
+    if (!nullToAbsent || waybillNo != null) {
+      map['waybill_no'] = Variable<String>(waybillNo);
+    }
+    if (!nullToAbsent || closingMileage != null) {
+      map['closing_mileage'] = Variable<int>(closingMileage);
+    }
     map['sync_status'] = Variable<String>(syncStatus);
     return map;
   }
@@ -2167,6 +2358,15 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
       routeDestination: routeDestination == null && nullToAbsent
           ? const Value.absent()
           : Value(routeDestination),
+      startingMileage: startingMileage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(startingMileage),
+      waybillNo: waybillNo == null && nullToAbsent
+          ? const Value.absent()
+          : Value(waybillNo),
+      closingMileage: closingMileage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(closingMileage),
       syncStatus: Value(syncStatus),
     );
   }
@@ -2195,6 +2395,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
       driverName: serializer.fromJson<String?>(json['driverName']),
       routeOrigin: serializer.fromJson<String?>(json['routeOrigin']),
       routeDestination: serializer.fromJson<String?>(json['routeDestination']),
+      startingMileage: serializer.fromJson<int?>(json['startingMileage']),
+      waybillNo: serializer.fromJson<String?>(json['waybillNo']),
+      closingMileage: serializer.fromJson<int?>(json['closingMileage']),
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
     );
   }
@@ -2220,6 +2423,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
       'driverName': serializer.toJson<String?>(driverName),
       'routeOrigin': serializer.toJson<String?>(routeOrigin),
       'routeDestination': serializer.toJson<String?>(routeDestination),
+      'startingMileage': serializer.toJson<int?>(startingMileage),
+      'waybillNo': serializer.toJson<String?>(waybillNo),
+      'closingMileage': serializer.toJson<int?>(closingMileage),
       'syncStatus': serializer.toJson<String>(syncStatus),
     };
   }
@@ -2241,6 +2447,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
     Value<String?> driverName = const Value.absent(),
     Value<String?> routeOrigin = const Value.absent(),
     Value<String?> routeDestination = const Value.absent(),
+    Value<int?> startingMileage = const Value.absent(),
+    Value<String?> waybillNo = const Value.absent(),
+    Value<int?> closingMileage = const Value.absent(),
     String? syncStatus,
   }) => LocalTrip(
     id: id ?? this.id,
@@ -2263,6 +2472,13 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
     routeDestination: routeDestination.present
         ? routeDestination.value
         : this.routeDestination,
+    startingMileage: startingMileage.present
+        ? startingMileage.value
+        : this.startingMileage,
+    waybillNo: waybillNo.present ? waybillNo.value : this.waybillNo,
+    closingMileage: closingMileage.present
+        ? closingMileage.value
+        : this.closingMileage,
     syncStatus: syncStatus ?? this.syncStatus,
   );
   LocalTrip copyWithCompanion(LocalTripsCompanion data) {
@@ -2295,6 +2511,13 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
       routeDestination: data.routeDestination.present
           ? data.routeDestination.value
           : this.routeDestination,
+      startingMileage: data.startingMileage.present
+          ? data.startingMileage.value
+          : this.startingMileage,
+      waybillNo: data.waybillNo.present ? data.waybillNo.value : this.waybillNo,
+      closingMileage: data.closingMileage.present
+          ? data.closingMileage.value
+          : this.closingMileage,
       syncStatus: data.syncStatus.present
           ? data.syncStatus.value
           : this.syncStatus,
@@ -2320,6 +2543,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
           ..write('driverName: $driverName, ')
           ..write('routeOrigin: $routeOrigin, ')
           ..write('routeDestination: $routeDestination, ')
+          ..write('startingMileage: $startingMileage, ')
+          ..write('waybillNo: $waybillNo, ')
+          ..write('closingMileage: $closingMileage, ')
           ..write('syncStatus: $syncStatus')
           ..write(')'))
         .toString();
@@ -2343,6 +2569,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
     driverName,
     routeOrigin,
     routeDestination,
+    startingMileage,
+    waybillNo,
+    closingMileage,
     syncStatus,
   );
   @override
@@ -2365,6 +2594,9 @@ class LocalTrip extends DataClass implements Insertable<LocalTrip> {
           other.driverName == this.driverName &&
           other.routeOrigin == this.routeOrigin &&
           other.routeDestination == this.routeDestination &&
+          other.startingMileage == this.startingMileage &&
+          other.waybillNo == this.waybillNo &&
+          other.closingMileage == this.closingMileage &&
           other.syncStatus == this.syncStatus);
 }
 
@@ -2385,6 +2617,9 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
   final Value<String?> driverName;
   final Value<String?> routeOrigin;
   final Value<String?> routeDestination;
+  final Value<int?> startingMileage;
+  final Value<String?> waybillNo;
+  final Value<int?> closingMileage;
   final Value<String> syncStatus;
   final Value<int> rowid;
   const LocalTripsCompanion({
@@ -2404,6 +2639,9 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
     this.driverName = const Value.absent(),
     this.routeOrigin = const Value.absent(),
     this.routeDestination = const Value.absent(),
+    this.startingMileage = const Value.absent(),
+    this.waybillNo = const Value.absent(),
+    this.closingMileage = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.rowid = const Value.absent(),
   });
@@ -2424,6 +2662,9 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
     this.driverName = const Value.absent(),
     this.routeOrigin = const Value.absent(),
     this.routeDestination = const Value.absent(),
+    this.startingMileage = const Value.absent(),
+    this.waybillNo = const Value.absent(),
+    this.closingMileage = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
@@ -2448,6 +2689,9 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
     Expression<String>? driverName,
     Expression<String>? routeOrigin,
     Expression<String>? routeDestination,
+    Expression<int>? startingMileage,
+    Expression<String>? waybillNo,
+    Expression<int>? closingMileage,
     Expression<String>? syncStatus,
     Expression<int>? rowid,
   }) {
@@ -2469,6 +2713,9 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
       if (driverName != null) 'driver_name': driverName,
       if (routeOrigin != null) 'route_origin': routeOrigin,
       if (routeDestination != null) 'route_destination': routeDestination,
+      if (startingMileage != null) 'starting_mileage': startingMileage,
+      if (waybillNo != null) 'waybill_no': waybillNo,
+      if (closingMileage != null) 'closing_mileage': closingMileage,
       if (syncStatus != null) 'sync_status': syncStatus,
       if (rowid != null) 'rowid': rowid,
     });
@@ -2491,6 +2738,9 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
     Value<String?>? driverName,
     Value<String?>? routeOrigin,
     Value<String?>? routeDestination,
+    Value<int?>? startingMileage,
+    Value<String?>? waybillNo,
+    Value<int?>? closingMileage,
     Value<String>? syncStatus,
     Value<int>? rowid,
   }) {
@@ -2512,6 +2762,9 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
       driverName: driverName ?? this.driverName,
       routeOrigin: routeOrigin ?? this.routeOrigin,
       routeDestination: routeDestination ?? this.routeDestination,
+      startingMileage: startingMileage ?? this.startingMileage,
+      waybillNo: waybillNo ?? this.waybillNo,
+      closingMileage: closingMileage ?? this.closingMileage,
       syncStatus: syncStatus ?? this.syncStatus,
       rowid: rowid ?? this.rowid,
     );
@@ -2570,6 +2823,15 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
     if (routeDestination.present) {
       map['route_destination'] = Variable<String>(routeDestination.value);
     }
+    if (startingMileage.present) {
+      map['starting_mileage'] = Variable<int>(startingMileage.value);
+    }
+    if (waybillNo.present) {
+      map['waybill_no'] = Variable<String>(waybillNo.value);
+    }
+    if (closingMileage.present) {
+      map['closing_mileage'] = Variable<int>(closingMileage.value);
+    }
     if (syncStatus.present) {
       map['sync_status'] = Variable<String>(syncStatus.value);
     }
@@ -2598,6 +2860,9 @@ class LocalTripsCompanion extends UpdateCompanion<LocalTrip> {
           ..write('driverName: $driverName, ')
           ..write('routeOrigin: $routeOrigin, ')
           ..write('routeDestination: $routeDestination, ')
+          ..write('startingMileage: $startingMileage, ')
+          ..write('waybillNo: $waybillNo, ')
+          ..write('closingMileage: $closingMileage, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -4694,6 +4959,7 @@ typedef $$CachedFleetsTableCreateCompanionBuilder =
       required String number,
       Value<String?> registrationNumber,
       Value<String> status,
+      Value<bool> onTrip,
       Value<int> capacity,
       required DateTime cachedAt,
       Value<int> rowid,
@@ -4704,6 +4970,7 @@ typedef $$CachedFleetsTableUpdateCompanionBuilder =
       Value<String> number,
       Value<String?> registrationNumber,
       Value<String> status,
+      Value<bool> onTrip,
       Value<int> capacity,
       Value<DateTime> cachedAt,
       Value<int> rowid,
@@ -4735,6 +5002,11 @@ class $$CachedFleetsTableFilterComposer
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get onTrip => $composableBuilder(
+    column: $table.onTrip,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4778,6 +5050,11 @@ class $$CachedFleetsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get onTrip => $composableBuilder(
+    column: $table.onTrip,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get capacity => $composableBuilder(
     column: $table.capacity,
     builder: (column) => ColumnOrderings(column),
@@ -4811,6 +5088,9 @@ class $$CachedFleetsTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<bool> get onTrip =>
+      $composableBuilder(column: $table.onTrip, builder: (column) => column);
 
   GeneratedColumn<int> get capacity =>
       $composableBuilder(column: $table.capacity, builder: (column) => column);
@@ -4854,6 +5134,7 @@ class $$CachedFleetsTableTableManager
                 Value<String> number = const Value.absent(),
                 Value<String?> registrationNumber = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<bool> onTrip = const Value.absent(),
                 Value<int> capacity = const Value.absent(),
                 Value<DateTime> cachedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -4862,6 +5143,7 @@ class $$CachedFleetsTableTableManager
                 number: number,
                 registrationNumber: registrationNumber,
                 status: status,
+                onTrip: onTrip,
                 capacity: capacity,
                 cachedAt: cachedAt,
                 rowid: rowid,
@@ -4872,6 +5154,7 @@ class $$CachedFleetsTableTableManager
                 required String number,
                 Value<String?> registrationNumber = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<bool> onTrip = const Value.absent(),
                 Value<int> capacity = const Value.absent(),
                 required DateTime cachedAt,
                 Value<int> rowid = const Value.absent(),
@@ -4880,6 +5163,7 @@ class $$CachedFleetsTableTableManager
                 number: number,
                 registrationNumber: registrationNumber,
                 status: status,
+                onTrip: onTrip,
                 capacity: capacity,
                 cachedAt: cachedAt,
                 rowid: rowid,
@@ -4914,6 +5198,7 @@ typedef $$CachedDriversTableCreateCompanionBuilder =
       required String id,
       required String fullName,
       Value<String> status,
+      Value<bool> onTrip,
       required DateTime cachedAt,
       Value<int> rowid,
     });
@@ -4922,6 +5207,7 @@ typedef $$CachedDriversTableUpdateCompanionBuilder =
       Value<String> id,
       Value<String> fullName,
       Value<String> status,
+      Value<bool> onTrip,
       Value<DateTime> cachedAt,
       Value<int> rowid,
     });
@@ -4947,6 +5233,11 @@ class $$CachedDriversTableFilterComposer
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get onTrip => $composableBuilder(
+    column: $table.onTrip,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4980,6 +5271,11 @@ class $$CachedDriversTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get onTrip => $composableBuilder(
+    column: $table.onTrip,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get cachedAt => $composableBuilder(
     column: $table.cachedAt,
     builder: (column) => ColumnOrderings(column),
@@ -5003,6 +5299,9 @@ class $$CachedDriversTableAnnotationComposer
 
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<bool> get onTrip =>
+      $composableBuilder(column: $table.onTrip, builder: (column) => column);
 
   GeneratedColumn<DateTime> get cachedAt =>
       $composableBuilder(column: $table.cachedAt, builder: (column) => column);
@@ -5042,12 +5341,14 @@ class $$CachedDriversTableTableManager
                 Value<String> id = const Value.absent(),
                 Value<String> fullName = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<bool> onTrip = const Value.absent(),
                 Value<DateTime> cachedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CachedDriversCompanion(
                 id: id,
                 fullName: fullName,
                 status: status,
+                onTrip: onTrip,
                 cachedAt: cachedAt,
                 rowid: rowid,
               ),
@@ -5056,12 +5357,14 @@ class $$CachedDriversTableTableManager
                 required String id,
                 required String fullName,
                 Value<String> status = const Value.absent(),
+                Value<bool> onTrip = const Value.absent(),
                 required DateTime cachedAt,
                 Value<int> rowid = const Value.absent(),
               }) => CachedDriversCompanion.insert(
                 id: id,
                 fullName: fullName,
                 status: status,
+                onTrip: onTrip,
                 cachedAt: cachedAt,
                 rowid: rowid,
               ),
@@ -5573,6 +5876,9 @@ typedef $$LocalTripsTableCreateCompanionBuilder =
       Value<String?> driverName,
       Value<String?> routeOrigin,
       Value<String?> routeDestination,
+      Value<int?> startingMileage,
+      Value<String?> waybillNo,
+      Value<int?> closingMileage,
       Value<String> syncStatus,
       Value<int> rowid,
     });
@@ -5594,6 +5900,9 @@ typedef $$LocalTripsTableUpdateCompanionBuilder =
       Value<String?> driverName,
       Value<String?> routeOrigin,
       Value<String?> routeDestination,
+      Value<int?> startingMileage,
+      Value<String?> waybillNo,
+      Value<int?> closingMileage,
       Value<String> syncStatus,
       Value<int> rowid,
     });
@@ -5684,6 +5993,21 @@ class $$LocalTripsTableFilterComposer
 
   ColumnFilters<String> get routeDestination => $composableBuilder(
     column: $table.routeDestination,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startingMileage => $composableBuilder(
+    column: $table.startingMileage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get waybillNo => $composableBuilder(
+    column: $table.waybillNo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get closingMileage => $composableBuilder(
+    column: $table.closingMileage,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5782,6 +6106,21 @@ class $$LocalTripsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get startingMileage => $composableBuilder(
+    column: $table.startingMileage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get waybillNo => $composableBuilder(
+    column: $table.waybillNo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get closingMileage => $composableBuilder(
+    column: $table.closingMileage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get syncStatus => $composableBuilder(
     column: $table.syncStatus,
     builder: (column) => ColumnOrderings(column),
@@ -5857,6 +6196,19 @@ class $$LocalTripsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<int> get startingMileage => $composableBuilder(
+    column: $table.startingMileage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get waybillNo =>
+      $composableBuilder(column: $table.waybillNo, builder: (column) => column);
+
+  GeneratedColumn<int> get closingMileage => $composableBuilder(
+    column: $table.closingMileage,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get syncStatus => $composableBuilder(
     column: $table.syncStatus,
     builder: (column) => column,
@@ -5910,6 +6262,9 @@ class $$LocalTripsTableTableManager
                 Value<String?> driverName = const Value.absent(),
                 Value<String?> routeOrigin = const Value.absent(),
                 Value<String?> routeDestination = const Value.absent(),
+                Value<int?> startingMileage = const Value.absent(),
+                Value<String?> waybillNo = const Value.absent(),
+                Value<int?> closingMileage = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalTripsCompanion(
@@ -5929,6 +6284,9 @@ class $$LocalTripsTableTableManager
                 driverName: driverName,
                 routeOrigin: routeOrigin,
                 routeDestination: routeDestination,
+                startingMileage: startingMileage,
+                waybillNo: waybillNo,
+                closingMileage: closingMileage,
                 syncStatus: syncStatus,
                 rowid: rowid,
               ),
@@ -5950,6 +6308,9 @@ class $$LocalTripsTableTableManager
                 Value<String?> driverName = const Value.absent(),
                 Value<String?> routeOrigin = const Value.absent(),
                 Value<String?> routeDestination = const Value.absent(),
+                Value<int?> startingMileage = const Value.absent(),
+                Value<String?> waybillNo = const Value.absent(),
+                Value<int?> closingMileage = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => LocalTripsCompanion.insert(
@@ -5969,6 +6330,9 @@ class $$LocalTripsTableTableManager
                 driverName: driverName,
                 routeOrigin: routeOrigin,
                 routeDestination: routeDestination,
+                startingMileage: startingMileage,
+                waybillNo: waybillNo,
+                closingMileage: closingMileage,
                 syncStatus: syncStatus,
                 rowid: rowid,
               ),

@@ -23,6 +23,8 @@ import { notificationService } from "@/lib/api/notification.service";
 import { frequencyStyles, severityStyles } from "@/lib/fleet-compliance";
 import type { AlertFrequency, FleetComplianceNotification } from "@/types";
 import ErrorAlert from "@/components/ErrorAlert";
+import { useAuth } from "@/contexts/AuthContext";
+import { canViewFleets } from "@/lib/permissions";
 
 const DISMISSED_KEY = "cboy_dismissed_notifications";
 const READ_KEY = "cboy_read_notifications";
@@ -68,6 +70,8 @@ function FrequencyIcon({ frequency }: { frequency: AlertFrequency }) {
 
 const Notifications = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canOpenFleets = canViewFleets(user?.roles || []);
   const [notifications, setNotifications] = useState<FleetComplianceNotification[]>([]);
   const [summary, setSummary] = useState({
     total: 0,
@@ -317,12 +321,16 @@ const Notifications = () => {
                 return (
                   <motion.div key={n.id} variants={itemVariants} exit={itemVariants.exit} layout>
                     <Card
-                      className={`group relative overflow-hidden transition-all duration-200 hover:shadow-md cursor-pointer ${
+                      onClick={() => {
+                        if (canOpenFleets) navigate("/fleets");
+                      }}
+                      className={`group relative overflow-hidden transition-all duration-200 hover:shadow-md ${
+                        canOpenFleets ? "cursor-pointer" : "cursor-default"
+                      } ${
                         !isRead
                           ? "bg-card shadow-sm ring-1 ring-border"
                           : "bg-muted/20 shadow-none"
                       }`}
-                      onClick={() => navigate("/fleets")}
                     >
                       {!isRead && (
                         <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${styles.bar}`} />

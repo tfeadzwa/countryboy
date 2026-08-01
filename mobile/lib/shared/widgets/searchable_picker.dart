@@ -136,6 +136,7 @@ Future<T?> showSearchablePickerSheet<T>({
   String itemNoun = 'items',
   String emptyHint = 'Try a different search.',
   String? Function(T item)? secondaryLabelOf,
+  bool Function(T item)? isDisabled,
   IconData itemIcon = Icons.circle_outlined,
 }) {
   return showModalBottomSheet<T>(
@@ -153,6 +154,7 @@ Future<T?> showSearchablePickerSheet<T>({
       emptyHint: emptyHint,
       labelOf: labelOf,
       secondaryLabelOf: secondaryLabelOf,
+      isDisabled: isDisabled,
       isSelected: isSelected,
       matchesQuery: matchesQuery,
       itemIcon: itemIcon,
@@ -196,9 +198,16 @@ Future<FleetModel?> showFleetPickerSheet({
   String? subtitle,
   String searchHint = 'Search fleet number',
 }) {
+  final sorted = [...fleets]..sort((a, b) {
+      if (a.onTrip == b.onTrip) {
+        return a.number.toLowerCase().compareTo(b.number.toLowerCase());
+      }
+      return a.onTrip ? 1 : -1;
+    });
+
   return showSearchablePickerSheet<FleetModel>(
     context: context,
-    items: fleets,
+    items: sorted,
     selected: selected,
     title: title,
     subtitle: subtitle,
@@ -207,12 +216,17 @@ Future<FleetModel?> showFleetPickerSheet({
     emptyHint: 'Try a different fleet number.',
     itemIcon: Icons.directions_bus_rounded,
     labelOf: (f) => f.number,
-    secondaryLabelOf: (f) =>
-        f.status == null || f.status!.isEmpty ? null : f.status,
+    secondaryLabelOf: (f) {
+      if (f.onTrip) return 'On trip';
+      if (f.status == null || f.status!.isEmpty) return null;
+      return f.status;
+    },
+    isDisabled: (f) => f.onTrip,
     isSelected: (item, selected) => selected?.id == item.id,
     matchesQuery: (f, q) =>
         f.number.toLowerCase().contains(q) ||
-        (f.status?.toLowerCase().contains(q) ?? false),
+        (f.status?.toLowerCase().contains(q) ?? false) ||
+        (f.onTrip && 'on trip'.contains(q)),
   );
 }
 
@@ -224,9 +238,16 @@ Future<DriverModel?> showDriverPickerSheet({
   String? subtitle,
   String searchHint = 'Search driver name',
 }) {
+  final sorted = [...drivers]..sort((a, b) {
+      if (a.onTrip == b.onTrip) {
+        return a.fullName.toLowerCase().compareTo(b.fullName.toLowerCase());
+      }
+      return a.onTrip ? 1 : -1;
+    });
+
   return showSearchablePickerSheet<DriverModel>(
     context: context,
-    items: drivers,
+    items: sorted,
     selected: selected,
     title: title,
     subtitle: subtitle,
@@ -235,10 +256,16 @@ Future<DriverModel?> showDriverPickerSheet({
     emptyHint: 'Try a different driver name.',
     itemIcon: Icons.person_rounded,
     labelOf: (d) => d.fullName,
-    secondaryLabelOf: (d) =>
-        d.status == null || d.status!.isEmpty ? null : d.status,
+    secondaryLabelOf: (d) {
+      if (d.onTrip) return 'On trip';
+      if (d.status == null || d.status!.isEmpty) return null;
+      return d.status;
+    },
+    isDisabled: (d) => d.onTrip,
     isSelected: (item, selected) => selected?.id == item.id,
-    matchesQuery: (d, q) => d.fullName.toLowerCase().contains(q),
+    matchesQuery: (d, q) =>
+        d.fullName.toLowerCase().contains(q) ||
+        (d.onTrip && 'on trip'.contains(q)),
   );
 }
 
@@ -300,6 +327,7 @@ class _SearchablePickerSheet<T> extends StatefulWidget {
     this.selected,
     this.subtitle,
     this.secondaryLabelOf,
+    this.isDisabled,
   });
 
   final List<T> items;
@@ -311,6 +339,7 @@ class _SearchablePickerSheet<T> extends StatefulWidget {
   final String emptyHint;
   final String Function(T item) labelOf;
   final String? Function(T item)? secondaryLabelOf;
+  final bool Function(T item)? isDisabled;
   final bool Function(T item, T? selected) isSelected;
   final bool Function(T item, String query) matchesQuery;
   final IconData itemIcon;
@@ -456,56 +485,94 @@ class _SearchablePickerSheetState<T> extends State<_SearchablePickerSheet<T>> {
                         final item = filtered[index];
                         final selected = widget.isSelected(item, widget.selected);
                         final secondary = widget.secondaryLabelOf?.call(item);
+                        final disabled = widget.isDisabled?.call(item) ?? false;
+                        final muted = AppColors.textSecondary.withValues(
+                          alpha: disabled ? 0.55 : 1,
+                        );
+                        final titleColor = disabled
+                            ? muted
+                            : selected
+                                ? AppColors.brandRed
+                                : AppColors.textPrimary;
 
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.lg,
-                            vertical: AppSpacing.xs,
-                          ),
-                          leading: Container(
-                            width: 40,
-                            height: 40,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? AppColors.brandRed.withValues(alpha: 0.12)
-                                  : AppColors.surfaceMuted,
-                              borderRadius:
-                                  BorderRadius.circular(AppSpacing.radiusSm),
+                        return Opacity(
+                          opacity: disabled ? 0.55 : 1,
+                          child: ListTile(
+                            enabled: !disabled,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.lg,
+                              vertical: AppSpacing.xs,
                             ),
-                            child: Icon(
-                              selected ? Icons.check_rounded : widget.itemIcon,
-                              color: selected
-                                  ? AppColors.brandRed
-                                  : AppColors.textSecondary,
-                              size: 20,
+                            leading: Container(
+                              width: 40,
+                              height: 40,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: selected && !disabled
+                                    ? AppColors.brandRed.withValues(alpha: 0.12)
+                                    : AppColors.surfaceMuted,
+                                borderRadius:
+                                    BorderRadius.circular(AppSpacing.radiusSm),
+                              ),
+                              child: Icon(
+                                disabled
+                                    ? Icons.lock_outline_rounded
+                                    : selected
+                                        ? Icons.check_rounded
+                                        : widget.itemIcon,
+                                color: disabled
+                                    ? muted
+                                    : selected
+                                        ? AppColors.brandRed
+                                        : AppColors.textSecondary,
+                                size: 20,
+                              ),
                             ),
-                          ),
-                          title: Text(
-                            widget.labelOf(item),
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight:
-                                  selected ? FontWeight.w700 : FontWeight.w600,
-                              color: selected
-                                  ? AppColors.brandRed
-                                  : AppColors.textPrimary,
+                            title: Text(
+                              widget.labelOf(item),
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: selected && !disabled
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
+                                color: titleColor,
+                              ),
                             ),
-                          ),
-                          subtitle: secondary == null || secondary.isEmpty
-                              ? null
-                              : Text(
-                                  secondary,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: AppColors.textSecondary,
+                            subtitle: secondary == null || secondary.isEmpty
+                                ? null
+                                : Text(
+                                    secondary,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: disabled
+                                          ? AppColors.brandRed.withValues(
+                                              alpha: 0.75,
+                                            )
+                                          : AppColors.textSecondary,
+                                      fontWeight: disabled
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                    ),
                                   ),
-                                ),
-                          trailing: selected
-                              ? const Icon(
-                                  Icons.check_circle_rounded,
-                                  color: AppColors.brandRed,
-                                )
-                              : null,
-                          onTap: () => Navigator.of(context).pop(item),
+                            trailing: selected && !disabled
+                                ? const Icon(
+                                    Icons.check_circle_rounded,
+                                    color: AppColors.brandRed,
+                                  )
+                                : disabled
+                                    ? Text(
+                                        'On trip',
+                                        style:
+                                            theme.textTheme.labelMedium?.copyWith(
+                                          color: AppColors.brandRed.withValues(
+                                            alpha: 0.75,
+                                          ),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      )
+                                    : null,
+                            onTap: disabled
+                                ? null
+                                : () => Navigator.of(context).pop(item),
+                          ),
                         );
                       },
                     ),

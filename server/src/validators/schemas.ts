@@ -130,6 +130,7 @@ export const driverSchema = z.object({
     full_name: z.string().trim().min(2, 'Full name is required'),
     phone: z.string().trim().min(7).max(30).optional().nullable(),
     licence_number: z.string().trim().min(1).max(60).optional().nullable(),
+    defensive_driving_certificate_number: z.string().trim().min(1).max(60).optional().nullable(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional().default('ACTIVE'),
   }),
 });
@@ -139,8 +140,12 @@ export const driverUpdateSchema = z.object({
     full_name: z.string().trim().min(2).optional(),
     phone: z.string().trim().min(7).max(30).optional().nullable(),
     licence_number: z.string().trim().min(1).max(60).optional().nullable(),
+    defensive_driving_certificate_number: z.string().trim().min(1).max(60).optional().nullable(),
     status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
     depot_id: z.string().uuid().optional(),
+    drivers_licence_expiry: expiryDateField,
+    medical_certificate_expiry: expiryDateField,
+    defensive_driving_certificate_expiry: expiryDateField,
   }),
 });
 
@@ -175,6 +180,11 @@ export const startTripSchema = z.object({
       route_id: z.string().optional(),
       device_id: z.string().optional(),
       started_offline: z.boolean().optional(),
+      starting_mileage: z.coerce.number().int().min(0),
+      waybill_no: z
+        .string()
+        .trim()
+        .regex(/^\d{5}$/, 'Waybill number must be exactly 5 digits'),
     })
     .superRefine((data, ctx) => {
       if (data.origin.toLowerCase() === data.destination.toLowerCase()) {
@@ -187,7 +197,13 @@ export const startTripSchema = z.object({
     }),
 });
 
-export const endTripSchema = z.object({ params: z.object({ id: z.string() }) });
+export const endTripSchema = z.object({
+  params: z.object({ id: z.string() }),
+  body: z.object({
+    force: z.boolean().optional(),
+    closing_mileage: z.coerce.number().int().min(0),
+  }),
+});
 
 export const ticketIssueSchema = z.object({
   body: z

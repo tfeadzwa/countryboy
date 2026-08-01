@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Bus, Eye, Loader2, Pencil, Plus, Trash2, UserRound } from "lucide-react";
+import { Bus, Eye, Loader2, Pencil, Plus, ShieldAlert, ShieldCheck, Trash2, UserRound, AlertTriangle } from "lucide-react";
 import PageHeader from "@/components/PageHeader";
 import { ResponsiveTable } from "@/components/ResponsiveTable";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import AddDriverDialog from "@/components/AddDriverDialog";
 import ConfirmDeleteDialog from "@/components/ConfirmDeleteDialog";
 import TablePagination from "@/components/TablePagination";
 import ErrorAlert from "@/components/ErrorAlert";
@@ -16,7 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canManageDrivers, isSuperAdmin } from "@/lib/permissions";
 import { useToast } from "@/hooks/use-toast";
 import { DEFAULT_PAGE_SIZE } from "@/types/pagination";
-import type { Driver, DriverDutyStatus } from "@/types";
+import type { Driver, DriverDocumentItem, DriverDutyStatus } from "@/types";
+import { frequencyStyles, severityStyles } from "@/lib/fleet-compliance";
 
 const PRESENCE_POLL_MS = 30_000;
 
@@ -46,6 +46,7 @@ const columns = [
   { header: "Phone" },
   { header: "Depot" },
   { header: "Duty" },
+  { header: "Documents" },
   { header: "Account" },
   { header: "Actions", className: "text-right" },
 ];
@@ -78,6 +79,57 @@ const driverSortRank = (driver: Driver) => {
   return 2;
 };
 
+function DocumentsCell({ driver }: { driver: Driver }) {
+  const items = driver.documents || [];
+  const worst = driver.documents_summary?.worst_severity || "ok";
+  const attention = driver.documents_summary?.items_needing_attention || 0;
+  const styles = severityStyles[worst] || severityStyles.ok;
+
+  if (items.length === 0) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+
+  if (attention === 0 && worst !== "expired" && worst !== "urgent") {
+    return (
+      <Badge variant="outline" className={`text-[10px] gap-1 ${styles.badge}`}>
+        <ShieldCheck className="h-3 w-3" />
+        Documents OK
+      </Badge>
+    );
+  }
+
+  const urgentItems = items.filter(
+    (i) => i.severity === "expired" || i.severity === "urgent" || i.severity === "warning",
+  );
+
+  return (
+    <div className="flex flex-col gap-1.5 min-w-[140px]">
+      <Badge variant="outline" className={`text-[10px] w-fit gap-1 ${styles.badge}`}>
+        {worst === "expired" || worst === "urgent" ? (
+          <ShieldAlert className="h-3 w-3" />
+        ) : (
+          <AlertTriangle className="h-3 w-3" />
+        )}
+        {attention} need{attention === 1 ? "s" : ""} attention
+      </Badge>
+      <div className="flex flex-wrap gap-1">
+        {urgentItems.slice(0, 2).map((item: DriverDocumentItem) => (
+          <Badge
+            key={item.key}
+            variant="outline"
+            className={`text-[9px] font-medium ${
+              item.frequency ? frequencyStyles[item.frequency] : styles.badge
+            }`}
+            title={`${item.label}: ${item.status_label}`}
+          >
+            {item.shortLabel}
+          </Badge>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const compareDrivers = (a: Driver, b: Driver) => {
   const rankDiff = driverSortRank(a) - driverSortRank(b);
   if (rankDiff !== 0) return rankDiff;
@@ -96,8 +148,6 @@ const Drivers = () => {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingDriver, setEditingDriver] = useState<Driver | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
@@ -140,14 +190,8 @@ const Drivers = () => {
 
   const sortedDrivers = useMemo(() => [...drivers].sort(compareDrivers), [drivers]);
 
-  const handleDialogClose = (open: boolean) => {
-    setDialogOpen(open);
-    if (!open) setEditingDriver(undefined);
-  };
-
-  const handleSaved = () => {
-    if (page !== 1 && !editingDriver) setPage(1);
-    else void fetchDrivers();
+  const openDriver = (driver: Driver) => {
+    navigate(`/drivers/${driver.id}/edit`);
   };
 
   const handleDelete = async () => {
@@ -175,22 +219,15 @@ const Drivers = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-      <PageHeader title="Drivers" description="Manage bus drivers assigned to each depot">
+      <PageHeader title="Drivers" description="Manage drivers, compliance documents, and depot assignments">
         {canManage && (
-          <Button size="sm" className="gap-2 shadow-sm" onClick={() => setDialogOpen(true)}>
+          <Button size="sm" className="gap-2 shadow-sm" onClick={() => navigate("/drivers/new")}>
             <Plus className="h-4 w-4" /> Add Driver
           </Button>
         )}
       </PageHeader>
 
       <ErrorAlert error={error} />
-
-      <AddDriverDialog
-        open={dialogOpen}
-        onOpenChange={handleDialogClose}
-        onSuccess={handleSaved}
-        driver={editingDriver}
-      />
 
       <ConfirmDeleteDialog
         open={!!deleteTarget}
@@ -222,7 +259,7 @@ const Drivers = () => {
             Add drivers for this depot so conductors can assign them when starting a trip.
           </p>
           {canManage && (
-            <Button size="sm" className="mt-5 gap-2" onClick={() => setDialogOpen(true)}>
+            <Button size="sm" className="mt-5 gap-2" onClick={() => navigate("/drivers/new")}>
               <Plus className="h-4 w-4" /> Add first driver
             </Button>
           )}
@@ -238,7 +275,11 @@ const Drivers = () => {
               const duty = dutyConfig[dutyOf(driver)];
               const trip = tripLabel(driver);
               return (
-                <TableRow key={driver.id} className="group hover:bg-muted/30 transition-colors">
+                <TableRow
+                  key={driver.id}
+                  className="group hover:bg-muted/30 transition-colors cursor-pointer"
+                  onClick={() => openDriver(driver)}
+                >
                   <TableCell>
                     <div className="flex items-center gap-2.5">
                       <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -274,7 +315,10 @@ const Drivers = () => {
                           variant="outline"
                           size="sm"
                           className="h-7 gap-1 text-xs"
-                          onClick={() => navigate(`/trips/${driver.active_trip!.id}`)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/trips/${driver.active_trip!.id}`);
+                          }}
                         >
                           <Eye className="h-3 w-3" /> View trip
                         </Button>
@@ -282,22 +326,22 @@ const Drivers = () => {
                     </div>
                   </TableCell>
                   <TableCell>
+                    <DocumentsCell driver={driver} />
+                  </TableCell>
+                  <TableCell>
                     <Badge className={`text-xs gap-1.5 ${account.class}`}>
                       <span className={`h-1.5 w-1.5 rounded-full ${account.dot}`} />
                       {driver.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right space-x-1">
+                  <TableCell className="text-right space-x-1" onClick={(e) => e.stopPropagation()}>
                     {canManage ? (
                       <>
                         <Button
                           variant="ghost"
                           size="sm"
                           className="gap-1"
-                          onClick={() => {
-                            setEditingDriver(driver);
-                            setDialogOpen(true);
-                          }}
+                          onClick={() => openDriver(driver)}
                         >
                           <Pencil className="h-3.5 w-3.5" /> Edit
                         </Button>
@@ -311,7 +355,14 @@ const Drivers = () => {
                         </Button>
                       </>
                     ) : (
-                      <span className="text-xs text-muted-foreground">View only</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1"
+                        onClick={() => openDriver(driver)}
+                      >
+                        <Eye className="h-3.5 w-3.5" /> View
+                      </Button>
                     )}
                   </TableCell>
                 </TableRow>
@@ -322,7 +373,10 @@ const Drivers = () => {
               const duty = dutyConfig[dutyOf(driver)];
               const trip = tripLabel(driver);
               return (
-                <div className="space-y-3">
+                <div
+                  className="space-y-3 cursor-pointer"
+                  onClick={() => openDriver(driver)}
+                >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -352,7 +406,10 @@ const Drivers = () => {
                       variant="outline"
                       size="sm"
                       className="w-full gap-1.5"
-                      onClick={() => navigate(`/trips/${driver.active_trip!.id}`)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/trips/${driver.active_trip!.id}`);
+                      }}
                     >
                       <Eye className="h-3.5 w-3.5" /> View trip details
                     </Button>
@@ -367,16 +424,15 @@ const Drivers = () => {
                       <p className="font-medium">{driver.depot_name || "—"}</p>
                     </div>
                   </div>
-                  {canManage && (
-                    <div className="flex justify-end gap-1 pt-2 border-t border-border/40">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setEditingDriver(driver);
-                          setDialogOpen(true);
-                        }}
-                      >
+                  <div className="pt-1">
+                    <DocumentsCell driver={driver} />
+                  </div>
+                  {canManage ? (
+                    <div
+                      className="flex justify-end gap-1 pt-2 border-t border-border/40"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Button variant="ghost" size="sm" onClick={() => openDriver(driver)}>
                         Edit
                       </Button>
                       <Button
@@ -386,6 +442,15 @@ const Drivers = () => {
                         onClick={() => setDeleteTarget(driver)}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="flex justify-end pt-2 border-t border-border/40"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Button variant="ghost" size="sm" onClick={() => openDriver(driver)}>
+                        View documents
                       </Button>
                     </div>
                   )}

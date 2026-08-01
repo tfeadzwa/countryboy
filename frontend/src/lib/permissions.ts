@@ -3,9 +3,13 @@
  *
  * Centralized logic for checking user permissions based on roles.
  * Aligns with backend role-based access control (RBAC).
+ *
+ * DEVELOPER inherits SUPER_ADMIN privileges and sits above it for
+ * platform-only capabilities (e.g. publishing mobile app releases).
  */
 
 export type UserRole =
+  | 'DEVELOPER'
   | 'SUPER_ADMIN'
   | 'DEPOT_ADMIN'
   | 'CASHIER'
@@ -21,31 +25,38 @@ export const hasRole = (userRoles: string[], ...requiredRoles: string[]): boolea
 };
 
 /**
- * Check if user is a Super Admin
+ * Platform developer — above super admin for release publishing / hidden accounts.
+ */
+export const isDeveloper = (userRoles: string[]): boolean => {
+  return hasRole(userRoles, 'DEVELOPER');
+};
+
+/**
+ * Super Admin privileges (DEVELOPER inherits these).
  */
 export const isSuperAdmin = (userRoles: string[]): boolean => {
-  return hasRole(userRoles, 'SUPER_ADMIN');
+  return hasRole(userRoles, 'SUPER_ADMIN', 'DEVELOPER');
 };
 
 /**
  * Check if user is a Depot Admin or higher
  */
 export const isDepotAdmin = (userRoles: string[]): boolean => {
-  return hasRole(userRoles, 'SUPER_ADMIN', 'DEPOT_ADMIN');
+  return hasRole(userRoles, 'SUPER_ADMIN', 'DEVELOPER', 'DEPOT_ADMIN');
 };
 
 /**
- * Check if user is a Cashier (or Super Admin with cashier privileges)
+ * Check if user is a Cashier (or Super Admin / Developer with cashier privileges)
  */
 export const isCashier = (userRoles: string[]): boolean => {
-  return hasRole(userRoles, 'SUPER_ADMIN', 'CASHIER');
+  return hasRole(userRoles, 'SUPER_ADMIN', 'DEVELOPER', 'CASHIER');
 };
 
 /**
  * Check if user is a Manager or higher
  */
 export const isManager = (userRoles: string[]): boolean => {
-  return hasRole(userRoles, 'SUPER_ADMIN', 'DEPOT_ADMIN', 'MANAGER');
+  return hasRole(userRoles, 'SUPER_ADMIN', 'DEVELOPER', 'DEPOT_ADMIN', 'MANAGER');
 };
 
 // ===== DEPOT PERMISSIONS =====
@@ -58,12 +69,28 @@ export const canManageAdminUsers = (userRoles: string[]): boolean => {
   return isSuperAdmin(userRoles);
 };
 
+/** View / download published mobile app releases. */
+export const canViewAppReleases = (userRoles: string[]): boolean => {
+  return isSuperAdmin(userRoles);
+};
+
+/** Publish / promote / delete mobile app releases (developer only). */
+export const canPublishAppReleases = (userRoles: string[]): boolean => {
+  return isDeveloper(userRoles);
+};
+
+/** @deprecated Prefer canViewAppReleases / canPublishAppReleases */
+export const canManageAppReleases = (userRoles: string[]): boolean => {
+  return canViewAppReleases(userRoles);
+};
+
 // ===== AGENT PERMISSIONS =====
 
 export const canManageAgents = (userRoles: string[]): boolean => {
   return isDepotAdmin(userRoles);
 };
 
+/** Cashiers may not open the conductors list. */
 export const canViewAgents = (userRoles: string[]): boolean => {
   return userRoles && userRoles.length > 0 && !isCashierOnly(userRoles);
 };
@@ -84,6 +111,7 @@ export const canManageFleets = (userRoles: string[]): boolean => {
   return isDepotAdmin(userRoles);
 };
 
+/** Cashiers may not open the fleets list. */
 export const canViewFleets = (userRoles: string[]): boolean => {
   return userRoles && userRoles.length > 0 && !isCashierOnly(userRoles);
 };
@@ -92,6 +120,7 @@ export const canManageDrivers = (userRoles: string[]): boolean => {
   return isDepotAdmin(userRoles);
 };
 
+/** Cashiers may not open the drivers list. */
 export const canViewDrivers = (userRoles: string[]): boolean => {
   return userRoles && userRoles.length > 0 && !isCashierOnly(userRoles);
 };
@@ -122,7 +151,7 @@ export const canViewFares = (userRoles: string[]): boolean => {
  * Cashiers and Super Admins close trips (conductors only start them).
  */
 export const canEndTrips = (userRoles: string[]): boolean => {
-  return hasRole(userRoles, 'SUPER_ADMIN', 'CASHIER');
+  return hasRole(userRoles, 'SUPER_ADMIN', 'DEVELOPER', 'CASHIER');
 };
 
 export const canManageTrips = (userRoles: string[]): boolean => {
@@ -147,7 +176,7 @@ export const canViewTickets = (userRoles: string[]): boolean => {
  * Print ticket batches for a trip (cashier desk + super admin).
  */
 export const canPrintTicketBatches = (userRoles: string[]): boolean => {
-  return hasRole(userRoles, 'SUPER_ADMIN', 'CASHIER');
+  return hasRole(userRoles, 'SUPER_ADMIN', 'DEVELOPER', 'CASHIER');
 };
 
 // ===== METRICS/REPORTS PERMISSIONS =====
@@ -161,7 +190,7 @@ export const canViewMetrics = (userRoles: string[]): boolean => {
  */
 export const isCashierOnly = (userRoles: string[]): boolean => {
   if (!userRoles?.length) return false;
-  if (hasRole(userRoles, 'SUPER_ADMIN', 'DEPOT_ADMIN', 'MANAGER')) return false;
+  if (hasRole(userRoles, 'SUPER_ADMIN', 'DEVELOPER', 'DEPOT_ADMIN', 'MANAGER')) return false;
   return hasRole(userRoles, 'CASHIER');
 };
 
@@ -170,6 +199,7 @@ export const isCashierOnly = (userRoles: string[]): boolean => {
  */
 export const getRoleDisplayName = (role: string): string => {
   const roleNames: Record<string, string> = {
+    DEVELOPER: 'Developer',
     SUPER_ADMIN: 'Super Admin',
     DEPOT_ADMIN: 'Depot Admin',
     CASHIER: 'Cashier',
@@ -186,6 +216,7 @@ export const getPrimaryRole = (userRoles: string[]): string | null => {
   if (!userRoles || userRoles.length === 0) return null;
 
   const rolePriority: Record<string, number> = {
+    DEVELOPER: 0,
     SUPER_ADMIN: 1,
     DEPOT_ADMIN: 2,
     CASHIER: 3,

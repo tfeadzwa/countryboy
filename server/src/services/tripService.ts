@@ -2,6 +2,12 @@ import prisma from '../utils/prisma';
 import { Prisma } from '@prisma/client';
 import { ensureRoute } from './routeService';
 import { isDeviceOnline } from '../constants/presence';
+import { sortTrips } from '../utils/tripSort';
+import {
+  assertClosingMileageValid,
+  parseRequiredMileage,
+  parseRequiredWaybillNo,
+} from '../utils/tripMileage';
 
 export const startTrip = async (
   depotId: string,
@@ -14,9 +20,16 @@ export const startTrip = async (
     route_id?: string;
     device_id?: string;
     started_offline?: boolean;
+    starting_mileage: number;
+    waybill_no: string;
   }
 ) => {
   const parent = await ensureRoute(depotId, data.origin, data.destination);
+  const startingMileage = parseRequiredMileage(
+    data.starting_mileage,
+    'Starting mileage',
+  );
+  const waybillNo = parseRequiredWaybillNo(data.waybill_no);
 
   if (data.driver_id) {
     const driver = await prisma.tblDrivers.findUnique({
@@ -40,11 +53,17 @@ export const startTrip = async (
       started_at: new Date(),
       status: 'ACTIVE',
       started_offline: data.started_offline || false,
+      starting_mileage: startingMileage,
+      waybill_no: waybillNo,
     },
   });
 };
 
-export const endTrip = async (tripId: string, depotId?: string) => {
+export const endTrip = async (
+  tripId: string,
+  depotId?: string,
+  options?: { force?: boolean; closing_mileage: number },
+) => {
   const trip = await prisma.tblTrips.findUnique({ where: { id: tripId } });
   if (!trip) {
     throw new Error('Trip not found');
@@ -56,9 +75,39 @@ export const endTrip = async (tripId: string, depotId?: string) => {
     throw new Error('Trip is already ended');
   }
 
+  const closingMileage = parseRequiredMileage(
+    options?.closing_mileage,
+    'Closing mileage',
+  );
+  assertClosingMileageValid(closingMileage, trip.starting_mileage);
+
+  const openSession = await prisma.tblAgentDeviceSessions.findFirst({
+    where: { agent_id: trip.agent_id, ended_at: null },
+    orderBy: { started_at: 'desc' },
+    include: {
+      device: { select: { paired: true, last_seen: true } },
+    },
+  });
+
+  const conductorOnline = isDeviceOnline({
+    paired: Boolean(openSession?.device?.paired),
+    lastSeen: openSession?.device?.last_seen ?? null,
+    hasOpenSession: Boolean(openSession),
+  });
+
+  if (!conductorOnline && !options?.force) {
+    throw new Error(
+      'Cannot end trip while the conductor is offline. Wait until they are online so pending tickets can sync.',
+    );
+  }
+
   return prisma.tblTrips.update({
     where: { id: tripId },
-    data: { ended_at: new Date(), status: 'ENDED' },
+    data: {
+      ended_at: new Date(),
+      status: 'ENDED',
+      closing_mileage: closingMileage,
+    },
     include: {
       agent: { select: { id: true, full_name: true, agent_code: true } },
       fleet: { select: { id: true, number: true, registration_number: true } },
@@ -368,6 +417,9 @@ export const formatTripDetail = (
     started_at: trip.started_at.toISOString(),
     ended_at: trip.ended_at ? trip.ended_at.toISOString() : null,
     started_offline: trip.started_offline,
+    starting_mileage: trip.starting_mileage ?? null,
+    waybill_no: trip.waybill_no ?? null,
+    closing_mileage: trip.closing_mileage ?? null,
     duration_ms: durationMs,
     ticket_count: validTickets.length,
     voided_ticket_count: voidedCount,
@@ -428,7 +480,7 @@ export const listTrips = async (depotId?: string, filters?: {
     }
   }
 
-  return prisma.tblTrips.findMany({
+  const trips = await prisma.tblTrips.findMany({
     where,
     include: {
       agent: true,
@@ -441,8 +493,9 @@ export const listTrips = async (depotId?: string, filters?: {
         },
       },
     },
-    orderBy: { started_at: 'desc' },
   });
+
+  return sortTrips(trips);
 };
 
 export type CorridorSummary = {

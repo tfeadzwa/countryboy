@@ -136,6 +136,8 @@ class TripRepository {
     required String driverName,
     required String origin,
     required String destination,
+    required int startingMileage,
+    required String waybillNo,
   }) async {
     final agentJson = await _storage.getAgentProfile();
     final depotId = await _storage.getDepotId();
@@ -184,9 +186,14 @@ class TripRepository {
         driverName: Value(driverName),
         routeOrigin: Value(origin),
         routeDestination: Value(destination),
+        startingMileage: Value(startingMileage),
+        waybillNo: Value(waybillNo),
         syncStatus: Value(offline ? 'pending' : 'syncing'),
       ),
     );
+
+    await _db.setFleetOnTrip(fleetId, true);
+    await _db.setDriverOnTrip(driverId, true);
 
     final syncPayload = {
       'id': tripId,
@@ -199,6 +206,8 @@ class TripRepository {
       'started_at': startedAt.toUtc().toIso8601String(),
       'agent_id': agentId,
       'status': 'ACTIVE',
+      'starting_mileage': startingMileage,
+      'waybill_no': waybillNo,
     };
 
     if (offline) {
@@ -225,6 +234,8 @@ class TripRepository {
         driverName: driverName,
         routeOrigin: origin,
         routeDestination: destination,
+        startingMileage: startingMileage,
+        waybillNo: waybillNo,
         syncStatus: 'pending',
       );
     }
@@ -238,6 +249,8 @@ class TripRepository {
         destination: destination,
         deviceId: deviceId,
         startedOffline: false,
+        startingMileage: startingMileage,
+        waybillNo: waybillNo,
       );
       final trip = response['trip'] as Map<String, dynamic>;
       final serverId = trip['id'] as String;
@@ -262,6 +275,12 @@ class TripRepository {
           ),
           routeOrigin: Value(origin),
           routeDestination: Value(destination),
+          startingMileage: Value(
+            (trip['starting_mileage'] as num?)?.toInt() ?? startingMileage,
+          ),
+          waybillNo: Value(
+            trip['waybill_no'] as String? ?? waybillNo,
+          ),
           syncStatus: const Value('synced'),
         ),
       );
@@ -285,6 +304,8 @@ class TripRepository {
           }
           await (_db.delete(_db.localTrips)..where((t) => t.id.equals(tripId)))
               .go();
+          await _db.setFleetOnTrip(fleetId, false);
+          await _db.setDriverOnTrip(driverId, false);
           await _saveRemoteTripToLocal(serverActive);
           throw ApiError(
             message:
@@ -293,12 +314,16 @@ class TripRepository {
         }
         await (_db.delete(_db.localTrips)..where((t) => t.id.equals(tripId)))
             .go();
+        await _db.setFleetOnTrip(fleetId, false);
+        await _db.setDriverOnTrip(driverId, false);
         throw apiError!;
       }
 
       if (apiError != null) {
         await (_db.delete(_db.localTrips)..where((t) => t.id.equals(tripId)))
             .go();
+        await _db.setFleetOnTrip(fleetId, false);
+        await _db.setDriverOnTrip(driverId, false);
         throw apiError;
       }
 
@@ -326,6 +351,8 @@ class TripRepository {
         driverName: driverName,
         routeOrigin: origin,
         routeDestination: destination,
+        startingMileage: startingMileage,
+        waybillNo: waybillNo,
         syncStatus: 'pending',
       );
     }
@@ -338,8 +365,11 @@ class TripRepository {
       origin: payload['origin'] as String,
       destination: payload['destination'] as String,
       routeId: payload['route_id'] as String?,
+      driverId: payload['driver_id'] as String?,
       deviceId: payload['device_id'] as String?,
       startedOffline: payload['started_offline'] as bool? ?? true,
+      startingMileage: (payload['starting_mileage'] as num).toInt(),
+      waybillNo: payload['waybill_no'] as String,
     );
     await _db.updateTripSyncStatus(payload['id'] as String, 'synced');
   }
@@ -402,6 +432,9 @@ class TripRepository {
         driverName: Value(driver?['full_name'] as String?),
         routeOrigin: Value(origin),
         routeDestination: Value(destination),
+        startingMileage: Value((json['starting_mileage'] as num?)?.toInt()),
+        waybillNo: Value(json['waybill_no'] as String?),
+        closingMileage: Value((json['closing_mileage'] as num?)?.toInt()),
         syncStatus: const Value('synced'),
       ),
     );
@@ -421,6 +454,9 @@ class TripRepository {
         driverName: t.driverName,
         routeOrigin: t.routeOrigin,
         routeDestination: t.routeDestination,
+        startingMileage: t.startingMileage,
+        waybillNo: t.waybillNo,
+        closingMileage: t.closingMileage,
         syncStatus: t.syncStatus.isEmpty ? 'pending' : t.syncStatus,
       );
 
@@ -447,6 +483,9 @@ class TripRepository {
       driverName: driver?['full_name'] as String?,
       routeOrigin: origin,
       routeDestination: destination,
+      startingMileage: (json['starting_mileage'] as num?)?.toInt(),
+      waybillNo: json['waybill_no'] as String?,
+      closingMileage: (json['closing_mileage'] as num?)?.toInt(),
       ticketsCount: json['tickets_count'] as int? ?? 0,
       totalRevenue: (json['total_revenue'] as num?)?.toDouble() ?? 0,
       syncStatus: 'synced',

@@ -9,7 +9,10 @@ import {
   type AlertSeverity,
 } from '../utils/fleetCompliance';
 
-type FleetWithDepot = tblFleets & { depot: tblDepots | null };
+type FleetWithDepot = tblFleets & {
+  depot: tblDepots | null;
+  trips?: { id: string }[];
+};
 
 export type FleetComplianceStatusItem = {
   key: FleetComplianceKey;
@@ -70,8 +73,15 @@ function worstSeverity(items: FleetComplianceStatusItem[]): AlertSeverity {
 
 export function formatFleetResponse(fleet: FleetWithDepot) {
   const compliance = buildComplianceStatus(fleet);
+  const onTrip = Boolean(fleet.on_trip) || Boolean(fleet.trips?.[0]);
   return {
     ...fleet,
+    on_trip: onTrip,
+    duty_status: onTrip
+      ? 'on_trip'
+      : fleet.status === 'ACTIVE'
+        ? 'available'
+        : 'off_duty',
     depot_name: fleet.depot?.name ?? null,
     compliance,
     compliance_summary: {
@@ -106,8 +116,15 @@ export const listFleets = async (
   if (depotId) where.depot_id = depotId;
   return prisma.tblFleets.findMany({
     where,
-    include: { depot: true },
-    orderBy: { number: 'asc' },
+    include: {
+      depot: true,
+      trips: {
+        where: { status: 'ACTIVE' },
+        take: 1,
+        select: { id: true },
+      },
+    },
+    orderBy: [{ on_trip: 'asc' }, { number: 'asc' }],
     ...(pagination ? { skip: pagination.skip, take: pagination.limit } : {}),
   }) as Promise<FleetWithDepot[]>;
 };
@@ -195,6 +212,13 @@ export const updateFleet = async (
 export const getFleet = async (id: string): Promise<FleetWithDepot | null> => {
   return prisma.tblFleets.findUnique({
     where: { id },
-    include: { depot: true },
+    include: {
+      depot: true,
+      trips: {
+        where: { status: 'ACTIVE' },
+        take: 1,
+        select: { id: true },
+      },
+    },
   }) as Promise<FleetWithDepot | null>;
 };

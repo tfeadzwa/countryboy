@@ -40,6 +40,16 @@ export const errorHandler = (err: any, req: Request & { requestId?: string }, re
         ip: req.ip || req.socket?.remoteAddress || 'unknown',
       });
     }
+  } else if (err?.name === 'MulterError') {
+    code = 400;
+    response.code = code;
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      response.message = 'File is too large';
+      response.error = response.message;
+    } else {
+      response.message = err.message || 'Upload failed';
+      response.error = response.message;
+    }
   } else if (err.details) {
     response.details = err.details;
   }

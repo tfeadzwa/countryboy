@@ -8,6 +8,7 @@ import '../../core/connectivity/connectivity_service.dart';
 import '../../data/local/database.dart';
 import '../../services/sync_service.dart';
 import '../../shared/widgets/widgets.dart';
+import 'sync_queue_display.dart';
 
 class PendingSyncScreen extends ConsumerStatefulWidget {
   const PendingSyncScreen({super.key});
@@ -34,8 +35,9 @@ class _PendingSyncScreenState extends ConsumerState<PendingSyncScreen> {
   Future<_SyncViewData> _load() async {
     final db = ref.read(appDatabaseProvider);
     final items = await db.getPendingSyncItems();
+    final displayItems = await buildSyncQueueDisplayItems(db, items);
     final lastSync = await ref.read(syncServiceProvider).lastSyncAt();
-    return _SyncViewData(items: items, lastSyncAt: lastSync);
+    return _SyncViewData(items: displayItems, lastSyncAt: lastSync);
   }
 
   Future<void> _syncNow() async {
@@ -130,9 +132,13 @@ class _PendingSyncScreenState extends ConsumerState<PendingSyncScreen> {
 
                 final items = data.items;
                 final failed =
-                    items.where((item) => item.status == 'failed').length;
-                final pending =
-                    items.where((item) => item.status == 'pending').length;
+                    items.where((item) => item.isFailed).length;
+                final pending = items
+                    .where((item) => item.item.status == 'pending')
+                    .length;
+                final ticketCount =
+                    items.where((item) => !item.isTrip).length;
+                final tripCount = items.where((item) => item.isTrip).length;
 
                 return RefreshIndicator(
                   color: AppColors.brandRed,
@@ -208,7 +214,10 @@ class _PendingSyncScreenState extends ConsumerState<PendingSyncScreen> {
                             ),
                             const SizedBox(height: AppSpacing.xs),
                             Text(
-                              'Oldest items are listed first',
+                              _queueSubtitle(
+                                ticketCount: ticketCount,
+                                tripCount: tripCount,
+                              ),
                               style: Theme.of(context)
                                   .textTheme
                                   .bodySmall
@@ -218,13 +227,14 @@ class _PendingSyncScreenState extends ConsumerState<PendingSyncScreen> {
                             ),
                             const SizedBox(height: AppSpacing.md),
                             ...items.map(
-                              (item) => Padding(
+                              (display) => Padding(
                                 padding: const EdgeInsets.only(
                                   bottom: AppSpacing.sm,
                                 ),
                                 child: _SyncItemTile(
-                                  item: item,
-                                  onRetry: () => _retryItem(item.id),
+                                  display: display,
+                                  onRetry: () =>
+                                      _retryItem(display.item.id),
                                 ),
                               ),
                             ),
@@ -240,9 +250,21 @@ class _PendingSyncScreenState extends ConsumerState<PendingSyncScreen> {
   }
 }
 
+String _queueSubtitle({required int ticketCount, required int tripCount}) {
+  final parts = <String>[];
+  if (ticketCount > 0) {
+    parts.add('$ticketCount ticket${ticketCount == 1 ? '' : 's'}');
+  }
+  if (tripCount > 0) {
+    parts.add('$tripCount trip${tripCount == 1 ? '' : 's'}');
+  }
+  if (parts.isEmpty) return 'Oldest items are listed first';
+  return '${parts.join(' · ')} waiting · oldest first';
+}
+
 class _SyncViewData {
   _SyncViewData({required this.items, this.lastSyncAt});
-  final List<SyncQueueItem> items;
+  final List<SyncQueueDisplayItem> items;
   final DateTime? lastSyncAt;
 }
 
@@ -399,26 +421,18 @@ class _SyncStatBox extends StatelessWidget {
 
 class _SyncItemTile extends StatelessWidget {
   const _SyncItemTile({
-    required this.item,
+    required this.display,
     required this.onRetry,
   });
 
-  final SyncQueueItem item;
+  final SyncQueueDisplayItem display;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isFailed = item.status == 'failed';
-    final typeLabel = switch (item.entityType) {
-      'trip' => 'Trip',
-      'ticket' => 'Ticket',
-      _ => item.entityType,
-    };
-    final operationLabel = item.operation.replaceAll('_', ' ');
-    final refId = item.entityId.length > 8
-        ? '${item.entityId.substring(0, 8)}…'
-        : item.entityId;
+    final item = display.item;
+    final isFailed = display.isFailed;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -447,7 +461,7 @@ class _SyncItemTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                 ),
                 child: Icon(
-                  item.entityType == 'trip'
+                  display.isTrip
                       ? Icons.directions_bus_outlined
                       : Icons.confirmation_number_outlined,
                   color: isFailed ? AppColors.error : AppColors.brandRed,
@@ -459,18 +473,30 @@ class _SyncItemTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$typeLabel · $operationLabel',
+                      display.title,
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      'Ref $refId · ${DateFormat.MMMd().add_jm().format(item.createdAt)}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
+                    if (display.routeLabel != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        display.routeLabel!,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
+                    ],
+                    if (display.detailLine != null) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        display.detailLine!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                     if (item.retryCount > 0) ...[
                       const SizedBox(height: AppSpacing.xs),
                       Text(

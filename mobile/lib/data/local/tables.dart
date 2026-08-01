@@ -5,6 +5,7 @@ class CachedFleets extends Table {
   TextColumn get number => text()();
   TextColumn get registrationNumber => text().nullable()();
   TextColumn get status => text().withDefault(const Constant('ACTIVE'))();
+  BoolColumn get onTrip => boolean().withDefault(const Constant(false))();
   IntColumn get capacity => integer().withDefault(const Constant(0))();
   DateTimeColumn get cachedAt => dateTime()();
 
@@ -16,6 +17,7 @@ class CachedDrivers extends Table {
   TextColumn get id => text()();
   TextColumn get fullName => text()();
   TextColumn get status => text().withDefault(const Constant('ACTIVE'))();
+  BoolColumn get onTrip => boolean().withDefault(const Constant(false))();
   DateTimeColumn get cachedAt => dateTime()();
 
   @override
@@ -67,6 +69,9 @@ class LocalTrips extends Table {
   TextColumn get driverName => text().nullable()();
   TextColumn get routeOrigin => text().nullable()();
   TextColumn get routeDestination => text().nullable()();
+  IntColumn get startingMileage => integer().nullable()();
+  TextColumn get waybillNo => text().nullable()();
+  IntColumn get closingMileage => integer().nullable()();
   TextColumn get syncStatus =>
       text().withDefault(const Constant('pending'))();
 

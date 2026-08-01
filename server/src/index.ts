@@ -28,6 +28,8 @@ import ticketRoutes from "./routes/ticket";
 import publicRoutes from "./routes/public";
 import notificationRoutes from "./routes/notification";
 import settingsRoutes from "./routes/settings";
+import appReleaseRoutes from "./routes/appRelease";
+import { ensureUploadRoot, UPLOAD_ROOT } from "./utils/fileStorage";
 
 dotenv.config();
 const app = express();
@@ -114,6 +116,7 @@ app.use("/api/trips", tripRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/admin-users", adminUsersRoutes);
 app.use("/api/settings", settingsRoutes);
+app.use("/api/app-releases", appReleaseRoutes);
 app.use("/api/public", publicRoutes);
 
 // health check
@@ -129,6 +132,14 @@ export default app;
 // start server only if this file is executed directly
 if (require.main === module) {
   const host = process.env.HOST || '0.0.0.0';
+  void ensureUploadRoot()
+    .then(() => {
+      logger.info(`Upload storage ready at ${UPLOAD_ROOT}`);
+    })
+    .catch((err) => {
+      logger.error(`Failed to initialize upload storage at ${UPLOAD_ROOT}`, err);
+    });
+
   app.listen(port, host, () => {
     logger.info(`Server listening on ${host}:${port}`);
     logger.info(`Local access: http://localhost:${port}`);
