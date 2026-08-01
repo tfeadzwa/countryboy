@@ -232,6 +232,10 @@ class TicketPrintService {
     bytes.addAll(_kv(generator, 'Issued', issued));
     bytes.addAll(_kv(generator, 'Depot', receipt.depotName));
     bytes.addAll(_kv(generator, 'Conductor', receipt.agentName));
+    final driverName = receipt.trip.driverName?.trim();
+    if (driverName != null && driverName.isNotEmpty) {
+      bytes.addAll(_kv(generator, 'Driver', driverName));
+    }
     if (receipt.deviceSerial != null && receipt.deviceSerial!.trim().isNotEmpty) {
       bytes.addAll(_kv(generator, 'Device', receipt.deviceSerial!));
     }
@@ -243,15 +247,6 @@ class TicketPrintService {
     // if (printerMac != null && printerMac.isNotEmpty) {
     //   bytes.addAll(_kv(generator, 'Mac', printerMac));
     // }
-    if (receipt.ticket.syncStatus != 'synced') {
-      bytes.addAll(generator.feed(1));
-      bytes.addAll(
-        generator.text(
-          'OFFLINE - SYNC PENDING',
-          styles: const PosStyles(align: PosAlign.center, bold: true),
-        ),
-      );
-    }
 
     bytes.addAll(generator.hr());
     bytes.addAll(
@@ -282,6 +277,20 @@ class TicketPrintService {
         styles: const PosStyles(align: PosAlign.center),
       ),
     );
+    // Quiet offline marker — tiny Font B so staff can spot it; passengers rarely notice.
+    if (receipt.ticket.syncStatus != 'synced') {
+      bytes.addAll(
+        generator.text(
+          'local',
+          styles: const PosStyles(
+            align: PosAlign.center,
+            fontType: PosFontType.fontB,
+            height: PosTextSize.size1,
+            width: PosTextSize.size1,
+          ),
+        ),
+      );
+    }
     bytes.addAll(generator.feed(3));
 
     return bytes;

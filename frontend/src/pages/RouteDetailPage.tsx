@@ -281,8 +281,19 @@ const RouteDetailPage = () => {
                       </div>
                     )}
                   </div>
-                  <div className="text-xs text-muted-foreground sm:text-right">
-                    Started {format(new Date(trip.started_at), "dd MMM · HH:mm")}
+                  <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+                    <div className="text-xs text-muted-foreground sm:text-right">
+                      Started {format(new Date(trip.started_at), "dd MMM · HH:mm")}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 self-start sm:self-end"
+                      onClick={() => navigate(`/trips/${trip.id}`)}
+                    >
+                      View Trip
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
               ))}

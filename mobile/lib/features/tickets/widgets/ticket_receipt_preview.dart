@@ -29,6 +29,7 @@ class TicketReceiptPreview extends StatelessWidget {
     this.issuedAt,
     this.depotName,
     this.agentName,
+    this.driverName,
     this.deviceSerial,
     this.printerName,
     this.printerMac,
@@ -55,6 +56,7 @@ class TicketReceiptPreview extends StatelessWidget {
       luggageAmount: draft.luggageAmount,
       luggageDescription: draft.luggageDescription,
       ticketNumber: ticketNumberOverride ?? 'Pending',
+      driverName: draft.trip.driverName,
     );
   }
 
@@ -75,6 +77,7 @@ class TicketReceiptPreview extends StatelessWidget {
       issuedAt: receipt.ticket.issuedAt,
       depotName: receipt.depotName,
       agentName: receipt.agentName,
+      driverName: receipt.trip.driverName,
       deviceSerial: receipt.deviceSerial,
       printerName: receipt.printerName,
       printerMac: receipt.printerMac,
@@ -100,6 +103,7 @@ class TicketReceiptPreview extends StatelessWidget {
   final DateTime? issuedAt;
   final String? depotName;
   final String? agentName;
+  final String? driverName;
   final String? deviceSerial;
   final String? printerName;
   final String? printerMac;
@@ -203,24 +207,14 @@ class TicketReceiptPreview extends StatelessWidget {
               _row(context, 'Depot', depotName!),
             if (agentName != null && agentName!.trim().isNotEmpty)
               _row(context, 'Conductor', agentName!),
+            if (driverName != null && driverName!.trim().isNotEmpty)
+              _row(context, 'Driver', driverName!),
             if (deviceSerial != null && deviceSerial!.trim().isNotEmpty)
               _row(context, 'Device', deviceSerial!),
             if (printerName != null && printerName!.trim().isNotEmpty)
               _row(context, 'Printer', printerName!),
             // if (printerMac != null && printerMac!.trim().isNotEmpty)
             //   _row(context, 'Mac', printerMac!),
-            if (syncPending)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: Text(
-                  'OFFLINE - SYNC PENDING',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.warning,
-                        fontWeight: FontWeight.w600,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
             if (verifyUrl != null) ...[
               const SizedBox(height: AppSpacing.md),
               Center(
@@ -274,6 +268,20 @@ class TicketReceiptPreview extends StatelessWidget {
                       fontSize: 10,
                     ),
                 textAlign: TextAlign.center,
+              ),
+            if (syncPending)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'local',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary.withValues(alpha: 0.55),
+                        fontSize: 9,
+                        letterSpacing: 0.4,
+                        fontWeight: FontWeight.w400,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
               ),
           ],
         ),
