@@ -90,8 +90,8 @@ const TripBatchPrintDialog = ({ open, onOpenChange, trip }: TripBatchPrintDialog
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[92vh] overflow-hidden p-0 gap-0 print:max-w-none print:max-h-none print:overflow-visible print:shadow-none print:border-0">
-        <div className="flex items-start justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-6 print:hidden">
+      <DialogContent className="flex max-h-[92vh] max-w-3xl flex-col gap-0 overflow-hidden p-0 print:max-h-none print:max-w-none print:overflow-visible print:border-0 print:shadow-none">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/60 px-4 py-3 sm:px-6 print:hidden">
           <DialogHeader className="space-y-1 text-left">
             <DialogTitle className="text-lg sm:text-xl">Print ticket batch</DialogTitle>
             <DialogDescription>
@@ -108,7 +108,7 @@ const TripBatchPrintDialog = ({ open, onOpenChange, trip }: TripBatchPrintDialog
           </Button>
         </div>
 
-        <div className="overflow-y-auto px-4 py-4 sm:px-6 print:overflow-visible print:p-0">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 print:overflow-visible print:p-0">
           <div id="ticket-batch-print" className="space-y-4">
             <div className="rounded-xl border border-border/70 bg-muted/30 p-4 print:border print:rounded-none print:bg-transparent">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -182,7 +182,7 @@ const TripBatchPrintDialog = ({ open, onOpenChange, trip }: TripBatchPrintDialog
 
                 <div className="overflow-x-auto rounded-xl border border-border/60 print:border">
                   <table className="w-full text-sm">
-                    <thead className="bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                    <thead className="sticky top-0 z-[1] bg-muted/95 text-left text-xs uppercase tracking-wider text-muted-foreground backdrop-blur-sm print:static">
                       <tr>
                         <th className="px-3 py-2.5 font-semibold">#</th>
                         <th className="px-3 py-2.5 font-semibold">Category</th>
@@ -231,7 +231,7 @@ const TripBatchPrintDialog = ({ open, onOpenChange, trip }: TripBatchPrintDialog
           </div>
         </div>
 
-        <div className="flex flex-col-reverse gap-2 border-t border-border/60 px-4 py-3 sm:flex-row sm:justify-end sm:px-6 print:hidden">
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border/60 px-4 py-3 sm:flex-row sm:justify-end sm:px-6 print:hidden">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
