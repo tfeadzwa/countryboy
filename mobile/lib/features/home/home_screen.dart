@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -51,8 +53,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(syncServiceProvider).syncIfOnline();
+    // Sync after the first frame so a just-started trip can render from local
+    // DB before pull/reconcile runs.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      if (!mounted) return;
+      unawaited(ref.read(syncServiceProvider).syncIfOnline());
     });
   }
 

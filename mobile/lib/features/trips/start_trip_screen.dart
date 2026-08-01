@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/config/app_colors.dart';
 import '../../core/config/app_spacing.dart';
+import '../../core/connectivity/online_sync_lifecycle.dart';
 import '../../core/network/api_error.dart';
 import '../../data/repositories/reference_repository.dart';
 import '../../data/repositories/trip_repository.dart';
@@ -147,14 +148,27 @@ class _StartTripScreenState extends ConsumerState<StartTripScreen> {
             startingMileage: startingMileage,
             waybillNo: waybillNo,
           );
+      if (!mounted) return;
+
+      // Refresh home before leaving so the active-trip card is ready.
+      ref.read(tripSessionRevisionProvider.notifier).state++;
       ref.invalidate(homeDashboardProvider);
-      if (mounted) context.go('/home');
+
+      // Do not setState after this — it can cancel go_router navigation and
+      // leave the conductor stuck on the start-trip form.
+      context.go('/home');
     } on ApiError catch (e) {
-      setState(() => _error = e.message);
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _submitting = false;
+      });
     } catch (_) {
-      setState(() => _error = 'Could not start trip. Try again.');
-    } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (!mounted) return;
+      setState(() {
+        _error = 'Could not start trip. Try again.';
+        _submitting = false;
+      });
     }
   }
 

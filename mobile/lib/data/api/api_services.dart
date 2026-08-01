@@ -189,13 +189,13 @@ class TripApi {
   }
 
   Future<Map<String, dynamic>?> getActiveTrip() async {
-    try {
-      final response =
-          await _dio.get<Map<String, dynamic>>('/agents/trips/active');
-      return response.data?['trip'] as Map<String, dynamic>?;
-    } on DioException {
-      return null;
-    }
+    final response =
+        await _dio.get<Map<String, dynamic>>('/agents/trips/active');
+    final raw = response.data?['trip'];
+    if (raw == null) return null;
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return null;
   }
 }
 

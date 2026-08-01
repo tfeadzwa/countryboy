@@ -50,6 +50,7 @@ class TripRepository {
       if (agentId == null || agentId.isEmpty) return null;
 
       // When online, prefer server truth so cashier/admin end closes local issue flow.
+      // Reconcile catches its own fetch errors and keeps the local ACTIVE trip.
       if (await _connectivity.checkReachability() &&
           await _storage.hasOnlineAuth()) {
         await reconcileActiveTripFromServer();
