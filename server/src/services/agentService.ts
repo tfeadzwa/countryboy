@@ -587,16 +587,19 @@ export const startAgentTrip = async (data: {
     throw new Error('Fleet does not belong to agent\'s depot');
   }
 
-  if (fleet.on_trip) {
-    throw new Error('Fleet is already on an active trip');
-  }
-
   const fleetActiveTrip = await prisma.tblTrips.findFirst({
     where: { fleet_id: fleetId, status: 'ACTIVE' },
     select: { id: true },
   });
   if (fleetActiveTrip) {
     throw new Error('Fleet is already on an active trip');
+  }
+  // Heal sticky on_trip left behind by older cashier end paths.
+  if (fleet.on_trip) {
+    await prisma.tblFleets.update({
+      where: { id: fleetId },
+      data: { on_trip: false },
+    });
   }
 
   // Step 3b: Validate driver belongs to same depot when provided
@@ -614,15 +617,18 @@ export const startAgentTrip = async (data: {
     if (driver.status !== 'ACTIVE') {
       throw new Error('Driver is not active');
     }
-    if (driver.on_trip) {
-      throw new Error('Driver is already on an active trip');
-    }
     const driverActiveTrip = await prisma.tblTrips.findFirst({
       where: { driver_id: driverId, status: 'ACTIVE' },
       select: { id: true },
     });
     if (driverActiveTrip) {
       throw new Error('Driver is already on an active trip');
+    }
+    if (driver.on_trip) {
+      await prisma.tblDrivers.update({
+        where: { id: driverId },
+        data: { on_trip: false },
+      });
     }
     resolvedDriverId = driver.id;
   }

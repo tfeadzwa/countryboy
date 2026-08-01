@@ -68,7 +68,8 @@ const mapActiveTrip = (trip?: ActiveTripInclude | null) => {
 export const formatDriverResponse = (driver: DriverWithDepot) => {
   const activeTrip = mapActiveTrip(driver.trips?.[0]);
   const accountActive = driver.status === 'ACTIVE';
-  const onTrip = Boolean(driver.on_trip) || Boolean(activeTrip);
+  // ACTIVE trip is source of truth; ignore sticky on_trip left by old end paths.
+  const onTrip = Boolean(activeTrip);
   const documents = buildDriverDocumentStatus(driver);
   const duty_status = !accountActive
     ? 'off_duty'

@@ -181,45 +181,79 @@ class AppDatabase extends _$AppDatabase {
       (update(localTrips)..where((t) => t.id.equals(id)))
           .write(LocalTripsCompanion(syncStatus: Value(status)));
 
-  Future<void> completeTrip(String id) =>
-      (update(localTrips)..where((t) => t.id.equals(id))).write(
-        LocalTripsCompanion(
-          status: const Value('COMPLETED'),
-          endedAt: Value(DateTime.now()),
-        ),
-      );
+  Future<void> completeTrip(String id) async {
+    final trip = await getTripById(id);
+    await (update(localTrips)..where((t) => t.id.equals(id))).write(
+      LocalTripsCompanion(
+        status: const Value('COMPLETED'),
+        endedAt: Value(DateTime.now()),
+      ),
+    );
+    if (trip != null) {
+      await setFleetOnTrip(trip.fleetId, false);
+      final driverId = trip.driverId;
+      if (driverId != null && driverId.isNotEmpty) {
+        await setDriverOnTrip(driverId, false);
+      }
+    }
+  }
 
   /// Marks a trip as ended locally (cashier/admin close, or pull reconcile).
   Future<void> markTripEnded(
     String id, {
     String status = 'ENDED',
     DateTime? endedAt,
-  }) =>
-      (update(localTrips)..where((t) => t.id.equals(id))).write(
-        LocalTripsCompanion(
-          status: Value(status),
-          endedAt: Value(endedAt ?? DateTime.now()),
-          syncStatus: const Value('synced'),
-        ),
-      );
+  }) async {
+    final trip = await getTripById(id);
+    await (update(localTrips)..where((t) => t.id.equals(id))).write(
+      LocalTripsCompanion(
+        status: Value(status),
+        endedAt: Value(endedAt ?? DateTime.now()),
+        syncStatus: const Value('synced'),
+      ),
+    );
+    // Match server endTrip: free bus/driver so Start Trip pickers unlock.
+    if (trip != null) {
+      await setFleetOnTrip(trip.fleetId, false);
+      final driverId = trip.driverId;
+      if (driverId != null && driverId.isNotEmpty) {
+        await setDriverOnTrip(driverId, false);
+      }
+    }
+  }
 
   /// Ends every local ACTIVE trip for an agent (server has none / trip closed).
   Future<void> markAgentActiveTripsEnded(
     String agentId, {
     String status = 'ENDED',
     DateTime? endedAt,
-  }) =>
-      (update(localTrips)
-            ..where(
-              (t) => t.agentId.equals(agentId) & t.status.equals('ACTIVE'),
-            ))
-          .write(
-        LocalTripsCompanion(
-          status: Value(status),
-          endedAt: Value(endedAt ?? DateTime.now()),
-          syncStatus: const Value('synced'),
-        ),
-      );
+  }) async {
+    final active = await (select(localTrips)
+          ..where(
+            (t) => t.agentId.equals(agentId) & t.status.equals('ACTIVE'),
+          ))
+        .get();
+
+    await (update(localTrips)
+          ..where(
+            (t) => t.agentId.equals(agentId) & t.status.equals('ACTIVE'),
+          ))
+        .write(
+      LocalTripsCompanion(
+        status: Value(status),
+        endedAt: Value(endedAt ?? DateTime.now()),
+        syncStatus: const Value('synced'),
+      ),
+    );
+
+    for (final trip in active) {
+      await setFleetOnTrip(trip.fleetId, false);
+      final driverId = trip.driverId;
+      if (driverId != null && driverId.isNotEmpty) {
+        await setDriverOnTrip(driverId, false);
+      }
+    }
+  }
 
   // ── Tickets ──────────────────────────────────────────────────────
 

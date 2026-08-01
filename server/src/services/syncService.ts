@@ -385,7 +385,8 @@ const buildReferenceSnapshot = async (depotId: string) => {
       id: f.id,
       number: f.number,
       status: f.status,
-      on_trip: Boolean(f.on_trip),
+      // Prefer live ACTIVE trip over sticky denormalized flag.
+      on_trip: Boolean(f.trips?.[0]),
     })),
     drivers: drivers
       .filter((d) => d.status === 'ACTIVE')
@@ -393,7 +394,7 @@ const buildReferenceSnapshot = async (depotId: string) => {
         id: d.id,
         full_name: d.full_name,
         status: d.status,
-        on_trip: Boolean(d.on_trip) || Boolean(d.trips?.[0]),
+        on_trip: Boolean(d.trips?.[0]),
       })),
     routes,
     fares: fares.map((f) => ({

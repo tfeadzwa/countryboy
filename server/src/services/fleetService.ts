@@ -73,7 +73,8 @@ function worstSeverity(items: FleetComplianceStatusItem[]): AlertSeverity {
 
 export function formatFleetResponse(fleet: FleetWithDepot) {
   const compliance = buildComplianceStatus(fleet);
-  const onTrip = Boolean(fleet.on_trip) || Boolean(fleet.trips?.[0]);
+  // ACTIVE trip is source of truth; ignore sticky on_trip left by old end paths.
+  const onTrip = Boolean(fleet.trips?.[0]);
   return {
     ...fleet,
     on_trip: onTrip,
