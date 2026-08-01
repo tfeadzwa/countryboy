@@ -1,7 +1,9 @@
+import { useEffect, useState, type CSSProperties } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Building2, Users, Bus, MapPin, Ticket, Route, Smartphone, UserCog,
-  LogOut, ChevronsLeft, ChevronsRight, Shield, ShieldCheck, X, UserRound, Download
+  LogOut, ChevronsLeft, ChevronsRight, Shield, ShieldCheck, X, UserRound, Download,
+  ChevronDown,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -12,6 +14,17 @@ import {
 } from "@/lib/permissions";
 import BrandLogo from "@/components/BrandLogo";
 import cboyIcon from "@/assets/cboy-icon.svg";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type NavLinkDef = {
   to: string;
@@ -21,14 +34,20 @@ type NavLinkDef = {
   hideForCashier?: boolean;
 };
 
-const mainLinks: NavLinkDef[] = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/depots", label: "Depots", icon: Building2, superOnly: true },
-  { to: "/admin-users", label: "Admin Users", icon: UserCog, superOnly: true },
-  { to: "/app-releases", label: "App Releases", icon: Download, superOnly: true },
-  { to: "/agents", label: "Conductors", icon: Users, hideForCashier: true },
+const peopleLinks: NavLinkDef[] = [
+  { to: "/admin-users", label: "Admins", icon: UserCog, superOnly: true },
   { to: "/drivers", label: "Drivers", icon: UserRound, hideForCashier: true },
-  { to: "/fleets", label: "Fleets", icon: Bus, hideForCashier: true },
+  { to: "/agents", label: "Conductors", icon: Users, hideForCashier: true },
+];
+
+const mainLinksBefore: NavLinkDef[] = [
+  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+];
+
+const mainLinksAfter: NavLinkDef[] = [
+  { to: "/depots", label: "Depots", icon: Building2, superOnly: true },
+  { to: "/app-releases", label: "App Releases", icon: Download, superOnly: true },
+  { to: "/fleets", label: "Buses", icon: Bus, hideForCashier: true },
   { to: "/routes", label: "Routes", icon: MapPin, hideForCashier: true },
 ];
 
@@ -37,6 +56,8 @@ const operationLinks: NavLinkDef[] = [
   { to: "/tickets", label: "Tickets", icon: Ticket },
   { to: "/devices", label: "Devices", icon: Smartphone, hideForCashier: true },
 ];
+
+const peoplePaths = peopleLinks.map((l) => l.to);
 
 const AppSidebar = ({ open = true, onToggle, onClose }: { open?: boolean; onToggle?: () => void; onClose?: () => void }) => {
   const location = useLocation();
@@ -47,30 +68,146 @@ const AppSidebar = ({ open = true, onToggle, onClose }: { open?: boolean; onTogg
   const isMobileSheet = !!onClose;
   const primaryRole = getPrimaryRole(userRoles);
   const roleDisplay = primaryRole ? getRoleDisplayName(primaryRole) : 'User';
+  const peopleActive = peoplePaths.some(
+    (path) => location.pathname === path || location.pathname.startsWith(`${path}/`),
+  );
+  const [peopleOpen, setPeopleOpen] = useState(peopleActive);
+
+  // Expand when navigating into one of the grouped pages, but leave manual
+  // collapsing intact while the user stays on that page.
+  useEffect(() => {
+    if (peopleActive) setPeopleOpen(true);
+  }, [peopleActive]);
 
   if (!user) return null;
 
-  const renderLink = (link: NavLinkDef) => {
-    if (link.superOnly && !isSuperAdmin) return null;
-    if (link.hideForCashier && cashierOnly) return null;
-    const isActive = location.pathname === link.to;
+  const isVisible = (link: NavLinkDef) => {
+    if (link.superOnly && !isSuperAdmin) return false;
+    if (link.hideForCashier && cashierOnly) return false;
+    return true;
+  };
+
+  const visiblePeople = peopleLinks.filter(isVisible);
+  const showPeopleGroup = visiblePeople.length > 0;
+
+  const linkClass = (isActive: boolean, compact = false) =>
+    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 group ${
+      compact || !open ? "justify-center" : ""
+    } ${
+      isActive
+        ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md shadow-sidebar-primary/20"
+        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary-foreground"
+    }`;
+
+  const renderLink = (
+    link: NavLinkDef,
+    opts?: { nested?: boolean; index?: number; total?: number },
+  ) => {
+    if (!isVisible(link)) return null;
+    const isActive =
+      location.pathname === link.to ||
+      (link.to !== "/" && location.pathname.startsWith(`${link.to}/`));
+    const index = opts?.index ?? 0;
+    const total = opts?.total ?? 1;
     return (
       <NavLink
         key={link.to}
         to={link.to}
         title={!open ? link.label : undefined}
         onClick={onClose}
-        className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 group ${
-          !open ? "justify-center" : ""
-        } ${
-          isActive
-            ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md shadow-sidebar-primary/20"
-            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary-foreground"
+        style={
+          opts?.nested
+            ? ({
+                // Items cascade in on open and peel away in reverse on close.
+                "--nav-delay-in": `${index * 55}ms`,
+                "--nav-delay-out": `${(total - 1 - index) * 35}ms`,
+              } as CSSProperties)
+            : undefined
+        }
+        className={`${linkClass(isActive)} ${
+          opts?.nested
+            ? `${open ? "pl-10" : ""} will-change-transform motion-reduce:animate-none ` +
+              "group-data-[state=open]/nav:animate-nav-item-in group-data-[state=open]/nav:[animation-delay:var(--nav-delay-in)] " +
+              "group-data-[state=closed]/nav:animate-nav-item-out group-data-[state=closed]/nav:[animation-delay:var(--nav-delay-out)]"
+            : ""
         }`}
       >
         <link.icon className={`h-[18px] w-[18px] shrink-0 transition-colors ${isActive ? "" : "group-hover:text-sidebar-primary-foreground"}`} />
         {open && <span className="truncate">{link.label}</span>}
       </NavLink>
+    );
+  };
+
+  const renderPeopleGroup = () => {
+    if (!showPeopleGroup) return null;
+
+    // Collapsed desktop sidebar: flyout menu
+    if (!open && !isMobileSheet) {
+      return (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              title="Users"
+              className={`${linkClass(peopleActive, true)} w-full`}
+            >
+              <Users className="h-[18px] w-[18px] shrink-0" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="right" align="start" className="w-44">
+            {visiblePeople.map((link) => (
+              <DropdownMenuItem key={link.to} asChild>
+                <NavLink to={link.to} onClick={onClose} className="flex items-center gap-2 cursor-pointer">
+                  <link.icon className="h-4 w-4" />
+                  {link.label}
+                </NavLink>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+
+    return (
+      <Collapsible open={peopleOpen} onOpenChange={setPeopleOpen}>
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-primary-foreground ${
+              peopleActive ? "text-sidebar-primary-foreground" : ""
+            }`}
+          >
+            <Users className="h-[18px] w-[18px] shrink-0" />
+            {open && (
+              <>
+                <span className="truncate flex-1 text-left">Users</span>
+                <ChevronDown
+                  className={`h-4 w-4 shrink-0 opacity-60 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                    peopleOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </>
+            )}
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="group/nav overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up motion-reduce:animate-none">
+          <div className="relative space-y-0.5 pt-1">
+            {open && (
+              <span
+                aria-hidden
+                className="absolute left-[21px] top-1.5 bottom-1 w-px origin-top bg-sidebar-border motion-reduce:animate-none group-data-[state=open]/nav:animate-nav-rail-in group-data-[state=closed]/nav:animate-nav-rail-out"
+              />
+            )}
+            {visiblePeople.map((link, index) =>
+              renderLink(link, {
+                nested: true,
+                index,
+                total: visiblePeople.length,
+              }),
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     );
   };
 
@@ -115,11 +252,13 @@ const AppSidebar = ({ open = true, onToggle, onClose }: { open?: boolean; onTogg
       <nav className="flex-1 px-2.5 py-4 space-y-5 overflow-y-auto">
         <div className="space-y-0.5">
           {open && <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-3 mb-2">Main</p>}
-          {mainLinks.map(renderLink)}
+          {mainLinksBefore.map((link) => renderLink(link))}
+          {renderPeopleGroup()}
+          {mainLinksAfter.map((link) => renderLink(link))}
         </div>
         <div className="space-y-0.5">
           {open && <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40 px-3 mb-2">Operations</p>}
-          {operationLinks.map(renderLink)}
+          {operationLinks.map((link) => renderLink(link))}
         </div>
       </nav>
 

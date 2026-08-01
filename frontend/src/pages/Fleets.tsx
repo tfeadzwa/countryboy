@@ -174,7 +174,7 @@ const Fleets = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-      <PageHeader title="Fleets" description="Manage buses, compliance documents, and expiry tracking">
+      <PageHeader title="Buses" description="Manage buses, compliance documents, and expiry tracking">
         {canManage && (
           <Button
             size="sm"

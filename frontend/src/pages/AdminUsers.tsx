@@ -313,7 +313,7 @@ const AdminUsers = () => {
   if (loading) {
     return (
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-        <PageHeader title="Admin Users" description="Manage system administrators and their access" />
+        <PageHeader title="Admins" description="Manage system administrators and their access" />
         <div className="flex items-center justify-center py-12">
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -326,7 +326,7 @@ const AdminUsers = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-      <PageHeader title="Admin Users" description="Manage system administrators and their access">
+      <PageHeader title="Admins" description="Manage system administrators and their access">
         <Button size="sm" className="gap-2 shadow-sm" onClick={openCreateDialog}>
           <Plus className="h-4 w-4" /> Add Admin
         </Button>
