@@ -23,6 +23,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Do not set ndk.abiFilters here — they conflict with
+        // `flutter build apk --split-per-abi` (Flutter owns the ABI split list).
     }
 
     buildTypes {

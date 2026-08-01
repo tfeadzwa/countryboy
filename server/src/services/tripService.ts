@@ -101,19 +101,36 @@ export const endTrip = async (
     );
   }
 
-  return prisma.tblTrips.update({
-    where: { id: tripId },
-    data: {
-      ended_at: new Date(),
-      status: 'ENDED',
-      closing_mileage: closingMileage,
-    },
-    include: {
-      agent: { select: { id: true, full_name: true, agent_code: true } },
-      fleet: { select: { id: true, number: true, registration_number: true } },
-      driver: { select: { id: true, full_name: true } },
-      depot: { select: { id: true, name: true } },
-    },
+  // Free fleet/driver so they can be selected for the next trip.
+  // startAgentTrip sets on_trip=true; this path must clear it (agent end is blocked).
+  return prisma.$transaction(async (tx) => {
+    const ended = await tx.tblTrips.update({
+      where: { id: tripId },
+      data: {
+        ended_at: new Date(),
+        status: 'ENDED',
+        closing_mileage: closingMileage,
+      },
+      include: {
+        agent: { select: { id: true, full_name: true, agent_code: true } },
+        fleet: { select: { id: true, number: true, registration_number: true } },
+        driver: { select: { id: true, full_name: true } },
+        depot: { select: { id: true, name: true } },
+      },
+    });
+
+    await tx.tblFleets.update({
+      where: { id: trip.fleet_id },
+      data: { on_trip: false },
+    });
+    if (trip.driver_id) {
+      await tx.tblDrivers.update({
+        where: { id: trip.driver_id },
+        data: { on_trip: false },
+      });
+    }
+
+    return ended;
   });
 };
 
