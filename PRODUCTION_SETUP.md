@@ -309,6 +309,9 @@ SMTP_PORT=587
 SMTP_USER=noreply@countryboy.co.zw
 SMTP_PASS=YOUR_EMAIL_PASSWORD
 SMTP_FROM="CountryBoy <noreply@countryboy.co.zw>"
+
+# Large file storage (APK releases, driver docs) — keep outside the git tree
+UPLOAD_DIR=/var/lib/countryboy/uploads
 ```
 
 > **Generate secure JWT secrets** on the server:
@@ -582,6 +585,13 @@ server {
 
         # App release APKs are up to 150 MB (see MAX_APP_RELEASE_BYTES)
         client_max_body_size 150M;
+        client_body_timeout 300s;
+        client_body_buffer_size 1m;
+
+        # Stream multipart bodies to Node (do not spool the whole APK on Nginx first)
+        proxy_request_buffering off;
+        proxy_buffering off;
+        proxy_max_temp_file_size 0;
     }
 
     # Security headers
@@ -894,6 +904,39 @@ grep -R client_max_body_size /etc/nginx/sites-enabled/
 ```
 
 Then publish again. Progress should move past 12% toward 100%.
+
+---
+
+### Problem: App release upload is allowed (150M) but still very slow
+
+`client_max_body_size` only **allows** large files — it does not make the transfer faster.
+
+Typical causes on this stack:
+
+1. **Client → Contabo uplink** — home/office “fast internet” is usually download-heavy. A 120 MB APK at 5–10 Mbps upload still takes several minutes. Check the progress bar: if it creeps 0→100% the whole time, this is the wire, not Nginx.
+2. **Rate limits on the upload path** — do **not** put `limit_req` / `limit_conn` on `/api/app-releases`. Use the dedicated location in the repo root `countryboy-api` sample.
+3. **Double disk write** — older builds saved to `/tmp` then copied into `server/uploads/`. Deploy the latest API so multer writes under `uploads/releases/.incoming` (same filesystem → cheap rename).
+4. **Uploads inside the app tree** — prefer a dedicated directory:
+
+```bash
+sudo mkdir -p /var/lib/countryboy/uploads
+sudo chown -R "$(whoami):$(whoami)" /var/lib/countryboy/uploads
+# in /var/www/countryboy/server/.env:
+# UPLOAD_DIR=/var/lib/countryboy/uploads
+pm2 restart countryboy-api
+```
+
+**Isolate network vs server:**
+
+```bash
+# On the VPS — if this is fast, the bottleneck is your PC→VPS link, not disk/Nginx
+time curl -o /dev/null -s -w "%{speed_upload}\n" \
+  -F "file=@/path/to/test.apk" \
+  -F "version_name=speedtest" \
+  -F "version_code=9999" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  http://127.0.0.1:3000/api/app-releases
+```
 
 ---
 
