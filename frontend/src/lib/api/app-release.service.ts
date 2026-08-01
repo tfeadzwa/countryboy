@@ -18,6 +18,8 @@ export interface AppRelease {
   updated_at: string;
 }
 
+export type UploadProgressHandler = (percent: number) => void;
+
 export interface PublishAppReleaseRequest {
   version_name: string;
   version_code: number;
@@ -25,6 +27,7 @@ export interface PublishAppReleaseRequest {
   admin_notes?: string;
   set_as_current?: boolean;
   file: File;
+  onUploadProgress?: UploadProgressHandler;
 }
 
 export interface UpdateAppReleaseRequest {
@@ -35,6 +38,7 @@ export interface UpdateAppReleaseRequest {
   set_as_current?: boolean;
   /** Optional — omit to keep the existing package. */
   file?: File;
+  onUploadProgress?: UploadProgressHandler;
 }
 
 export const getMobileNotes = (release: AppRelease): string =>
@@ -80,6 +84,14 @@ class AppReleaseService {
 
     const response = await apiClient.post<AppRelease>('/app-releases', form, {
       timeout: 180000,
+      onUploadProgress: (event) => {
+        if (!data.onUploadProgress) return;
+        if (!event.total) {
+          data.onUploadProgress(0);
+          return;
+        }
+        data.onUploadProgress(Math.min(100, Math.round((event.loaded * 100) / event.total)));
+      },
     });
     return response.data;
   }
@@ -97,6 +109,16 @@ class AppReleaseService {
 
     const response = await apiClient.put<AppRelease>(`/app-releases/${id}`, form, {
       timeout: 180000,
+      onUploadProgress: data.file
+        ? (event) => {
+            if (!data.onUploadProgress) return;
+            if (!event.total) {
+              data.onUploadProgress(0);
+              return;
+            }
+            data.onUploadProgress(Math.min(100, Math.round((event.loaded * 100) / event.total)));
+          }
+        : undefined,
     });
     return response.data;
   }

@@ -26,6 +26,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -96,6 +97,8 @@ const AppReleases = () => {
   const [setAsCurrent, setSetAsCurrent] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [publishing, setPublishing] = useState(false);
+  /** 0–100 while a package is uploading; null when idle or metadata-only save. */
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [editingRelease, setEditingRelease] = useState<AppRelease | null>(null);
   const [notesFocusId, setNotesFocusId] = useState<string | null>(null);
@@ -161,8 +164,13 @@ const AppReleases = () => {
     setSetAsCurrent(true);
     setSelectedFile(null);
     setPublishError(null);
+    setUploadProgress(null);
     setEditingRelease(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const trackUploadProgress = (percent: number) => {
+    setUploadProgress(percent);
   };
 
   const startEdit = (release: AppRelease) => {
@@ -207,7 +215,9 @@ const AppReleases = () => {
 
   const submitRelease = async () => {
     const code = Number(versionCode);
+    const willUploadFile = Boolean(selectedFile) || !editingRelease;
     setPublishing(true);
+    setUploadProgress(willUploadFile ? 0 : null);
     try {
       if (editingRelease) {
         const updated = await appReleaseService.update(editingRelease.id, {
@@ -217,6 +227,7 @@ const AppReleases = () => {
           admin_notes: adminNotes.trim() || undefined,
           set_as_current: setAsCurrent,
           file: selectedFile ?? undefined,
+          onUploadProgress: selectedFile ? trackUploadProgress : undefined,
         });
         toast({
           title: "Release updated",
@@ -232,6 +243,7 @@ const AppReleases = () => {
           admin_notes: adminNotes.trim() || undefined,
           set_as_current: setAsCurrent,
           file: selectedFile!,
+          onUploadProgress: trackUploadProgress,
         });
         toast({
           title: "Release published",
@@ -254,8 +266,20 @@ const AppReleases = () => {
       setPublishConfirmOpen(false);
     } finally {
       setPublishing(false);
+      setUploadProgress(null);
     }
   };
+
+  const publishLoadingLabel =
+    uploadProgress != null
+      ? uploadProgress >= 100
+        ? "Finishing…"
+        : `Uploading… ${uploadProgress}%`
+      : publishing
+        ? editingRelease
+          ? "Saving…"
+          : "Publishing…"
+        : "Publishing…";
 
   const handleDownload = async (release: AppRelease) => {
     setDownloadingId(release.id);
@@ -379,8 +403,9 @@ const AppReleases = () => {
             : ""
         }
         confirmLabel="Save changes"
-        loadingLabel="Saving…"
+        loadingLabel={publishLoadingLabel}
         loading={publishing}
+        progress={selectedFile ? uploadProgress : null}
         tone="default"
         onConfirm={() => void submitRelease()}
       />
@@ -393,8 +418,9 @@ const AppReleases = () => {
         title="Publish new release?"
         description={`Publish v${versionName.trim()} (build ${versionCode})${selectedFile ? ` with ${selectedFile.name}` : ""}${setAsCurrent ? " and mark it as the current download" : ""}.`}
         confirmLabel="Publish release"
-        loadingLabel="Publishing…"
+        loadingLabel={publishLoadingLabel}
         loading={publishing}
+        progress={uploadProgress}
         tone="default"
         onConfirm={() => void submitRelease()}
       />
@@ -667,6 +693,25 @@ const AppReleases = () => {
                     </Label>
                   </div>
 
+                  {publishing && uploadProgress != null && (
+                    <div className="space-y-2 rounded-xl border border-border/60 bg-muted/20 px-3.5 py-3">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          {uploadProgress >= 100
+                            ? "Upload complete — saving release…"
+                            : selectedFile
+                              ? `Uploading ${selectedFile.name}`
+                              : "Uploading package…"}
+                        </span>
+                        <span className="font-medium tabular-nums text-foreground">
+                          {uploadProgress}%
+                        </span>
+                      </div>
+                      <Progress value={uploadProgress} className="h-2.5" />
+                    </div>
+                  )}
+
                   <Button type="submit" className="w-full gap-2" disabled={publishing}>
                     {publishing ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -675,7 +720,11 @@ const AppReleases = () => {
                     ) : (
                       <Upload className="h-4 w-4" />
                     )}
-                    {editingRelease ? "Save changes" : "Publish release"}
+                    {publishing
+                      ? publishLoadingLabel
+                      : editingRelease
+                        ? "Save changes"
+                        : "Publish release"}
                   </Button>
                 </form>
               </CardContent>

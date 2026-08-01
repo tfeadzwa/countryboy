@@ -405,30 +405,37 @@ export default function DriverDocumentCard({
           >
             <Icon className="h-5 w-5" />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
-              <div className="min-w-0">
-                <h3 className="font-semibold text-sm leading-tight">{field.label}</h3>
-                <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">
-                  {field.description}
-                </p>
-              </div>
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="space-y-1.5">
+              <h3 className="pr-1 font-semibold text-sm leading-snug text-foreground">
+                {field.label}
+              </h3>
               {pendingUpload ? (
                 <Badge
                   variant="outline"
-                  className={`text-[10px] w-fit shrink-0 self-start ${pendingStyles.badge}`}
+                  className={`text-[10px] w-fit max-w-full whitespace-normal ${pendingStyles.badge}`}
                 >
                   {draft ? "Will upload on save" : "Ready to upload"}
                 </Badge>
               ) : doc ? (
                 <Badge
                   variant="outline"
-                  className={`text-[10px] w-fit shrink-0 self-start ${styles.badge}`}
+                  className={`text-[10px] w-fit max-w-full whitespace-normal ${styles.badge}`}
                 >
                   {doc.status_label}
                 </Badge>
-              ) : null}
+              ) : (
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] w-fit max-w-full whitespace-normal ${severityStyles.warning.badge}`}
+                >
+                  Document not uploaded
+                </Badge>
+              )}
             </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {field.description}
+            </p>
           </div>
         </div>
 
