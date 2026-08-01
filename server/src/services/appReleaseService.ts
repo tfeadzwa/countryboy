@@ -43,6 +43,31 @@ const trimOrNull = (value?: string | null): string | null => {
   return trimmed ? trimmed : null;
 };
 
+/** Move multer disk file (or write memory buffer) into the permanent uploads path. */
+const persistReleaseFile = async (file: Express.Multer.File, absolutePath: string) => {
+  await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+  if (file.path) {
+    try {
+      await fs.rename(file.path, absolutePath);
+    } catch {
+      await fs.copyFile(file.path, absolutePath);
+      await fs.unlink(file.path).catch(() => undefined);
+    }
+    return;
+  }
+  if (file.buffer) {
+    await fs.writeFile(absolutePath, file.buffer);
+    return;
+  }
+  throw new Error('Uploaded file has no data');
+};
+
+const cleanupTempUpload = async (file?: Express.Multer.File) => {
+  if (file?.path) {
+    await fs.unlink(file.path).catch(() => undefined);
+  }
+};
+
 const normalizeNotes = (data: AppReleaseInput) => {
   const mobile_notes = trimOrNull(data.mobile_notes) ?? trimOrNull(data.release_notes);
   const admin_notes = trimOrNull(data.admin_notes);
@@ -104,14 +129,17 @@ export const createAppRelease = async (
   const versionCode = Number(data.version_code);
 
   if (!versionName) {
+    await cleanupTempUpload(file);
     throw new Error('Version name is required');
   }
   if (!Number.isInteger(versionCode) || versionCode < 1) {
+    await cleanupTempUpload(file);
     throw new Error('Version code must be a positive integer');
   }
 
   const mime = resolveAppReleaseMime(file.originalname, file.mimetype);
   if (!mime) {
+    await cleanupTempUpload(file);
     throw new Error('File type not allowed. Upload an Android APK or AAB.');
   }
 
@@ -123,6 +151,7 @@ export const createAppRelease = async (
     },
   });
   if (existing) {
+    await cleanupTempUpload(file);
     throw new Error(`Release ${versionName} (${versionCode}) already exists`);
   }
 
@@ -130,37 +159,48 @@ export const createAppRelease = async (
   const relativePath = buildAppReleaseRelativePath(versionName, versionCode, file.originalname);
   await ensureAppReleasesDir();
   const absolutePath = path.join(UPLOAD_ROOT, relativePath);
-  await fs.writeFile(absolutePath, file.buffer);
+
+  try {
+    await persistReleaseFile(file, absolutePath);
+  } catch (err) {
+    await cleanupTempUpload(file);
+    throw err;
+  }
 
   const setAsCurrent = data.set_as_current !== false;
 
-  const release = await prisma.$transaction(async (tx) => {
-    if (setAsCurrent) {
-      await tx.tblAppReleases.updateMany({
-        where: { platform: 'android', is_current: true },
-        data: { is_current: false },
+  try {
+    const release = await prisma.$transaction(async (tx) => {
+      if (setAsCurrent) {
+        await tx.tblAppReleases.updateMany({
+          where: { platform: 'android', is_current: true },
+          data: { is_current: false },
+        });
+      }
+
+      return tx.tblAppReleases.create({
+        data: {
+          version_name: versionName,
+          version_code: versionCode,
+          platform: 'android',
+          file_path: relativePath.replace(/\\/g, '/'),
+          file_name: file.originalname,
+          file_size: file.size,
+          mime_type: mime,
+          release_notes: notes.release_notes,
+          mobile_notes: notes.mobile_notes,
+          admin_notes: notes.admin_notes,
+          is_current: setAsCurrent,
+          uploaded_by: uploadedBy,
+        },
       });
-    }
-
-    return tx.tblAppReleases.create({
-      data: {
-        version_name: versionName,
-        version_code: versionCode,
-        platform: 'android',
-        file_path: relativePath.replace(/\\/g, '/'),
-        file_name: file.originalname,
-        file_size: file.size,
-        mime_type: mime,
-        release_notes: notes.release_notes,
-        mobile_notes: notes.mobile_notes,
-        admin_notes: notes.admin_notes,
-        is_current: setAsCurrent,
-        uploaded_by: uploadedBy,
-      },
     });
-  });
 
-  return formatRelease(release as ReleaseRow);
+    return formatRelease(release as ReleaseRow);
+  } catch (err) {
+    await deleteStoredFile(relativePath.replace(/\\/g, '/'));
+    throw err;
+  }
 };
 
 export const updateAppRelease = async (
@@ -206,13 +246,19 @@ export const updateAppRelease = async (
   if (file) {
     const mime = resolveAppReleaseMime(file.originalname, file.mimetype);
     if (!mime) {
+      await cleanupTempUpload(file);
       throw new Error('File type not allowed. Upload an Android APK or AAB.');
     }
 
     const relativePath = buildAppReleaseRelativePath(versionName, versionCode, file.originalname);
     await ensureAppReleasesDir();
     const absolutePath = path.join(UPLOAD_ROOT, relativePath);
-    await fs.writeFile(absolutePath, file.buffer);
+    try {
+      await persistReleaseFile(file, absolutePath);
+    } catch (err) {
+      await cleanupTempUpload(file);
+      throw err;
+    }
 
     previousFilePath = existing.file_path;
     fileFields = {

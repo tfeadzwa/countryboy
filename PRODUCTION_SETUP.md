@@ -575,13 +575,13 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
 
-        # Timeouts
+        # Timeouts — APK publish can take several minutes on slower uplinks
         proxy_connect_timeout 60s;
-        proxy_send_timeout 60s;
-        proxy_read_timeout 60s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
 
-        # Body size limit (for file uploads etc.)
-        client_max_body_size 10M;
+        # App release APKs are up to 150 MB (see MAX_APP_RELEASE_BYTES)
+        client_max_body_size 150M;
     }
 
     # Security headers
@@ -870,6 +870,32 @@ After deployment, verify each item:
 ---
 
 ## 16. Troubleshooting Reference
+
+### Problem: App release upload stuck around ~10–15% (e.g. 62 MB APK)
+
+**Not a permissions issue.** Nginx was configured with `client_max_body_size 10M`, so a ~60 MB APK stalls near ~10 MB (~12–15%).
+
+On the server, raise the limit and reload Nginx:
+
+```bash
+sudo nano /etc/nginx/sites-available/countryboy-api
+# Inside the server / location block, set:
+#   client_max_body_size 150M;
+#   proxy_send_timeout 300s;
+#   proxy_read_timeout 300s;
+
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Confirm the live value:
+
+```bash
+grep -R client_max_body_size /etc/nginx/sites-enabled/
+```
+
+Then publish again. Progress should move past 12% toward 100%.
+
+---
 
 ### Problem: `502 Bad Gateway` on API
 

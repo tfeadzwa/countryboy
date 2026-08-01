@@ -83,7 +83,7 @@ class AppReleaseService {
     form.append('set_as_current', data.set_as_current === false ? 'false' : 'true');
 
     const response = await apiClient.post<AppRelease>('/app-releases', form, {
-      timeout: 180000,
+      timeout: 600000,
       onUploadProgress: (event) => {
         if (!data.onUploadProgress) return;
         if (!event.total) {
@@ -108,7 +108,7 @@ class AppReleaseService {
     form.append('set_as_current', data.set_as_current ? 'true' : 'false');
 
     const response = await apiClient.put<AppRelease>(`/app-releases/${id}`, form, {
-      timeout: 180000,
+      timeout: 600000,
       onUploadProgress: data.file
         ? (event) => {
             if (!data.onUploadProgress) return;
